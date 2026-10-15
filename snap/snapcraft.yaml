@@ -1,0 +1,131 @@
+name: silver-tongue
+title: Silver Tongue
+adopt-info: silver-tongue
+base: core24
+summary: Talk your way past a guard who hears every word you say.
+description: |
+  Say the right thing. Not too loud.
+
+  Silver Tongue is a co-op con game where the guards, staff and guests
+  are characters who hear what you say into your microphone and answer
+  in their own words, out loud. Nobody wrote their lines. Talk your way
+  in, keep your story straight, and don't get caught.
+
+  This is the first proof: one room, one guard, one door. Marcus guards
+  the Meridian's service door. Talk him into letting you through.
+
+  - Hold to talk; he hears you a moment later, and your words show up as
+    he heard them. Whisper and he barely catches it; shout and the whole
+    corridor does
+  - He checks stories with reception, asks for badges, and radios for
+    backup when he's had enough
+  - The hearing, the brains and the voice all run on your own machine
+    through Lemonade; nothing you say leaves it
+  - Plays with a keyboard and mouse or a controller, and lines can be
+    typed instead of spoken
+  - Comfort settings: no head bob or view roll by default
+icon: snap/gui/silver-tongue.svg
+grade: stable
+confinement: strict
+compression: lzo
+license: MIT AND CC0-1.0 AND Apache-2.0 AND OFL-1.1
+website: https://github.com/LinuxGroove/silver-tongue
+source-code: https://github.com/LinuxGroove/silver-tongue
+issues: https://github.com/LinuxGroove/silver-tongue/issues
+
+platforms:
+  amd64:
+  arm64:
+
+apps:
+  silver-tongue:
+    command: bin/silver-tongue
+    extensions: [gnome]
+    environment:
+      # $SNAP/bin first so lemond finds bsdtar as "tar" (see the lemonade part).
+      PATH: $SNAP/bin:$SNAP/usr/bin:$PATH
+    plugs:
+      - audio-playback
+      - audio-record
+      - joystick
+      - network
+      - network-bind
+
+parts:
+  silver-tongue:
+    plugin: nil
+    source: .
+    build-packages:
+      - curl
+      - unzip
+      - ca-certificates
+      - libfontconfig1
+    stage-packages:
+      - libasound2t64
+      - libpulse0
+      - libdecor-0-0
+      - libfontconfig1
+      - libudev1
+      - libwayland-client0
+      - libwayland-cursor0
+      - libwayland-egl1
+      - libxkbcommon0
+      - libx11-6
+      - libxcursor1
+      - libxext6
+      - libxi6
+      - libxinerama1
+      - libxrandr2
+      - libxrender1
+      - libdbus-1-3
+    override-pull: |
+      craftctl default
+      craftctl set version="$(sed -n 's/^config\/version="\(.*\)"/\1/p' project.godot)"
+    override-build: |
+      # Godot version used to export; keep in step with the project.
+      GODOT_VERSION=4.7.2
+      case "$CRAFT_ARCH_BUILD_FOR" in
+        amd64) ARCH=x86_64; PRESET=Linux ;;
+        arm64) ARCH=arm64; PRESET="Linux ARM64" ;;
+        *) echo "Unsupported architecture: $CRAFT_ARCH_BUILD_FOR"; exit 1 ;;
+      esac
+      BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+      curl -sSfL -o godot.zip "$BASE/Godot_v${GODOT_VERSION}-stable_linux.${ARCH}.zip"
+      curl -sSfL -o templates.tpz "$BASE/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+      unzip -o -q godot.zip
+      GODOT="$PWD/Godot_v${GODOT_VERSION}-stable_linux.${ARCH}"
+      export HOME="$PWD/.home"
+      TEMPLATES="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+      mkdir -p "$TEMPLATES"
+      unzip -o -q -j templates.tpz "templates/linux_release.${ARCH}" templates/version.txt -d "$TEMPLATES"
+      "$GODOT" --headless --path . --import
+      "$GODOT" --headless --path . --import
+      mkdir -p "$CRAFT_PART_INSTALL/game" "$CRAFT_PART_INSTALL/bin"
+      "$GODOT" --headless --path . --export-release "$PRESET" "$CRAFT_PART_INSTALL/game/silver-tongue"
+      test -f "$CRAFT_PART_INSTALL/game/silver-tongue.pck"
+      install -m 755 snap/local/silver-tongue "$CRAFT_PART_INSTALL/bin/"
+      cp LICENSE CREDITS.md "$CRAFT_PART_INSTALL/game/"
+
+  lemonade:
+    plugin: nil
+    # Embedded, self-contained Lemonade Server (the "lemonade-embeddable"
+    # release). The game starts it privately on localhost for the guard's
+    # hearing, brains and voice, and models download into $SNAP_USER_COMMON
+    # on first use.
+    source:
+      - on amd64: https://github.com/lemonade-sdk/lemonade/releases/download/v2026.40.0/lemonade-embeddable-2026.40.0-ubuntu-x64.tar.gz
+      - on arm64: https://github.com/lemonade-sdk/lemonade/releases/download/v2026.40.0/lemonade-embeddable-2026.40.0-ubuntu-arm64.tar.gz
+    source-type: tar
+    override-build: |
+      craftctl default
+      mkdir -p $CRAFT_PART_INSTALL/lemonade
+      cp -a LICENSE lemond lemonade resources $CRAFT_PART_INSTALL/lemonade/
+      # lemond downloads llama.cpp backends (.tar.xz) at runtime and unpacks
+      # them with "tar" from PATH. The base snap's GNU tar can't do xz under
+      # strict confinement, so link bsdtar (libarchive, xz built in) in as
+      # $SNAP/bin/tar, which is first on PATH.
+      mkdir -p $CRAFT_PART_INSTALL/bin
+      ln -sf ../usr/bin/bsdtar $CRAFT_PART_INSTALL/bin/tar
+    stage-packages:
+      - libssl3t64
+      - libarchive-tools
