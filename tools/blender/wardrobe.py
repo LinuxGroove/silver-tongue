@@ -9,20 +9,28 @@ collar and cuffs as separate meshes, to look at each one.
 Writes <outfit>_<body>.gltf and .bin into the output folder for each outfit and body: the base
 body's own skeleton (unchanged, so the Universal Animation Libraries drive it), its head and hands
 (the skin under the clothes is cut away so it can't show through), its eyes and brows, and the
-clothes as separate meshes named for what they are (Suit, Shirt, Tie, Shoes, Buttons, Pin,
-Earpiece), each skinned to the same bones. The game paints each by its name (Person).
+clothes as separate meshes named for what they are (Suit, Skirt, Shirt, Tie, Trousers, Shoes,
+Buttons, Pin, Earpiece; Dress, Shoes, Necklace), each skinned to the same bones. The game paints
+each by its name (Person).
 
 How the clothes are made: the body becomes a distance field on a grid, and a "closing" of it (the
 body with every hollow narrower than the cloth's stiffness filled in) is the surface cloth lies on,
 over the chest rather than into every muscle. Shells start as copies of the body's own faces, are
 pushed onto that surface plus some ease, hang straight down the arms and legs, and are smoothed.
 The jacket's skirt, the collars, lapels, shirt, tie, buttons and shoes are built on top: the
-collars follow lines round the neck, and the shoes are the closing of the feet. Every point takes
-its skin weights from the nearest point of the body.
+collars follow lines round the neck, and the shoes are the closing of the feet. On the female
+body, smoothed hulls of the bust and the seat join the field first, so cloth bridges the
+cleavage, the underbust and the cleft between the buttocks rather than following them. Every
+point takes its skin weights from the nearest point of the body.
 
-Outfits so far: halberd_suit, the dark suit, white shirt and tie Halberd Security's door staff
-wear, with an earpiece and the company pin, fitted to the male body (the female body's
-measurements aren't tuned yet).
+Outfits so far:
+- halberd_suit (male and female): the dark suit, white shirt and tie Halberd Security's door
+  staff wear, with an earpiece and the company pin. The women's cut is a fitted, shorter jacket
+  with a higher button, a softer collar and pointed shoes.
+- evening_dress (female): a long gala gown, a fitted bodice with a V at the front, a low scoop at
+  the back and straps, a waistband, and a skirt that falls to the floor and flares a little more
+  at the back; evening shoes and a fine chain with a drop. The skirt is a ring of rays from the
+  waist down, never narrower than the ring above it, so it hangs from the hips over the legs.
 """
 import bpy, bmesh, math, os, sys
 import numpy as np
@@ -132,6 +140,48 @@ def normalize_weights(W, top=4):
 
 # --- The cloth surface -------------------------------------------------------------------------
 
+def hull_filler(P, rounds=3):
+    """Triangles of the convex hull of some points, its ridges rounded off (by smoothing, which
+    sinks it a little where it was sharp). Added to a body's field, cloth lies over the hull
+    instead of following the body into a hollow; inside the body it's harmless, since cloth
+    only meets the outside of the field."""
+    from scipy.spatial import ConvexHull
+    bm = bmesh.new()
+    vs = new_verts(bm, P)
+    for t in ConvexHull(P).simplices:
+        try:
+            bm.faces.new([vs[i] for i in t])
+        except ValueError:
+            pass
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+    for _ in range(rounds):
+        bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=1, use_grid_fill=True)
+        bmesh.ops.triangulate(bm, faces=bm.faces[:])
+        smooth(bm, 6, lam=0.6, mu=-0.6)
+    bm.verts.ensure_lookup_table()
+    P = coords(bm)
+    return P[np.array([[v.index for v in f.verts] for f in bm.faces])]
+
+
+def bust_filler(body, z0=1.17, z1=1.43, x1=0.15):
+    """The front of the female body's chest filled over the cleavage and under the bust: cloth
+    falls from the bust rather than into them."""
+    c = body.co
+    arm = sum(body.W[:, body.group(n)] for n in ("upperarm_l", "upperarm_r", "clavicle_l", "clavicle_r"))
+    m = (c[:, 2] > z0) & (c[:, 2] < z1) & (c[:, 1] < 0.0) & (np.abs(c[:, 0]) < x1) & (arm < 0.3)
+    return hull_filler(c[m])
+
+
+def seat_filler(body, z0=0.74, z1=1.02, x1=0.2):
+    """The back of the female body's hips filled over the cleft of the seat: a jacket hangs
+    straight across it."""
+    c = body.co
+    near = (np.abs(c[:, 2] - body.pelvis_z) < 0.02) & (np.abs(c[:, 0]) < 0.05)
+    cy = 0.5 * (c[near][:, 1].min() + c[near][:, 1].max())
+    m = (c[:, 2] > z0) & (c[:, 2] < z1) & (c[:, 1] > cy) & (np.abs(c[:, 0]) < x1)
+    return hull_filler(c[m])
+
+
 def surface_points(tris, step, seed=7):
     """Points over triangles, about one per step squared, plus the corners."""
     rng = np.random.default_rng(seed)
@@ -150,12 +200,19 @@ class Field:
     stiffness R, E is the distance to everywhere a ball of radius R can reach from outside, so
     E = R - ease is cloth lying over the body with that ease, bridging hollows narrower than R."""
 
-    def __init__(self, tris, h=0.006, pad=0.12):
+    def __init__(self, tris, h=0.006, pad=0.12, box=None):
+        """box (lo, hi) limits the grid to part of the triangles: cut through a closed body, its
+        inside stays apart from the outside."""
         pts = tris.reshape(-1, 3)
-        self.lo = pts.min(0) - pad
+        lo, hi = pts.min(0) - pad, pts.max(0) + pad
+        if box is not None:
+            lo, hi = np.maximum(lo, box[0]), np.minimum(hi, box[1])
+        self.lo = lo
         self.h = h
-        shape = tuple(np.ceil((pts.max(0) + pad - self.lo) / h).astype(int) + 1)
+        shape = tuple(np.ceil((hi - self.lo) / h).astype(int) + 1)
         idx = np.round((surface_points(tris, h * 0.45) - self.lo) / h).astype(int)
+        if box is not None:
+            idx = idx[np.all((idx >= 0) & (idx < np.array(shape)), axis=1)]
         surf = np.zeros(shape, bool)
         surf[tuple(idx.T)] = True
         self.D = (ndimage.distance_transform_edt(~surf) * h).astype(np.float32)
@@ -185,8 +242,9 @@ class Field:
             P -= np.clip(e, -0.02, 0.02)[:, None] * g
         return P
 
-    def reach(self, centers, dirs, R, ease, far=0.5, step=0.0015):
-        """How far out from each center, along its direction, the cloth surface is: walks in from far."""
+    def reach(self, centers, dirs, R, ease, far=0.5, step=0.0015, miss=None):
+        """How far out from each center, along its direction, the cloth surface is: walks in from far.
+        A ray that never meets it (from a gap between the legs) gives miss, when one is given."""
         centers = np.asarray(centers, float)
         dirs = np.asarray(dirs, float)
         E, _ = self.closing(R)
@@ -200,6 +258,8 @@ class Field:
         rows = np.arange(len(centers))
         e0, e1 = e[rows, prev], e[rows, first]
         t = np.where(first > 0, -e0 / np.where(np.abs(e1 - e0) > 1e-9, e1 - e0, 1.0), 0.0)
+        if miss is not None:
+            return np.where(inside.any(1), s[prev] - np.clip(t, 0.0, 1.0) * step, miss)
         return s[prev] - t * step
 
     def push_out(self, P, gap):
@@ -493,28 +553,42 @@ class Suit:
         self.skin_hand = b.hand[0] - 0.08         # the body's skin is kept beyond this
         self.z_cut = b.pelvis_z + 0.05            # the jacket's shell ends here, its skirt hangs below
         self.z_skirt = self.z_cut + 0.035         # the skirt starts here, tucked inside the shell
-        self.z_hem = b.pelvis_z - (0.15 if self.female else 0.17)
-        self.z_button = b.pelvis_z + 0.15         # the top button: the bottom of the V
+        self.z_hem = b.pelvis_z - (0.11 if self.female else 0.17)
+        self.z_button = b.pelvis_z + (0.18 if self.female else 0.15)   # the top button: the bottom of the V
         self.z_split = b.pelvis_z + 0.04          # the fronts part below here
-        self.z_gorge = b.neck_z - 0.052           # the top of the lapels
+        self.z_gorge = b.neck_z - (0.09 if self.female else 0.052)     # the top of the lapels
         self.x_gorge = 0.07 if self.female else 0.075
         self.z_trousers = b.pelvis_z + 0.09
         self.z_ankle = b.ankle[2] + 0.014         # trousers are cut here and hemmed below
         self.R_jacket, self.ease_jacket = 0.05, 0.017
-        self.R_skirt, self.ease_skirt = 0.06, 0.03
+        self.R_skirt, self.ease_skirt = (0.1, 0.028) if self.female else (0.06, 0.03)
+        self.skirt_blend = 0.1 if self.female else 0.04   # how far below the waist the skirt eases out
+        self.flap_x = (0.065, 0.17) if self.female else (0.075, 0.215)   # the pocket flaps' ends
         self.R_shirt, self.ease_shirt = 0.03, 0.006
         self.R_trousers, self.ease_trousers = 0.03, 0.01
+        self.trouser_taper = 0.09 if self.female else 0.06
+        self.collar_h = 0.034 if self.female else 0.045     # the shirt collar's height
+        self.collar_dip = 0.026 if self.female else 0.032   # and how far its points dip
+        self.pin_t = 0.9 if self.female else 0.72           # how far up the lapel the pin is
+        self.shirt_x = 0.14 if self.female else 0.11        # the shirt's front reaches this far out
         c = b.co
         near = (np.abs(c[:, 2] - b.neck_z) < 0.02) & (np.abs(c[:, 0]) < 0.09)
         self.neck_y = 0.5 * (c[near][:, 1].min() + c[near][:, 1].max())
         # The neckline's height round the neck, from the front (0) to the back (180), over the
         # neck's bone: down at the gorge, up the sides of the neck over the shoulders' slope, and
         # a little lower again at the back.
+        # The female neck is longer and slimmer, and meets the shoulders below its bone.
         at = np.radians([0, 28, 60, 90, 120, 150, 180])
-        dz = np.array([-0.052, -0.046, 0.02, 0.05, 0.05, 0.035, 0.028])
+        if self.female:
+            dz = np.array([-0.08, -0.074, -0.012, 0.018, 0.018, 0.006, -0.002])
+        else:
+            dz = np.array([-0.052, -0.046, 0.02, 0.05, 0.05, 0.035, 0.028])
         self._neckline = CubicSpline(at, b.neck_z + dz, bc_type=((1, 0.0), (1, 0.0)))
         # The shirt's collar sits round the neck itself, only a little lower at the throat.
-        dz = np.array([-0.032, -0.028, 0.008, 0.045, 0.045, 0.03, 0.024])
+        if self.female:
+            dz = np.array([-0.022, -0.014, 0.0, 0.012, 0.012, 0.004, -0.004])
+        else:
+            dz = np.array([-0.032, -0.028, 0.008, 0.045, 0.045, 0.03, 0.024])
         self._shirt_line = CubicSpline(at, b.neck_z + dz, bc_type=((1, 0.0), (1, 0.0)))
 
     def neckline(self, phi):
@@ -595,6 +669,16 @@ def jacket_shell(body, s, F):
                     v.co.z = s.z_cut
                 elif abs(abs(v.co.x) - s.sleeve) < 0.03:
                     v.co.x = math.copysign(s.sleeve, v.co.x)
+    if s.female:
+        # The waist edge runs smoothly round, and lies on the skirt below it, so the join
+        # reads as a seam rather than a step.
+        bm.verts.ensure_lookup_table()
+        waist = np.array([v.is_boundary and abs(v.co.z - s.z_cut) < 1e-4 for v in bm.verts])
+        smooth(bm, 8, pin=~waist)
+        P = coords(bm)
+        P[waist] = F.onto(P[waist], s.R_jacket, s.ease_jacket - 0.004)
+        P[waist, 2] = s.z_cut
+        set_coords(bm, P)
     return bm
 
 
@@ -649,7 +733,7 @@ def skirt(body, s, F):
             r = F.reach(cs, dirs, s.R_jacket, s.ease_jacket) - 0.004
         else:
             r = F.reach(cs, dirs, s.R_skirt, s.ease_skirt)
-            blend = np.clip((s.z_cut - z) / 0.04, 0, 1)
+            blend = np.clip((s.z_cut - z) / s.skirt_blend, 0, 1)
             rj = F.reach(cs, dirs, s.R_jacket, s.ease_jacket)
             r = rj + (r - rj) * blend
         flare = 0.012 * np.clip((s.z_cut - z) / (s.z_cut - s.z_hem), 0, 1)
@@ -671,7 +755,7 @@ def pocket_flaps(skirt_bvh, s, cy):
         rows = []
         for z in (s.z_hem + 0.13, s.z_hem + 0.08):
             row = []
-            for x in np.linspace(0.075, 0.215, 6):
+            for x in np.linspace(*s.flap_x, 6):
                 p, n = hit(skirt_bvh, (side * x, -0.6, z), (0, 1, 0))
                 if p is None:
                     continue
@@ -745,9 +829,12 @@ def shirt(body, s, F):
     """The shirt where it shows: its front in the V, the collar and the cuffs."""
     c = body.co
     parts = []
-    keep = (c[:, 1] < 0.03) & (c[:, 2] > s.z_button - 0.06) & (np.abs(c[:, 0]) < 0.13) & (body.w_head < 0.7) & (body.w_hand < 0.1)
+    keep = (c[:, 1] < 0.03) & (c[:, 2] > s.z_button - 0.06) & (np.abs(c[:, 0]) < s.shirt_x + 0.02) & (body.w_head < 0.7) & (body.w_hand < 0.1)
     bm = body_piece(body, keep)
     cut(bm, (0, 0, s.z_button - 0.05), (0, 0, -1))
+    if s.female:
+        # Its sides cut cleanly, since some of them show at the sides of the neck.
+        cut_level(bm, lambda p: abs(p[0]) - s.shirt_x)
     subdivide(bm)
     set_coords(bm, F.onto(coords(bm), s.R_shirt, s.ease_shirt))
     settle(bm, F, s.R_shirt, s.ease_shirt)
@@ -763,15 +850,15 @@ def shirt(body, s, F):
     # dipping down the front either side of it.
     phi_t = math.radians(3)
     phis = np.linspace(phi_t, 2 * np.pi - phi_t, 44)
-    rows = [neck_ring_at(body, s, phis, -0.004, 0.012, s.shirt_line), neck_ring_at(body, s, phis, 0.045, 0.014, s.shirt_line)]
+    rows = [neck_ring_at(body, s, phis, -0.004, 0.012, s.shirt_line), neck_ring_at(body, s, phis, s.collar_h, 0.014, s.shirt_line)]
     front = np.minimum(np.abs(phis), np.abs(2 * np.pi - phis))
     dip = np.clip(1 - (front - phi_t) / math.radians(34), 0, 1) ** 1.5
     low = rows[0].copy()
-    low[:, 2] -= 0.032 * dip
+    low[:, 2] -= s.collar_dip * dip
     low = F.onto(low, s.R_shirt, s.ease_shirt + 0.004, outward_only=True)
     rows[0] = low
     # Its inside, turned down from the top edge, so the neck doesn't show past it.
-    rows.append(neck_ring_at(body, s, phis, 0.03, 0.003, s.shirt_line))
+    rows.append(neck_ring_at(body, s, phis, s.collar_h - 0.015, 0.003, s.shirt_line))
     rows.append(neck_ring_at(body, s, phis, 0.0, 0.0, s.shirt_line))
     col = bmesh.new()
     grid_faces(col, [new_verts(col, r) for r in rows])
@@ -798,7 +885,9 @@ def tie(body, s, shirt_bvh):
     bm = bmesh.new()
     z0 = float(s.shirt_line(0.0))
     zk_top, zk_bot = z0 + 0.038, z0 - 0.014
-    zs = np.linspace(zk_bot + 0.004, s.z_button - 0.06, 14)
+    # Over a bust the blade bends, so it has more rows there, lifted straight forward rather
+    # than along the shirt's faces.
+    zs = np.linspace(zk_bot + 0.004, s.z_button - 0.06, 30 if s.female else 14)
     rows = []
     for z in zs:
         f = (zk_bot - z) / (s.z_gorge - s.z_button)
@@ -808,7 +897,7 @@ def tie(body, s, shirt_bvh):
             p, n = hit(shirt_bvh, (x, -0.6, z), (0, 1, 0))
             if p is None:
                 p, n = np.array([x, -0.1, z]), FWD
-            row.append(p + n * lift)
+            row.append(p + (FWD if s.female else n) * lift)
         rows.append(row)
     grid_faces(bm, [new_verts(bm, r) for r in rows], flip=True)
     # The knot, a little proud of the collar's front.
@@ -842,7 +931,7 @@ def trousers(body, s):
     for side in (1, -1):
         a = body.hip * [side, 1, 1]
         b = body.ankle * [side, 1, 1]
-        P = drape(P, P[:, 0] * side > 0.025, a, b, taper=0.06, t0=0.14)
+        P = drape(P, P[:, 0] * side > 0.025, a, b, taper=s.trouser_taper, t0=0.14)
     set_coords(bm, P)
     smooth(bm, 8)
     P = F.onto(coords(bm), s.R_trousers, s.ease_trousers * 0.7, outward_only=True)
@@ -917,9 +1006,10 @@ def decimate(bm, ratio):
     return out
 
 
-def shoes(body, s):
+def shoes(body, s, point=0.0):
     """Plain black shoes over the feet: a rounded toe a little longer than the foot, a flat sole.
-    Made from the cloth surface of the feet itself, so toes don't show through."""
+    Made from the cloth surface of the feet itself, so toes don't show through. With point, the
+    toe is longer and narrows to a point (women's shoes)."""
     c = body.co
     feet = (body.w_foot > 0.2) | (c[:, 2] < 0.16)
     F = Field(body.triangles(feet & (np.abs(c[:, 0]) > 0.02)), h=0.003)
@@ -929,6 +1019,12 @@ def shoes(body, s):
     toe_y = c[c[:, 2] < 0.03][:, 1].min()
     front = np.clip((-0.05 - P[:, 1]) / (-0.05 - toe_y), 0, 1)
     P[:, 1] -= 0.014 * front ** 1.5
+    if point:
+        P[:, 1] -= point * front ** 2.5
+        for side in (1, -1):
+            m = P[:, 0] * side > 0
+            cx = body.ankle[0] * side - side * 0.006
+            P[m, 0] = cx + (P[m, 0] - cx) * (1.0 - 0.4 * front[m] ** 2)
     low = P[:, 2] < body.floor + 0.016
     for side in (1, -1):
         m = (P[:, 0] * side > 0)
@@ -961,7 +1057,7 @@ def buttons_and_pin(body, s, jacket_bvh, skirt_bvh, lapel_bvh):
                 if q is not None:
                     disc(buttons, q, m, 0.0055, 0.003, 10)
     pin = bmesh.new()
-    t = 0.72
+    t = s.pin_t
     x = s.x_gorge * t + 0.032
     z = s.z_button + (s.z_gorge - s.z_button) * t - 0.004
     p, n = hit(lapel_bvh, (x, -0.6, z), (0, 1, 0))
@@ -987,6 +1083,279 @@ def earpiece(body, F):
     return bud
 
 
+# --- The evening dress -------------------------------------------------------------------------
+
+def smoothstep(e0, e1, x):
+    t = np.clip((np.asarray(x, float) - e0) / (e1 - e0), 0.0, 1.0)
+    return t * t * (3 - 2 * t)
+
+
+class Gown:
+    """The evening dress's measurements, from the (female) body's bones. Angles go round the
+    torso from the front (0) to the back (180)."""
+
+    def __init__(self, body):
+        b = body
+        self.z_waist = b.pelvis_z + 0.2           # the bodice ends here and the skirt starts
+        self.z_hip = b.pelvis_z - 0.05            # the skirt falls straight from below the hips
+        self.z_shin = b.floor + 0.16              # leg skin is kept below this, for when it shows
+        self.floor = b.floor
+        self.R_bodice, self.ease_bodice = 0.03, 0.004
+        self.R_skirt, self.ease_skirt = 0.07, 0.01
+        self.x_strap, self.w_strap = 0.112, 0.024  # the straps over the shoulders
+        self.z_v = b.neck_z - 0.215               # the bottom of the V at the front
+        self.z_scoop = b.neck_z - 0.27            # and of the scoop at the back
+        c = b.co
+        near = (np.abs(c[:, 2] - b.neck_z) < 0.02) & (np.abs(c[:, 0]) < 0.09)
+        self.neck_y = 0.5 * (c[near][:, 1].min() + c[near][:, 1].max())
+        near = (np.abs(c[:, 2] - (b.neck_z - 0.18)) < 0.02) & (np.abs(c[:, 0]) < 0.05)
+        self.cy = 0.5 * (c[near][:, 1].min() + c[near][:, 1].max())
+        # Where the straps meet the bodice at the front and back, and the armholes between, by
+        # angle round the torso: from the straps' outer edges, down under the arms.
+        self.z_strap_front = b.neck_z - 0.09
+        self.z_strap_back = b.neck_z - 0.1
+        x = self.x_strap + 0.5 * self.w_strap
+        pf, _n = hit(b.bvh, (x, -0.6, self.z_strap_front), (0, 1, 0))
+        pb, _n = hit(b.bvh, (x, 0.6, self.z_strap_back), (0, -1, 0))
+        self.a_front = math.atan2(x, -(pf[1] - self.cy))
+        self.a_back = math.atan2(x, -(pb[1] - self.cy))
+        self.z_side = b.neck_z - 0.175
+        # The necklace round the base of the neck, falling to the top of the chest.
+        z = b.neck_z + np.array([-0.105, -0.07, -0.02, -0.004, -0.012, -0.035, -0.045])
+        self._chain = CubicSpline(np.radians([0, 30, 60, 90, 120, 150, 180]), z, bc_type=((1, 0.0), (1, 0.0)))
+
+    def angle(self, p):
+        return abs(math.atan2(p[0], -(p[1] - self.cy)))
+
+    def neckline(self, p):
+        """Above zero where the bodice is cut away: over the V at the front, the scoop at the
+        back and the armholes, except along the straps."""
+        x = abs(p[0])
+        front = p[1] < self.cy
+        if x < self.x_strap:
+            t = x / self.x_strap
+            if front:
+                top = self.z_v + (self.z_strap_front - self.z_v) * t ** 1.15
+            else:
+                top = self.z_scoop + (self.z_strap_back - self.z_scoop) * t ** 2.2
+            g = p[2] - top
+        else:
+            g = p[2] - self.armhole(self.angle(p))
+        strap = abs(x - self.x_strap) - 0.5 * self.w_strap
+        # A soft minimum, so the straps run into the neckline and armholes with rounded corners.
+        k = 0.015
+        h = max(k - abs(g - strap), 0.0) / k
+        return min(g, strap) - h * h * k * 0.25
+
+    def armhole(self, a):
+        """The armhole's height by angle round the torso: steeply down from the strap's outer
+        edge, round under the arm and up to the back strap; above the straps beyond them."""
+        side = 0.5 * math.pi
+        if a < self.a_front:
+            return self.z_strap_front + (self.a_front - a) * 0.4
+        if a > self.a_back:
+            return self.z_strap_back + (a - self.a_back) * 0.4
+        if a < side:
+            u = (a - self.a_front) / (side - self.a_front)
+            return self.z_side + (self.z_strap_front - self.z_side) * (1 - u) ** 1.8
+        u = (self.a_back - a) / (self.a_back - side)
+        return self.z_side + (self.z_strap_back - self.z_side) * (1 - u) ** 1.8
+
+    def chain_line(self, phi):
+        a = np.abs((np.asarray(phi) + np.pi) % (2 * np.pi) - np.pi)
+        return self._chain(a)
+
+
+def bodice(body, gw, F):
+    """The bodice: fitted over the bust and waist, cut to a V at the front, a low scoop at the
+    back and armholes, with straps over the shoulders. Its edges hug the skin."""
+    c = body.co
+    w_arm = sum(body.W[:, body.group(n)] for n in ("upperarm_l", "upperarm_r", "lowerarm_l", "lowerarm_r"))
+    keep = ((c[:, 2] > gw.z_waist - 0.06) & (body.w_head < 0.4) & (body.w_hand < 0.1) & (body.w_leg < 0.5)
+            & ((w_arm < 0.5) | (np.abs(c[:, 0]) < gw.x_strap + 0.03)))
+    bm = body_piece(body, keep)
+    cut(bm, (0, 0, gw.z_waist), (0, 0, -1))
+    # Keep only what's near the dress (the straps and below the neckline) before refining.
+    bm.verts.ensure_lookup_table()
+    far = [f for f in bm.faces if min(gw.neckline(np.array(v.co[:])) for v in f.verts) > 0.03]
+    bmesh.ops.delete(bm, geom=far, context='FACES')
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+    subdivide(bm, 2)
+    set_coords(bm, F.onto(coords(bm), gw.R_bodice, gw.ease_bodice))
+    settle(bm, F, gw.R_bodice, gw.ease_bodice, rounds=6)
+    smooth(bm, 6)
+    # Thinned to what a gala full of guests can afford, before the cut so its edges stay clean.
+    bm = decimate(bm, 0.3)
+    smooth(bm, 3)
+    set_coords(bm, F.onto(coords(bm), gw.R_bodice, gw.ease_bodice * 0.8, outward_only=True))
+    cut_level(bm, gw.neckline)
+    # The cut edges smoothed along themselves (the cut crosses uneven faces), then the rest.
+    bm.verts.ensure_lookup_table()
+    edge = np.array([v.is_boundary and v.co.z > gw.z_waist + 0.01 for v in bm.verts])
+    for _ in range(3):
+        smooth(bm, 6, pin=~edge)
+        P = coords(bm)
+        P[edge] = F.onto(P[edge], gw.R_bodice, gw.ease_bodice)
+        set_coords(bm, P)
+    smooth(bm, 3, pin=edge)
+    # Its edges hug the skin, so the neckline sits on the chest and the straps on the shoulders.
+    P = coords(bm)
+    g = np.array([gw.neckline(p) for p in P])
+    t = np.clip(1.0 + g / 0.025, 0.0, 1.0)[:, None] * (P[:, 2] > gw.z_waist + 0.05)[:, None]
+    set_coords(bm, P * (1 - t) + F.onto(P, gw.R_bodice, 0.0015) * t)
+    # Smoothed again so the edges don't follow the facets of the skin under them.
+    smooth(bm, 4)
+    set_coords(bm, F.onto(coords(bm), gw.R_bodice, 0.0015, outward_only=True))
+    for v in bm.verts:
+        if v.is_boundary and abs(v.co.z - gw.z_waist) < 0.004:
+            v.co.z = gw.z_waist
+    recalc(bm)
+    return solidify(bm, 0.002, even=False)
+
+
+def gown_skirt(body, gw, F, Fb):
+    """The skirt: fitted over the hips, then falling straight to the floor with a little flare,
+    more at the back. Its top tucks inside the bodice (whose cloth surface is Fb's)."""
+    c = body.co
+    near = (np.abs(c[:, 2] - gw.z_hip) < 0.02) & (np.abs(c[:, 0]) < 0.05)
+    cy = 0.5 * (c[near][:, 1].min() + c[near][:, 1].max())
+    cols = 96
+    alpha = np.linspace(0, 2 * np.pi, cols, endpoint=False)
+    dirs = np.stack([np.sin(alpha), -np.cos(alpha), np.zeros(cols)], 1)
+    back = (1 - np.cos(alpha)) * 0.5
+    z_top = gw.z_waist + 0.008
+    hem = gw.floor + 0.03 - 0.022 * back
+    # Rows close together over the hips, further apart down the fall.
+    u = np.linspace(0.0, 1.0, 38) ** 1.6
+    bm = bmesh.new()
+    vrows = []
+    prev = None
+    for k, uk in enumerate(u):
+        z = z_top + (hem - z_top) * uk
+        cs = np.stack([np.zeros(cols), np.full(cols, cy), z], 1)
+        if prev is None or z.mean() > gw.z_waist - 0.07:
+            rb = Fb.reach(cs, dirs, gw.R_bodice, gw.ease_bodice, miss=0.0)
+            rs = F.reach(cs, dirs, gw.R_skirt, gw.ease_skirt, miss=0.0)
+            blend = np.clip((gw.z_waist - 0.02 - z) / 0.05, 0, 1)
+            r = rb - 0.005 * (1 - blend) + (rs - rb) * blend
+        else:
+            r = F.reach(cs, dirs, gw.R_skirt, gw.ease_skirt, miss=0.0)
+            r = np.maximum(r, prev)
+        fall = np.clip((gw.z_hip - z) / (gw.z_hip - gw.floor), 0, 1)
+        flare = (0.045 + 0.03 * back ** 2) * fall ** 1.5
+        rr = r + flare
+        for _ in range(3):
+            rr = 0.25 * np.roll(rr, 1) + 0.5 * rr + 0.25 * np.roll(rr, -1)
+        if prev is not None:
+            r = np.maximum(r, prev)
+        prev = r
+        vrows.append(new_verts(bm, cs + dirs * rr[:, None]))
+    grid_faces(bm, vrows, closed=True, flip=True)
+    recalc(bm)
+    smooth(bm, 4)
+    return solidify(bm, 0.003, even=False)
+
+
+def waistband(body, gw, F):
+    """A narrow band at the waist over the join of the bodice and the skirt."""
+    c = body.co
+    cols = 120
+    alpha = np.linspace(0, 2 * np.pi, cols, endpoint=False)
+    dirs = np.stack([np.sin(alpha), -np.cos(alpha), np.zeros(cols)], 1)
+    bm = bmesh.new()
+    rows = []
+    for z in (gw.z_waist - 0.016, gw.z_waist + 0.014):
+        near = (np.abs(c[:, 2] - z) < 0.02) & (np.abs(c[:, 0]) < 0.05)
+        cy = 0.5 * (c[near][:, 1].min() + c[near][:, 1].max())
+        cs = np.stack([np.zeros(cols), np.full(cols, cy), np.full(cols, z)], 1)
+        r = F.reach(cs, dirs, gw.R_bodice, gw.ease_bodice) + 0.004
+        for _ in range(4):
+            r = 0.25 * np.roll(r, 1) + 0.5 * r + 0.25 * np.roll(r, -1)
+        rows.append(new_verts(bm, cs + dirs * r[:, None]))
+    grid_faces(bm, rows, closed=True, flip=True)
+    recalc(bm)
+    return solidify(bm, 0.003, even=False)
+
+
+def necklace(body, gw):
+    """A fine chain round the base of the neck with a drop at the front."""
+    bm = bmesh.new()
+    phis = np.linspace(0, 2 * np.pi, 96, endpoint=False)
+    pts = neck_ring(body, phis, gw.chain_line(phis), 0.0)
+    # Smoothed along its length and laid back on the skin, a few times.
+    for _ in range(4):
+        for _ in range(4):
+            pts = 0.25 * np.roll(pts, 1, 0) + 0.5 * pts + 0.25 * np.roll(pts, -1, 0)
+        for i, p in enumerate(pts):
+            loc, n, _i, _d = body.bvh.find_nearest(Vector(p))
+            pts[i] = np.array(loc) + np.array(n) * 0.0032
+    tube(bm, list(pts) + [pts[0]], 0.0017, segments=6)
+    # The drop: a little teardrop hanging from the front of the chain, just off the skin.
+    top = pts[0]
+    p, n = hit(body.bvh, (0.0, -0.6, top[2] - 0.016), (0, 1, 0))
+    drop = (p + n * 0.0065) if p is not None else top + np.array([0.0, -0.005, -0.016])
+    tube(bm, [top, drop + np.array([0, 0, 0.007])], 0.0011, segments=5)
+    bmesh.ops.create_uvsphere(bm, u_segments=10, v_segments=8, radius=0.0055,
+                              matrix=Matrix.Translation(Vector(drop)) @ Matrix.Diagonal((1.0, 0.7, 1.35, 1.0)))
+    recalc(bm)
+    return bm
+
+
+def gown_weights(body, gw):
+    """The skirt follows the hips at the top and, further down, the legs: each side its own
+    leg, blending across the middle, and towards the hem partly the shin, so a foot set back
+    stays inside it."""
+    pelvis = body.group("pelvis")
+    tl, tr = body.group("thigh_l"), body.group("thigh_r")
+    cl, cr = body.group("calf_l"), body.group("calf_r")
+    knee = body.bone("calf_l")[2]
+
+    def fn(P, W):
+        W = W.copy()
+        side = smoothstep(-0.07, 0.07, P[:, 0])
+        leg = smoothstep(body.hip[2] + 0.04, body.hip[2] - 0.4, P[:, 2])
+        shin = 0.65 * smoothstep(knee + 0.05, gw.floor + 0.1, P[:, 2])
+        L = np.zeros_like(W)
+        L[:, pelvis] = 1.0 - leg
+        L[:, tl] = leg * side * (1 - shin)
+        L[:, tr] = leg * (1.0 - side) * (1 - shin)
+        L[:, cl] = leg * side * shin
+        L[:, cr] = leg * (1.0 - side) * shin
+        blend = smoothstep(gw.z_waist - 0.02, gw.z_waist - 0.14, P[:, 2])[:, None]
+        return normalize_weights(W * (1 - blend) + L * blend)
+    return fn
+
+
+def evening_dress(body):
+    gw = Gown(body)
+    lower = bust_filler(body, z1=body.neck_z - 0.17)
+    F = Field(np.concatenate([body.triangles(), lower]))
+    # The bodice lies closer, on a finer field of the torso.
+    box = (np.array([-0.32, -0.4, gw.z_waist - 0.2]), np.array([0.32, 0.4, body.neck_z + 0.15]))
+    Fb = Field(np.concatenate([body.triangles(), lower]), h=0.004, box=box)
+    top = bodice(body, gw, Fb)
+    band = waistband(body, gw, Fb)
+    sk = gown_skirt(body, gw, F, Fb)
+    s = Suit(body)
+    feet = shoes(body, s, point=0.02)
+    chain = necklace(body, gw)
+    # The skin under the dress goes, but not under its edges, or below the shins (it shows
+    # under the hem as she walks).
+    c = body.co
+    g = np.array([gw.neckline(p) for p in c])
+    # Skin in a hollow the bodice bridges stays: it shows down the V, and can't come through.
+    inbox = np.all((c > box[0]) & (c < box[1]), axis=1)
+    deep = np.zeros(len(c), bool)
+    deep[inbox] = Fb.at(Fb.closing(gw.R_bodice)[0], c[inbox]) - gw.R_bodice > 0.008
+    covered = (g < -0.015) & (c[:, 2] > gw.z_waist - 0.02) & ~deep
+    covered |= (c[:, 2] < gw.z_waist) & (c[:, 2] > gw.z_shin) & (body.w_hand < 0.1)
+    covered |= c[:, 2] < s.z_ankle - 0.01
+    keep_skin(body, ~covered)
+    add_part(body, "Dress", [top, band, sk], gown_weights(body, gw), smooth_weights=30)
+    add_part(body, "Shoes", [feet])
+    add_part(body, "Necklace", [chain])
+
+
 # --- Putting it together -----------------------------------------------------------------------
 
 def trim_body(body, s):
@@ -995,7 +1364,11 @@ def trim_body(body, s):
     c = body.co
     dx, dy = c[:, 0], c[:, 1] - s.neck_y
     neck = (c[:, 2] > s.shirt_line(np.arctan2(dx, -dy)) + 0.035) & (np.hypot(dx, dy) < 0.16)
-    keep = (np.abs(c[:, 0]) > s.skin_hand) | neck | ((body.w_head > 0.5) & (c[:, 2] > body.neck_z + 0.08))
+    keep_skin(body, (np.abs(c[:, 0]) > s.skin_hand) | neck | ((body.w_head > 0.5) & (c[:, 2] > body.neck_z + 0.08)))
+
+
+def keep_skin(body, keep):
+    """Cuts away the body's faces with no corner in keep."""
     bm = bmesh.new()
     bm.from_mesh(body.obj.data)
     bm.verts.ensure_lookup_table()
@@ -1007,8 +1380,10 @@ def trim_body(body, s):
     body.obj.name = "Body"
 
 
-def add_part(body, name, bms, weights_fn=None, smooth_shade=True):
-    """One mesh from some bmeshes, skinned like the body under it."""
+def add_part(body, name, bms, weights_fn=None, smooth_shade=True, smooth_weights=0):
+    """One mesh from some bmeshes, skinned like the body under it. smooth_weights blurs the
+    weights over the mesh that many times first, so cloth bridging a hollow (where the nearest
+    skin jumps from one side to the other) doesn't tear as the body moves."""
     bm = bmesh.new()
     for b in bms:
         tmp = bpy.data.meshes.new("tmp")
@@ -1026,6 +1401,14 @@ def add_part(body, name, bms, weights_fn=None, smooth_shade=True):
         ob.vertex_groups.new(name=g)
     P = np.array([v.co[:] for v in me.vertices])
     W = body.weights(P)
+    if smooth_weights:
+        E = np.array([e.vertices[:] for e in me.edges])
+        n = len(P)
+        A = sparse.coo_matrix((np.ones(2 * len(E)), (np.r_[E[:, 0], E[:, 1]], np.r_[E[:, 1], E[:, 0]])), shape=(n, n)).tocsr()
+        deg = np.maximum(np.asarray(A.sum(1)).ravel(), 1)[:, None]
+        for _ in range(smooth_weights):
+            W = 0.5 * W + 0.5 * (A @ W) / deg
+        W = normalize_weights(W.astype(np.float32))
     if weights_fn:
         W = weights_fn(P, W)
     for gi in range(W.shape[1]):
@@ -1077,7 +1460,10 @@ def head_weights(body, until):
 
 def halberd_suit(body):
     s = Suit(body)
-    F = Field(body.triangles())
+    tris = body.triangles()
+    if s.female:
+        tris = np.concatenate([tris, bust_filler(body), seat_filler(body)])
+    F = Field(tris)
     jac = jacket_shell(body, s, F)
     jacket_bvh = bvh_of(jac)
     open_v(jac, s)
@@ -1092,7 +1478,7 @@ def halberd_suit(body):
     sh = shirt(body, s, F)
     shirt_bvh = bvh_of(sh[0])
     tie_bm = tie(body, s, shirt_bvh)
-    shoe_bm = shoes(body, s)
+    shoe_bm = shoes(body, s, point=0.012 if s.female else 0.0)
     buttons, pin = buttons_and_pin(body, s, jacket_bvh, skirt_bvh, lapel_bvh)
     ear = earpiece(body, F)
     trim_body(body, s)
@@ -1115,7 +1501,8 @@ def halberd_suit(body):
     add_part(body, "Earpiece", [ear], head_weights(body, body.neck_z + 0.07))
 
 
-OUTFITS = {"halberd_suit": halberd_suit}
+# Each outfit and the bodies it's made for.
+OUTFITS = {"halberd_suit": (halberd_suit, ("male", "female")), "evening_dress": (evening_dress, ("female",))}
 
 
 def export(body, path):
@@ -1134,9 +1521,10 @@ def main():
     outfits = [o for o in OUTFITS if not (WANT & set(OUTFITS)) or o in WANT]
     bodies = [b for b in BODIES if not (WANT & set(BODIES)) or b in WANT]
     for outfit in outfits:
-        for kind in bodies:
+        make, fits = OUTFITS[outfit]
+        for kind in [b for b in bodies if b in fits]:
             body = Body(kind)
-            OUTFITS[outfit](body)
+            make(body)
             path = os.path.join(OUT, "%s_%s.gltf" % (outfit, kind))
             export(body, path)
             print("wrote", path)
