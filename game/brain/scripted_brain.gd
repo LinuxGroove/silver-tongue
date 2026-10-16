@@ -119,7 +119,7 @@ const HOT := ["forged", "forgery", "fake", "con ", "the rose", "diamond", "mae",
 
 static func _hot(heard: String, sheet: CharacterSheet = null) -> bool:
 	for w in HOT:
-		if heard.contains(w):
+		if heard.contains(w) and not (sheet and w in sheet.cool_words):
 			return true
 	if sheet:
 		for w in sheet.hot_words:

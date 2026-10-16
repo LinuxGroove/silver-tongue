@@ -95,6 +95,9 @@ var more_actions := {}
 ## Words that make them look up when they overhear them, on top of
 ## [constant ScriptedBrain.HOT].
 var hot_words: Array = []
+## Words of [constant ScriptedBrain.HOT] that don't make them look up here
+## (the Rose, at its own press call).
+var cool_words: Array = []
 
 
 ## Marcus Hale, the Halberd guard on the Meridian's service door: M0's one guard.
