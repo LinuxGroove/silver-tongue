@@ -374,6 +374,9 @@ func _casino_floor() -> void:
 	for p in [Vector3(-12.5, 3.9, -4.0), Vector3(1.5, 3.9, -4.0), Vector3(-13.0, 3.9, -21.5), Vector3(4.0, 3.9, -23.0), Vector3(7.5, 3.6, -13.5)]:
 		_omni(p, WARM, 0.55, 10.0)
 	_omni(Vector3(-2.4, 4.0, -15.5), Color(1.0, 0.7, 0.42), 0.8, 8.0)
+	# Inside the front doors, and the cage's windows.
+	_omni(Vector3(-4.0, 3.8, -4.5), WARM, 0.6, 7.0)
+	_omni(Vector3(8.2, 3.3, -10.0), WARM, 0.7, 5.5)
 	_probe(r, FLOOR_H, Color(0.4, 0.27, 0.22), 0.3)
 
 
@@ -650,7 +653,9 @@ func _eye() -> void:
 	_m("doorframe_plain", Vector3(19.5, 0.0, -18.2), PI)
 	_omni(Vector3(19.5, 1.7, -24.2), Color(0.5, 0.68, 1.0), 1.0, 5.5)
 	_slab(Vector3(19.5, BACK_H - 0.03, -20.5), Vector3(0.6, 0.05, 0.6), _mat("panel_light"))
-	_omni(Vector3(19.5, BACK_H - 0.4, -20.5), COOL, 0.35, 4.5)
+	_omni(Vector3(19.5, BACK_H - 0.4, -20.5), COOL, 0.6, 4.5)
+	# Behind Wes's chair, so he isn't only a shape against the screens.
+	_omni(Vector3(20.2, 2.1, -22.0), COOL, 0.4, 3.0)
 	_probe(r, BACK_H, Color(0.18, 0.22, 0.3), 0.3)
 
 
@@ -1014,7 +1019,7 @@ func _views() -> void:
 		"vault": [Vector3(16.6, 2.0, -6.7), Vector3(19.8, 0.8, -12.2)],
 		"corridor": [Vector3(11.0, 1.7, -16.0), Vector3(25.0, 1.4, -16.0)],
 		"count_room": [Vector3(11.0, 1.8, -19.0), Vector3(14.6, 0.8, -23.6)],
-		"eye": [Vector3(18.0, 1.7, -19.0), Vector3(19.6, 1.6, -25.6)],
+		"eye": [Vector3(21.2, 1.8, -19.2), Vector3(18.4, 1.3, -25.4)],
 		"office": [Vector3(23.0, 1.7, -18.8), Vector3(25.0, 0.9, -24.6)],
 		"staff_room": [Vector3(22.0, 1.7, -13.2), Vector3(24.6, 1.0, -7.4)],
 		"alley": [Vector3(31.5, 1.7, -2.0), Vector3(27.0, 1.4, -17.0)],
