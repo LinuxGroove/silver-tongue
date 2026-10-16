@@ -1,17 +1,16 @@
 class_name Face
 extends Node3D
-## A mouth that moves while a [Person] speaks: a small dark shape just below
-## the eyes, riding the head bone, that opens with the voice's loudness.
-## The body's own eyes and brows stay as they are.
+## A mouth that moves while a [Person] speaks: a dark oval between the lips,
+## riding the head bone, that opens with the voice's loudness and is gone
+## when they're quiet. The body's own eyes, brows and lips stay as they are.
 
 ## How far the mouth opens at full loudness, in meters.
-const OPEN := 0.028
-const REST := 0.005
+const OPEN := 0.02
+const WIDE := 0.036
 
 ## The voice's loudness right now, 0 to 1 (set by whoever plays the voice).
 var level := 0.0
 var _mouth: MeshInstance3D
-var _box: BoxMesh
 var _shown := 0.0
 
 
@@ -22,18 +21,24 @@ static func make(person: Person) -> Face:
 	f.name = "Face"
 	if rest:
 		rest.add_child(f)
-		f.position = person.eyes_at + Vector3(0, -0.082, 0.028)
+		# The line between the lips, measured on the male body, a little behind
+		# their front so they frame it.
+		f.position = person.eyes_at + Vector3(0, -0.073, 0.018)
 	f._build()
 	return f
 
 
 func _build() -> void:
-	_box = BoxMesh.new()
-	_box.size = Vector3(0.046, REST, 0.012)
+	var oval := SphereMesh.new()
+	oval.radius = 0.5
+	oval.height = 1.0
+	oval.radial_segments = 16
+	oval.rings = 8
 	_mouth = MeshInstance3D.new()
-	_mouth.mesh = _box
-	_mouth.material_override = Kit.flat(Color(0.22, 0.07, 0.07), 0.6)
+	_mouth.mesh = oval
+	_mouth.material_override = Kit.flat(Color(0.12, 0.04, 0.04), 0.7)
 	_mouth.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_mouth.visible = false
 	add_child(_mouth)
 
 
@@ -42,5 +47,8 @@ func _process(delta: float) -> void:
 	var target := clampf(level, 0.0, 1.0)
 	var k := 1.0 - exp(-delta * (30.0 if target > _shown else 18.0))
 	_shown = lerpf(_shown, target, k)
-	_box.size = Vector3(0.046 - _shown * 0.012, REST + OPEN * _shown, 0.012)
-	_mouth.position.y = -(_box.size.y - REST) * 0.5
+	_mouth.visible = _shown > 0.04
+	var open := OPEN * _shown
+	_mouth.scale = Vector3(WIDE - _shown * 0.01, open, 0.014)
+	# The top stays at the upper lip; the jaw drops.
+	_mouth.position.y = -open * 0.4

@@ -1,10 +1,12 @@
 class_name Person
 extends Node3D
 ## Someone in the Meridian: a guard, a member of staff or a guest, a
-## Universal Base Character dressed by [code]person.gdshader[/code] and
-## animated with the Universal Animation Libraries. Clothes are drawn on the
-## rest pose, so one shader dresses everyone (the shader and the bake come
-## from Burn Rate's tower staff).
+## Universal Base Character animated with the Universal Animation Libraries.
+## A job with real clothes ([constant WARDROBE], made by
+## [code]tools/blender/wardrobe.py[/code]) wears them, with the body's own
+## skin and eyes; anyone else is dressed by [code]person.gdshader[/code], which
+## draws clothes on the rest pose (the shader and the bake come from Burn
+## Rate's tower staff).
 
 const MALE := "res://assets/people/Superhero_Male_FullBody.gltf"
 const FEMALE := "res://assets/people/Superhero_Female_FullBody.gltf"
@@ -12,13 +14,33 @@ const UAL1 := "res://assets/people/UAL1_Standard.glb"
 const UAL2 := "res://assets/people/UAL2_Standard.glb"
 const HAIR := "res://assets/people/hair/%s.gltf"
 const SHADER := preload("res://game/people/person.gdshader")
+const WARDROBE_SHADER := preload("res://game/people/wardrobe.gdshader")
+## An outfit fitted to a body: the outfit's name, then "male" or "female".
+const OUTFIT := "res://assets/people/outfits/%s_%s.gltf"
+const SKIN_TEXTURE := "res://assets/people/textures/T_Superhero_%s_Skin.png"
+const EYE_TEXTURE := "res://assets/people/textures/T_Eye_Brown.png"
+## The skin texture's own average colour, which it's tinted from to each skin.
+const SKIN_MEAN := Color(0.65, 0.46, 0.32)
 
-## What each job wears: outfit (see the shader) and colours.
+## What each job wears: the painted outfit (see the shader), its colours, and
+## real clothes ("wardrobe", a key of [constant WARDROBE]) where it has them.
 const JOBS := {
-	"guard": {"outfit": 3, "main": Color(0.1, 0.1, 0.12), "accent": Color(1.0, 0.55, 0.0)},
+	"guard": {"outfit": 3, "main": Color(0.19, 0.195, 0.21), "accent": Color(0.85, 0.08, 0.12), "shirt": Color(0.86, 0.87, 0.88),
+		"tie": Color(0.36, 0.05, 0.07), "wardrobe": "halberd_suit"},
 	"staff": {"outfit": 2, "main": Color(0.16, 0.17, 0.22), "accent": Color(0.75, 0.15, 0.2), "shirt": Color(0.9, 0.9, 0.92)},
 	"guest": {"outfit": 2, "main": Color(0.3, 0.22, 0.16), "accent": Color(0.4, 0.55, 0.3), "shirt": Color(0.85, 0.82, 0.75)},
 	"kitchen": {"outfit": 4, "main": Color(0.9, 0.9, 0.9), "accent": Color(0.2, 0.2, 0.2), "shirt": Color(0.95, 0.95, 0.95)},
+}
+## Real clothes, piece by piece (the outfit's mesh names): a colour (or the
+## job's colour of that name), roughness, mottle, sheen and metallic.
+const WARDROBE := {
+	"halberd_suit": {
+		"Suit": ["main", 0.82, 0.14, 0.3, 0.0], "Skirt": ["main", 0.82, 0.14, 0.3, 0.0],
+		"Trousers": ["main", 0.82, 0.14, 0.3, 0.0], "Shirt": ["shirt", 0.7, 0.05, 0.15, 0.0],
+		"Tie": ["tie", 0.55, 0.12, 0.35, 0.0], "Shoes": [Color(0.03, 0.03, 0.035), 0.22, 0.0, 0.0, 0.0],
+		"Buttons": [Color(0.04, 0.04, 0.045), 0.35, 0.0, 0.0, 0.0], "Pin": ["accent", 0.3, 0.0, 0.0, 0.6],
+		"Earpiece": [Color(0.05, 0.05, 0.06), 0.4, 0.0, 0.0, 0.0],
+	},
 }
 const SKINS := [Color(0.88, 0.69, 0.56), Color(0.78, 0.56, 0.44), Color(0.6, 0.42, 0.3), Color(0.42, 0.28, 0.2), Color(0.3, 0.2, 0.15)]
 const HAIR_COLORS := [Color(0.08, 0.06, 0.05), Color(0.25, 0.15, 0.08), Color(0.5, 0.35, 0.18), Color(0.62, 0.58, 0.52), Color(0.55, 0.22, 0.1), Color(0.75, 0.6, 0.35)]
@@ -39,9 +61,12 @@ static var _libs := {}
 static var _baked := {}
 static var _mats := {}
 static var _hair_mats := {}
+static var _piece_mats := {}
 
 var job := "staff"
 var female := false
+## The outfit this person wears ("" when the shader paints one on).
+var outfit := ""
 var model: Node3D
 var skeleton: Skeleton3D
 var anim: AnimationPlayer
@@ -52,7 +77,7 @@ var _current := ""
 
 
 ## A person. `look` can set "skin", "hair" and "style" (indexes), "beard"
-## and the "main", "accent" and "shirt" colours; anything missing comes from
+## and the "main", "accent", "shirt" and "tie" colours; anything missing comes from
 ## `seed`. `p_job` is a key of [constant JOBS].
 static func make(p_job := "staff", p_female := false, seed := 0, look := {}) -> Person:
 	var c := Person.new()
@@ -64,7 +89,11 @@ static func make(p_job := "staff", p_female := false, seed := 0, look := {}) -> 
 
 
 func _build(seed: int, look: Dictionary) -> void:
-	var ps: PackedScene = load(FEMALE if female else MALE)
+	var j: Dictionary = JOBS[job].duplicate()
+	var dressed := OUTFIT % [j.get("wardrobe", ""), "female" if female else "male"]
+	if j.has("wardrobe") and ResourceLoader.exists(dressed):
+		outfit = str(j.wardrobe)
+	var ps: PackedScene = load(dressed if outfit != "" else (FEMALE if female else MALE))
 	model = ps.instantiate()
 	add_child(model)
 	skeleton = model.find_child("Skeleton3D", true, false)
@@ -74,8 +103,7 @@ func _build(seed: int, look: Dictionary) -> void:
 	var hair_i := int(look.get("hair", r.randi() % HAIR_COLORS.size())) % HAIR_COLORS.size()
 	var styles: Array = HAIR_STYLES["female" if female else "male"]
 	var style_i := int(look.get("style", r.randi() % styles.size())) % styles.size()
-	var j: Dictionary = JOBS[job].duplicate()
-	for k in ["main", "accent", "shirt", "legs"]:
+	for k in ["main", "accent", "shirt", "legs", "tie"]:
 		if look.has(k):
 			j[k] = look[k]
 	j["wrist"] = 0.6 if female else 0.66
@@ -86,10 +114,10 @@ func _build(seed: int, look: Dictionary) -> void:
 		if m.name.begins_with("Eye"):
 			if m.name == "Eyes" and m.mesh:
 				eyes_at = m.mesh.get_aabb().get_center()
-			m.material_override = Kit.flat(Color(0.9, 0.88, 0.85) if m.name == "Eyes" else HAIR_COLORS[hair_i] * 0.7, 0.4)
+			m.material_override = _eye_material() if m.name == "Eyes" else Kit.flat(HAIR_COLORS[hair_i] * 0.7, 0.4)
 			continue
 		m.mesh = bake(m.mesh, m.skin, skeleton)
-		m.material_override = mat
+		m.material_override = _piece_material(outfit, String(m.name), j, skin_i) if outfit != "" else mat
 	_add_hair(str(styles[style_i]), HAIR_COLORS[hair_i])
 	if not female and bool(look.get("beard", r.randf() < 0.3)):
 		_add_hair("Hair_Beard", HAIR_COLORS[hair_i])
@@ -158,6 +186,44 @@ static func _material(j: Dictionary, skin_i: int) -> ShaderMaterial:
 		m.set_shader_parameter("skin", SKINS[skin_i])
 		_mats[key] = m
 	return _mats[key]
+
+
+## A piece of an outfit, or the skin under it (any mesh the outfit doesn't list).
+func _piece_material(p_outfit: String, piece: String, j: Dictionary, skin_i: int) -> ShaderMaterial:
+	var look: Array = WARDROBE[p_outfit].get(piece, [])
+	var col: Color = SKINS[skin_i]
+	if not look.is_empty():
+		col = look[0] if look[0] is Color else j.get(look[0], Color.MAGENTA)
+	var key := "%s/%s/%s/%s" % [p_outfit, piece, col.to_html(), "f" if female else "m"]
+	if _piece_mats.has(key):
+		return _piece_mats[key]
+	var m := ShaderMaterial.new()
+	m.shader = WARDROBE_SHADER
+	m.set_shader_parameter("color", col)
+	if look.is_empty():
+		var tex_path := SKIN_TEXTURE % ("Female" if female else "Male")
+		if ResourceLoader.exists(tex_path):
+			m.set_shader_parameter("textured", true)
+			m.set_shader_parameter("tex", load(tex_path))
+			m.set_shader_parameter("tex_mean", SKIN_MEAN)
+		m.set_shader_parameter("roughness", 0.62)
+		m.set_shader_parameter("specular", 0.35)
+	else:
+		m.set_shader_parameter("roughness", float(look[1]))
+		m.set_shader_parameter("mottle", float(look[2]))
+		m.set_shader_parameter("sheen", float(look[3]))
+		m.set_shader_parameter("metallic", float(look[4]))
+	_piece_mats[key] = m
+	return m
+
+
+static func _eye_material() -> Material:
+	if not _piece_mats.has("eyes"):
+		var m := StandardMaterial3D.new()
+		m.albedo_texture = load(EYE_TEXTURE)
+		m.roughness = 0.25
+		_piece_mats["eyes"] = m
+	return _piece_mats["eyes"]
 
 
 static func _lib(path: String) -> AnimationLibrary:

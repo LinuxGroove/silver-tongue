@@ -202,6 +202,22 @@ func _test_person() -> void:
 	add_child(p)
 	await frames(2)
 	check(p.meshes.size() >= 3 and p.skeleton != null, "Marcus has a body")
+	check(p.outfit == "halberd_suit", "Marcus wears Halberd's suit")
+	var pieces := {}
+	for m in p.meshes:
+		pieces[String(m.name)] = m
+	for piece in ["Body", "Eyes", "Suit", "Shirt", "Tie", "Trousers", "Shoes", "Earpiece"]:
+		check(pieces.has(piece), "his outfit has its " + piece)
+	var suit: MeshInstance3D = pieces.get("Suit")
+	check(suit != null and suit.skin != null and suit.mesh.surface_get_format(0) & Mesh.ARRAY_FORMAT_CUSTOM0 != 0, "the suit is skinned and baked for the shader")
+	var body: MeshInstance3D = pieces.get("Body")
+	var skin_mat := body.material_override as ShaderMaterial if body else null
+	check(skin_mat != null and skin_mat.get_shader_parameter("textured"), "his skin is the body's own texture")
+	check(p.bone_position("Head").y > 1.5, "the suit's skeleton stands him up")
+	var other := Person.make("guard", true, 3)
+	add_child(other)
+	check(other.outfit == "" and other.meshes.size() >= 1, "a guard the suit isn't made for gets the painted uniform")
+	other.queue_free()
 	for clip in ["Idle_FoldArms", "Idle", "Idle_Talking", "Idle_TalkingPhone", "Interact", "Idle_No", "Yes"]:
 		check(p.clip_path(clip) != "", "the libraries have " + clip)
 	p.play("Idle_Talking")
@@ -209,9 +225,10 @@ func _test_person() -> void:
 	var f := Face.make(p)
 	await frames(1)
 	check(f.is_inside_tree() and f.global_position.y > 1.4 and f.global_position.y < 1.75, "the mouth sits on the face (y %.2f)" % f.global_position.y)
+	check(not f._mouth.visible, "the mouth is shut when he's quiet")
 	f.level = 1.0
 	await frames(3)
-	check(f._box.size.y > Face.REST, "the mouth opens with the voice")
+	check(f._mouth.visible and f._mouth.scale.y > Face.OPEN * 0.3, "the mouth opens with the voice")
 	p.queue_free()
 
 

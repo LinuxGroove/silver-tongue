@@ -10,8 +10,12 @@ Made by Drew, Kaden and Ken VanDine, the LinuxGroove team.
   (vendored from LinuxGroove/quaternius-assets by `tools/vendor_megakit.py`).
 - Marcus and the rest of the cast are Quaternius' Universal Base Characters
   with their hair, animated with the Universal Animation Library 1 and 2
-  (CC0), in `assets/people/` with their licence files. Their clothes are
-  drawn by `game/people/person.gdshader`.
+  (CC0), in `assets/people/` with their licence files, and their skin and
+  eye textures (the male skin scaled down) in `assets/people/textures/`.
+  Marcus's suit is made by `tools/blender/wardrobe.py` (with Blender's
+  Python module, GPL, which isn't shipped) and is CC0 like the body it's
+  fitted to; anyone without real clothes yet is dressed by
+  `game/people/person.gdshader`.
 - The icon is drawn by `tools/make_icon.py`.
 
 ## Fonts

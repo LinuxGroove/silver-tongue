@@ -16,6 +16,7 @@ godot --path . tools/m0_bench.tscn -- --model=LFM2.5-1.2B-Instruct-GGUF --runs=2
 python3 tools/fake_lemonade.py --port 13399                         # the stand-in Lemonade the tests use
 python3 tools/make_icon.py && godot --headless --path . -s tools/svg_to_png.gd -- icon.svg icon.png 512   # the icon
 python3 tools/vendor_megakit.py                                     # the MegaKit pieces from LinuxGroove/quaternius-assets
+python tools/blender/wardrobe.py assets/people assets/people/outfits halberd_suit male   # Marcus's suit (Python 3.13 venv with bpy, scipy, scikit-image)
 ```
 
 Run the script check and the tests before every commit. The tests start `tools/fake_lemonade.py` themselves (python3, standard library only) on a free port, so they need no model and no network. A new `class_name` needs an `--import` before the script check finds it. Headless runs reimport assets and rewrite `*.import` files and `icon.png.import`; revert those (`git checkout -- '*.import'`, `rm icon.png.import`) unless you meant to change them.
@@ -27,7 +28,7 @@ Run the script check and the tests before every commit. The tests start `tools/f
 | `game/game_config.gd` | `GAME_ID`, setting defaults (play, voice), the play test survey, input map (Cogito's action names plus talk, whisper, shout, text) |
 | `game/brain/` | `CharacterSheet` (Marcus: who he is, his voice, his actions, his scripted lines), `GuardPrompt` (the system prompt and the history's lines), `ReplySchema` (the reply's JSON schema and the probe), `GuardRules` (what a reply may do), `Earshot` (distance and voice to clarity), `BrainQueue` (one request at a time, with a timeout and the token counts), `Guard` (hears, thinks, speaks, acts), `ModelSetup` (starts the AI server and downloads and warms the three models before the door, with progress per model) |
 | `game/world/` | `Kit` (MegaKit pieces by name, layers), `ServiceDoorRoom` (the corridor, in code), `GuardDoor` |
-| `game/people/` | `Person` (Universal Base Characters in job colours, clips), `Face` (the mouth), `person.gdshader` |
+| `game/people/` | `Person` (Universal Base Characters, clips; a job's real clothes from `WARDROBE`, or job colours painted by `person.gdshader`), `wardrobe.gdshader` (cloth and the textured skin), `Face` (the mouth) |
 | `game/player/` | `CrewMember` (extends `CogitoPlayer`: the talk controls, the pause menu, comfort) |
 | `game/proof/` | `ProofScene`: the door, from the services starting to the result card and the `user://m0/` record |
 | `game/ui/` | Title and About, the setup screen (`SetupScreen`: a progress bar per model before the door), how to play, settings, the HUD and its readout, the typed line, the result card, the pause menu, `HotelTheme`, the menu backdrop |
@@ -38,9 +39,9 @@ Run the script check and the tests before every commit. The tests start `tools/f
 | `addons/cogito/` | Vendored COGITO 1.1.5 with local changes (see its `VENDORED.md`) |
 | `addons/quaternius/downtowncity/` | The MegaKit pieces the game uses (CC0), from LinuxGroove/quaternius-assets by `tools/vendor_megakit.py` |
 | `addons/com.heroiclabs.nakama/` | Vendored Nakama client with a local patch (see its `VENDORED.md`) |
-| `assets/people/` | The base characters, their hair and the animation libraries |
+| `assets/people/` | The base characters, their hair, skin and eye textures (`textures/`), the outfits fitted to them (`outfits/`, made by `tools/blender/wardrobe.py`) and the animation libraries |
 | `tests/run_tests.gd` | Headless test runner; add checks with `check(ok, "what")` |
-| `tools/` | Script checker, `fake_lemonade.py`, `m0_bench`, `probe_models.gd` (model sizes and bones), the icon, `version.sh`, `release.sh` |
+| `tools/` | Script checker, `fake_lemonade.py`, `m0_bench`, `probe_models.gd` (model sizes and bones), `blender/wardrobe.py` (the outfits), the icon, `version.sh`, `release.sh` |
 | `docs/m0.md` | What M0 is, what to measure on real hardware, and the tables to fill in |
 
 ## How the game is built
@@ -50,6 +51,7 @@ Run the script check and the tests before every commit. The tests start `tools/f
 - **The model only talks.** A turn is one chat request with the stable system prompt first (so the server's cache reuses it) and the history after, forced into `ReplySchema` by a `json_schema` response format. `GuardRules` applies the rules before anything happens: suspicion moves at most two steps a turn, `let_through` needs trust and at least two turns, `radio_security` needs suspicion 4, and 5 ends it. Facts behind a trust lock (the kitchen code) are never in the prompt.
 - **Earshot is the game's.** `Earshot` decides what reached the guard from where and in what voice, and tells the model how well it heard. Typed lines go through the same path.
 - **Every turn is measured.** `Guard.turns` keeps what was said and heard, the hearing timings, the round trip, the prompt and cached token counts, whether the reply was strict, whether it timed out, and the time to the first sound; the HUD shows the last one and `ProofScene` writes them all to `user://m0/`. Keep that record complete: M0 is the measurements.
+- **People wear real clothes** where a job has them: `tools/blender/wardrobe.py` fits an outfit over a base body (a distance field of the body, closed so cloth bridges hollows, with collars and the shirt's front following lines round the neck) and writes one glTF with the body's own skeleton, the skin the clothes cover cut away, and each piece as its own skinned mesh (Suit, Shirt, Tie, Trousers, Shoes, ...). `Person` loads it for the job's `wardrobe` and colours each piece by name from `WARDROBE`; the skin is the body's texture tinted to the person's skin. Only the male body has the Halberd suit so far; a female guard gets the painted uniform. After changing the script, rebuild the glTF and check the collar with the head turned (Idle, Idle_FoldArms), where it's easiest to break.
 - **Levels are code**, as in Tiptoe: the room places MegaKit pieces on a grid with collision from their bounds (`Kit`), and the door is a `StaticBody3D` on the Doors layer.
 - **Layers**: 1 world, 2 interactables, 4 people, 8 player, 16 doors. `Kit.LAYER_SOLID` is what blocks the way.
 - **Cogito** provides the player controller, interaction raycast and footsteps; `CrewMember` frees what it doesn't use. Head bob and view roll default off, physics interpolation on; never add camera shake.
