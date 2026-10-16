@@ -291,8 +291,8 @@ static func dot() -> CharacterSheet:
 	s.staff = true
 	s.female = true
 	s.seed = 91
-	s.look = {"skin": 2, "hair": 3, "style": 3, "main": Color(0.55, 0.18, 0.14), "legs": Color(0.16, 0.15, 0.2), "accent": Color(0.86, 0.82, 0.72)}
-	s.person_job = "party_help"
+	s.look = {"skin": 2, "hair": 3, "style": 3}
+	s.person_job = "mae_cook"
 	s.voice = "bf_isabella"
 	s.voice_speed = 0.92
 	s.manner = "Warm, nosy and blunt, with flour on everything. You've known Mae forty years and you'd do anything for her, except watch her do something stupid. You feed everyone. Praise your cooking and you're anyone's. Mae taught you to spot a liar too. You're worried about Mae tonight and you don't know why."

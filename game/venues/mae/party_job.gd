@@ -97,7 +97,7 @@ func _init() -> void:
 	end_text = "the end of the party"
 	covers = {
 		"crew": {
-			"title": "Mae's crew",
+			"title": "One of the crew",
 			"names": ["Nicky Lane", "Nicky Lane"],
 			"job": "one of Mae's crew, at her party like every year",
 			"story": "Mae invited the whole crew, like every year. She doesn't know you know. Don't lie to her: she taught you how.",
@@ -155,6 +155,7 @@ func _init() -> void:
 		"appraiser": {"outfit": 2, "main": Color(0.4, 0.31, 0.2), "legs": Color(0.22, 0.2, 0.18), "accent": Color(0.2, 0.32, 0.22),
 			"shirt": Color(0.86, 0.84, 0.78), "tie": Color(0.2, 0.32, 0.22), "wardrobe": "halberd_suit", "hide": ["Pin", "Earpiece"]},
 		"party_help": {"outfit": 4, "main": Color(0.1, 0.1, 0.11), "accent": Color(0.5, 0.4, 0.3), "shirt": Color(0.06, 0.06, 0.07)},
+		"mae_cook": {"outfit": 1, "main": Color(0.55, 0.18, 0.14), "legs": Color(0.16, 0.15, 0.2), "accent": Color(0.85, 0.7, 0.3), "shirt": Color(0.86, 0.82, 0.72)},
 		"bodyguard": {"outfit": 3, "main": Color(0.06, 0.06, 0.07), "legs": Color(0.06, 0.06, 0.07), "accent": Color(0.08, 0.08, 0.09),
 			"shirt": Color(0.12, 0.12, 0.13), "tie": Color(0.04, 0.04, 0.045), "wardrobe": "halberd_suit", "hide": ["Pin"]},
 		"buyer": {"outfit": 2, "main": Color(0.55, 0.56, 0.58), "legs": Color(0.5, 0.51, 0.53), "accent": Color(0.3, 0.1, 0.35),
