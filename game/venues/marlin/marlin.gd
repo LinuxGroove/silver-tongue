@@ -527,7 +527,7 @@ func _hull() -> void:
 	for x in [-2.6, 2.6]:
 		_omni(Vector3(x, -0.95, -1.3), Color(0.35, 0.8, 1.0), 1.4, 5.0)
 	# The mast on the hardtop.
-	_m("marlin_mast", Vector3(0.0, UPPER + UPPER_H + 0.3, -26.0))
+	_m("marlin_mast", Vector3(0.0, UPPER + UPPER_H + 0.42, -26.0))
 
 
 # --- Floors ------------------------------------------------------------------------------------
@@ -732,7 +732,9 @@ func _aft_deck() -> void:
 	# Posts under the sun deck's overhang.
 	for side in [-1.0, 1.0]:
 		_slab(Vector3(side * 4.45, 1.75, -4.15), Vector3(0.12, 1.5, 0.12), _mat("hull_paint"))
-	_ceiling(Rect2(-4.6, -10.0, 9.2, 6.0), h, "ceiling_white")
+	# The ceiling, open over the stair well to starboard.
+	_ceiling(Rect2(-4.6, -10.0, 7.8, 6.0), h, "ceiling_white")
+	_ceiling(Rect2(3.2, -10.0, 1.4, 1.6), h, "ceiling_white")
 	# The saloon's aft wall, seen from out here.
 	_wall("skin", Vector2(-SKIN, -9.9), Vector2(SKIN, -9.9), Vector2(0, 1), h,
 			[{"at": -3.6, "w": 0.9, "h": 2.0}, {"at": -1.2, "w": 2.6, "h": 2.3, "y0": 0.5},
@@ -1042,9 +1044,9 @@ func _captain() -> void:
 	_wall("steel", Vector2(-2.05, -32.9), Vector2(-2.05, -30.7), Vector2(-1, 0), h, [], 0.1)
 	_box("marlin_safe_cabinet", Vector3(-4.05, 0.0, -32.235))
 	if night == "safe":
-		_use("safe_shelf", Vector3(-4.1, 0.95, -32.55), Vector3(0.5, 0.3, 0.4), "marlin_file")
+		_use("safe_shelf", Vector3(-4.05, 0.92, -32.2), Vector3(0.5, 0.3, 0.4), "marlin_file")
 		uses.safe_shelf.set_meta("use", "item:auction_file")
-	_omni(Vector3(-3.3, 2.0, -31.8), COOL, 0.6, 3.5)
+	_omni(Vector3(-3.3, 2.0, -31.6), COOL, 0.9, 3.5)
 	_slab(Vector3(-3.3, h - 0.01, -31.8), Vector3(0.3, 0.02, 0.3), _mat("led_cool"))
 	# The keypad by the strongroom door, on the cabin's side.
 	_on("captain", UPPER)
@@ -1070,10 +1072,11 @@ func _bridge() -> void:
 		_box("marlin_helm_chair", Vector3(x, 0.0, -36.45), PI)
 	_box("marlin_chart_table", Vector3(4.08, 0.0, -34.0), -PI * 0.5)
 	clocks.append(_m("wall_clock", Vector3(-2.5, 1.7, -33.1), PI))
-	_omni(Vector3(0.0, 1.3, -36.8), Color(0.4, 0.75, 0.9), 0.5, 4.0)
-	_omni(Vector3(3.9, 1.4, -34.0), CANDLE, 0.4, 2.5)
-	_omni(Vector3(0.0, 2.1, -34.6), Color(0.85, 0.3, 0.25), 0.25, 5.0)
-	_probe(r, h, Color(0.18, 0.2, 0.24), 0.3)
+	_omni(Vector3(0.0, 1.3, -36.8), Color(0.4, 0.75, 0.9), 0.9, 4.5)
+	_omni(Vector3(3.9, 1.4, -34.0), CANDLE, 0.7, 3.5)
+	_omni(Vector3(0.0, 2.1, -34.6), Color(0.85, 0.3, 0.25), 0.45, 6.0)
+	_omni(Vector3(-2.6, 2.0, -34.2), WARM, 0.35, 4.5)
+	_probe(r, h, Color(0.22, 0.24, 0.28), 0.4)
 
 
 # --- The outside of the house ------------------------------------------------------------------
@@ -1113,13 +1116,15 @@ func _house() -> void:
 			[{"at": 0.0, "w": 1.0, "h": 2.2}, {"at": -2.6, "w": 3.0, "h": 2.2, "y0": 0.6}, {"at": 2.6, "w": 3.0, "h": 2.2, "y0": 0.6}], 0.1)
 	# The hardtop over the house, overhanging the sun deck a little.
 	_on("outside", UPPER)
-	_slab(Vector3(0.0, UPPER_H + 0.15, -26.1), Vector3(9.8, 0.3, 25.0), _mat("hull_paint"))
-	_slab(Vector3(0.0, UPPER_H - 0.01, -13.8), Vector3(9.6, 0.02, 0.3), _mat("ceiling_white"))
+	_slab(Vector3(0.0, UPPER_H + 0.27, -26.1), Vector3(9.8, 0.3, 25.0), _mat("hull_paint"))
+	_slab(Vector3(0.0, UPPER_H + 0.11, -13.8), Vector3(9.6, 0.02, 0.3), _mat("ceiling_white"))
 	for x in [-2.0, 2.0]:
-		_slab(Vector3(x, UPPER_H - 0.02, -13.75), Vector3(0.16, 0.012, 0.16), _mat("led"))
+		_slab(Vector3(x, UPPER_H + 0.1, -13.75), Vector3(0.16, 0.012, 0.16), _mat("led"))
 	# The sun deck's slab over the aft deck, seen from the quay.
 	_on("outside", 0.0)
-	_slab(Vector3(0.0, (UPPER + MAIN + MAIN_H) * 0.5, -7.0), Vector3(9.6, UPPER - MAIN - MAIN_H - 0.04, 6.0), _mat("hull_paint"))
+	var between := UPPER - MAIN - MAIN_H - 0.04
+	_slab(Vector3(-0.8, (UPPER + MAIN + MAIN_H) * 0.5, -7.0), Vector3(8.0, between, 6.0), _mat("hull_paint"))
+	_slab(Vector3(4.0, (UPPER + MAIN + MAIN_H) * 0.5, -9.2), Vector3(1.6, between, 1.6), _mat("hull_paint"))
 	_slab(Vector3(0.0, UPPER - 0.02, -4.02), Vector3(9.6, 0.04, 0.04), _mat("chrome"))
 
 
@@ -1316,14 +1321,14 @@ func _views() -> void:
 		"lobby": [Vector3(-3.8, 2.9, -25.6), Vector3(3.0, 2.6, -30.4)],
 		"crew_stair": [Vector3(-3.7, 3.35, -10.35), Vector3(-3.7, -0.9, -15.6)],
 		"corridor": [Vector3(0.0, 0.25, -16.0), Vector3(0.0, -0.3, -30.5)],
-		"galley": [Vector3(1.4, 0.35, -22.1), Vector3(4.0, -0.5, -16.4)],
-		"mess": [Vector3(-1.3, 0.35, -24.0), Vector3(-3.9, -0.7, -18.8)],
+		"galley": [Vector3(1.3, 0.4, -15.9), Vector3(3.6, -0.6, -21.6)],
+		"mess": [Vector3(-1.25, 0.4, -18.0), Vector3(-3.9, -0.8, -23.5)],
 		"cabin": [Vector3(1.25, 0.3, -26.6), Vector3(4.0, -0.8, -30.4)],
 		"sun_deck": [Vector3(3.9, 6.0, -4.4), Vector3(-2.2, 4.6, -12.0)],
 		"sky_lounge": [Vector3(3.8, 6.2, -14.5), Vector3(-3.0, 4.8, -19.6)],
 		"upper_hall": [Vector3(2.0, 6.2, -21.2), Vector3(3.0, 4.9, -32.5)],
 		"captain": [Vector3(0.5, 6.1, -21.3), Vector3(-3.6, 4.6, -28.6)],
-		"strongroom": [Vector3(-2.35, 5.95, -30.85), Vector3(-4.1, 4.7, -32.6)],
+		"strongroom": [Vector3(-3.0, 5.95, -30.8), Vector3(-4.1, 4.75, -32.4)],
 		"bridge": [Vector3(3.7, 6.1, -33.5), Vector3(-1.0, 4.9, -38.4)],
 	}
 	_set_views(v)
