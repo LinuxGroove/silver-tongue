@@ -223,6 +223,13 @@ func can_take(_job: Job, _c: CrewInfo, _item: String) -> String:
 	return ""
 
 
+## A crew member said something, out loud or on the earpiece (`voice` is
+## "normal", "whisper" or "shout"), before anyone hears it: a venue that
+## listens for itself (a scanner that picks up earpieces) does it here.
+func on_crew_said(_job: Job, _c: CrewInfo, _text: String, _voice: String, _earpiece: bool) -> void:
+	pass
+
+
 ## A character took an action for a crew member (after the rules). Return
 ## true when it's handled; false lets [member effects] do it.
 func on_action(_job: Job, _ch: Character, _c: CrewInfo, _act: String) -> bool:

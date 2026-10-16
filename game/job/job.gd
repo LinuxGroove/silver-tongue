@@ -239,6 +239,7 @@ func crew_said(crew_id: int, text: String, voice := "normal", earpiece := false)
 	crew_line_out.emit(crew_id, text, voice, earpiece)
 	var entry := {"t": elapsed, "clock": clock_text(), "crew": crew_id, "text": text, "voice": voice, "to": "", "earpiece": earpiece}
 	lines.append(entry)
+	def.on_crew_said(self, c, text, voice, earpiece)
 	var mouth := c.mouth()
 	if earpiece:
 		for ch in cast.values():
