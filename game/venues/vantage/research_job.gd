@@ -359,10 +359,14 @@ func _joost(job: Job) -> void:
 			job.flags["joost"] = "bringing"
 			j.walk_to("joost_break")
 		"bringing":
-			var c := job.crew_by_id(int(job.flags.fetch))
-			if c and not c.held and c.node and c.position().distance_to(j.global_position) < HAND:
-				job.flags["joost"] = "given"
-				_hand_rose(job, c, "Joost puts the Rose in your hand. \"Keep her whole.\"")
+			# The one who asked him, or else whichever of the crew is with him.
+			var asked := job.crew_by_id(int(job.flags.fetch))
+			var near := job.free_crew().filter(func(x): return x.node != null and x.position().distance_to(j.global_position) < HAND)
+			if near.is_empty():
+				return
+			var c: CrewInfo = asked if asked in near else near[0]
+			job.flags["joost"] = "given"
+			_hand_rose(job, c, "Joost puts the Rose in your hand. \"Keep her whole.\"")
 
 
 ## Dr Lind, at the gem room to sign the stone over, hands it to whoever

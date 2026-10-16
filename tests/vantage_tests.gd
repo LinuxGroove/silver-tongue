@@ -354,6 +354,10 @@ func test_lift_key(t) -> void:
 	t.check(job.flags.has("told:lift"), "a crewmate books the engineer by phone")
 	await _say_to(t, job, 1, "stan", "Northline Lifts. Here about car one.")
 	t.check(job.crew_by_id(1).flags.has("lift_key"), "and Stan lends the key")
+	JobHarness.stand_at(job, 1, "lift_wait_g")
+	JobHarness.stand(job, 2, job.spot("lift_wait_g").origin + Vector3(-1.5, 0, 0.5), job.spot("lift_wait_g").origin)
+	t.check(job.use(1, "lift_call_g").contains("level 12"), "the key runs car two")
+	await _done_as(t, job, "up", "the engineer and the crewmate beside them on twelve")
 	await _end(t, job)
 
 
@@ -383,6 +387,11 @@ func test_lift_ride(t) -> void:
 	await _ring(t, job, 2, "holt_office", "Swift Couriers", "Swift Couriers. We've a signed-for parcel for Mr Holt on the way up.")
 	await _say_to(t, job, 1, "philippa", "Parcel for Mr Holt. It has to be signed for upstairs.")
 	t.check(job.crew_by_id(1).flags.has("escort"), "with a crewmate's call, she takes the courier up")
+	p = job.cast.philippa
+	t.check(JobHarness.walk(job, p, "lift_wait_g"), "she walks to the lift")
+	JobHarness.stand(job, 1, p.global_position + Vector3(-1.5, 0, 0.5), p.global_position)
+	JobHarness.stand(job, 2, p.global_position + Vector3(-1.5, 0, -0.7), p.global_position)
+	await _done_as(t, job, "up", "Ms Grant takes the courier and the crewmate beside them up")
 	await _end(t, job)
 
 
@@ -449,6 +458,12 @@ func test_board_temp(t) -> void:
 	await _ring(t, job, 2, "reception", "Kestrel Staffing", "Kestrel Staffing. Our temp minute-taker for the board is on the way up.")
 	await _say_to(t, job, 1, "noor", "Kestrel Staffing sent me to take the minutes.")
 	t.check(job.crew_by_id(1).flags.has("minutes"), "a crewmate's call signs the temp in")
+	JobHarness.stand_at(job, 1, "seat_s1")
+	job.minutes = VantageBoardJob.DECISION + 0.2
+	await t.frames(3)
+	t.check(_decided(job, 1) and not _decided(job, 2), "the temp hears the vote, the crewmate downstairs doesn't")
+	_ride(job, 1, "b")
+	await _done_as(t, job, "out", "the temp gets it down to the crewmate")
 	await _end(t, job)
 
 
@@ -483,6 +498,22 @@ func test_board_server(t) -> void:
 	job.minutes = VantageBoardJob.DECISION + 0.2
 	await t.frames(3)
 	t.check(_decided(job, 1), "at the open service door, the pantry hears the vote")
+	await _end(t, job)
+	# A crewmate rings the pantry as Bellweather.
+	job = await _start(t, VantageBoardJob.new(), ["server", "temp"])
+	await _ring(t, job, 2, "catering", "Bellweather Catering", "Bellweather office. We're short tonight, so we've sent you an extra pair of hands.")
+	t.check(job.flags.has("told:hands"), "a crewmate tells Mirela help is coming")
+	await _say_to(t, job, 1, "mirela", "Bellweather sent me.")
+	await _say_to(t, job, 1, "mirela", "Where do you want me?")
+	t.check(job.crew_by_id(1).flags.has("serving"), "and she puts the server to work")
+	job.minutes = VantageBoardJob.COFFEE + 0.2
+	await t.frames(3)
+	JobHarness.stand_at(job, 1, "mirela_serve")
+	job.minutes = VantageBoardJob.DECISION + 0.2
+	await t.frames(3)
+	t.check(_decided(job, 1), "pouring the coffee, the server hears the vote")
+	_ride(job, 1, "b")
+	await _done_as(t, job, "out", "the server gets it downstairs")
 	await _end(t, job)
 
 
@@ -525,6 +556,11 @@ func test_board_observer(t) -> void:
 	await t.until(func() -> bool: return job.cast.philippa.turns.size() >= 1, 4.0)
 	await _settle(t, job, "philippa")
 	t.check(job.crew_by_id(1).flags.has("observer"), "a crewmate's call makes the observer good")
+	_stand_point(job, 1, "board_nw")
+	job.minutes = VantageBoardJob.DECISION + 0.2
+	await t.frames(3)
+	_ride(job, 1, "b")
+	await _done_as(t, job, "out", "the observer gets the vote downstairs")
 	await _end(t, job)
 
 
@@ -612,6 +648,14 @@ func test_research_orders(t) -> void:
 	t.check(job.flags.has("told:orders"), "a crewmate puts the orders in Noor's diary")
 	await _say_to(t, job, 1, "bram", "Evening. Ashby Mutual, I have Mr Holt's orders to move the stone to the vault.")
 	t.check(job.crew_by_id(1).flags.has("cleared"), "and Bram lets the insurer through")
+	await _say_to(t, job, 1, "margot", "Ashby Mutual. Mr Holt's orders: the Rose goes down to the vault tonight.")
+	m = job.cast.margot
+	t.check(job.crew_by_id(1).flags.has("handed") and JobHarness.walk(job, m, "rose"), "Dr Lind takes the insurer to the Rose")
+	JobHarness.stand(job, 1, m.global_position + Vector3(-1.2, 0, 0.6), m.global_position)
+	await t.frames(3)
+	t.check(_rose_with(job) == 1, "and signs her over")
+	await _out(t, job, 1)
+	await _done_as(t, job, "taken", "the insurer walks out with the Rose")
 	await _end(t, job)
 
 
@@ -650,6 +694,16 @@ func test_research_joost(t) -> void:
 	await _say_to(t, job, 1, "joost", "Joost? I'm the curator from the museum.")
 	await _say_to(t, job, 1, "joost", "We want to record her whole, before tomorrow.")
 	t.check(job.flags.has("fetch"), "a crewmate's call does it too")
+	j = job.cast.joost
+	t.check(JobHarness.walk(job, j, "rose"), "he goes for her")
+	await t.frames(3)
+	t.check(JobHarness.walk(job, j, "joost_break"), "and brings her back")
+	_stand_point(job, 1, "lab_c")
+	JobHarness.stand(job, 2, j.global_position + Vector3(-1.0, 0, 0.5), j.global_position)
+	await t.frames(3)
+	t.check(_rose_with(job) == 2, "and hands her to whichever of the crew is there")
+	await _out(t, job, 2)
+	await _done_as(t, job, "taken", "the crewmate walks out with the Rose")
 	await _end(t, job)
 
 
@@ -687,6 +741,13 @@ func test_research_cleaner(t) -> void:
 	await _ring(t, job, 2, "cleaning", "Brightway Cleaning", "Brightway office. Marisol's off sick, we're sending you cover tonight.")
 	await _say_to(t, job, 1, "bram", "Brightway sent me, I'm Marisol's cover.")
 	t.check(job.crew_by_id(1).flags.has("cleared"), "a crewmate's call does it too")
+	JobHarness.stand(job, 1, Vector3(7.0, VantageTower.R, -9.6), Vector3(9, VantageTower.R, -9.6))
+	t.check(job.keypad(1, VantageCast.CUTTING_CODE, "cutting_pad") == "The lock clicks.", "the code opens the gem room")
+	JobHarness.stand_at(job, 1, "rose")
+	job.use(1, "item:rose")
+	t.check(_rose_with(job) == 1, "and the cleaner takes the Rose")
+	await _out(t, job, 1)
+	await _done_as(t, job, "taken", "the cleaner walks out with the Rose")
 	await _end(t, job)
 
 
