@@ -24,6 +24,10 @@ var title := ""
 var venue_name := ""
 ## Auntie Mae's briefing, in her words (spoken in her voice on the board).
 var briefing := ""
+## Who gives the briefing, when it isn't Mae: a name for the board and a
+## Kokoro voice to speak it in ("" for Mae).
+var briefer := ""
+var briefer_voice := ""
 ## What the crew has to do, short, for the HUD and the board.
 var goal := ""
 ## What the whole job is about, for every character's prompt.
