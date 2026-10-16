@@ -43,7 +43,7 @@ func _init() -> void:
 	owed = Progress.is_done("tideline_favor")
 	covers = {
 		"courier": {
-			"title": "Larkspur courier", "names": ["Peter Wren", "Petra Wren"],
+			"title": "Larkspur courier", "keep_case": true, "names": ["Peter Wren", "Petra Wren"],
 			"job": "a courier for Larkspur Holdings, the Rose's buyer",
 			"story": "Larkspur keeps the Rose here for a month. A release needs Larkspur's call to Anton, the night manager, and Horace will check with him. Your release order is a good copy.",
 			"outfit": "courier", "for": "Horace, in the lounge",
@@ -55,7 +55,7 @@ func _init() -> void:
 			],
 		},
 		"halberd_escort": {
-			"title": "Halberd transfer", "names": ["Ray Doyle", "Rae Doyle"],
+			"title": "Halberd transfer", "keep_case": true, "names": ["Ray Doyle", "Rae Doyle"],
 			"job": "a guard on Halberd's transfer team",
 			"story": "When Halberd moves something out of a vault, Dispatch rings the guard on the door first. Horace will ask Marcus, so Marcus had better have heard.",
 			"outfit": "halberd_temp", "for": "Horace, then Marcus on the radio",

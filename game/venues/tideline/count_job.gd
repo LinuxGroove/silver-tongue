@@ -43,7 +43,7 @@ func _init() -> void:
 	seconds_per_minute = 18.0
 	covers = {
 		"auditor": {
-			"title": "Gaming Board auditor", "names": ["Martin Kessler", "Marta Kessler"],
+			"title": "Gaming Board auditor", "keep_case": true, "names": ["Martin Kessler", "Marta Kessler"],
 			"job": "a compliance auditor from the Caldera Gaming Board",
 			"story": "The Board sends auditors to watch a count, unannounced. Your letter of inspection is a good copy: it passes a glance. Marcus will check with Anton, so somebody had better tell Anton you're coming.",
 			"outfit": "auditor", "for": "Marcus on the staff door, then Gloria in the count room",
@@ -67,7 +67,7 @@ func _init() -> void:
 			],
 		},
 		"halberd_temp": {
-			"title": "Halberd relief", "names": ["Ray Doyle", "Rae Doyle"],
+			"title": "Halberd relief", "keep_case": true, "names": ["Ray Doyle", "Rae Doyle"],
 			"job": "a Halberd Security relief guard",
 			"story": "Halberd sends a relief guard for the drop now and then, and Dmitri in the eye puts them on his log when Dispatch rings ahead. Marcus walks the drop into the count room at eleven.",
 			"outfit": "halberd_temp", "for": "Marcus, on the staff door",

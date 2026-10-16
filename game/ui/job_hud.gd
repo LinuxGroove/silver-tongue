@@ -266,7 +266,7 @@ func set_voice(state: String, detail: String) -> void:
 ## Your cover, and what you're carrying.
 func set_cover(c: CrewInfo) -> void:
 	var cover := Covers.of(c.cover)
-	var t := "%s, %s" % [c.cover_name, str(cover.get("title", c.cover)).to_lower()]
+	var t := "%s, %s" % [c.cover_name, Covers.role(c.cover)]
 	if c.outfit != str(cover.get("outfit", c.outfit)):
 		t += " · in " + Covers.wearing(c.outfit, c.female)
 	for it in c.items:

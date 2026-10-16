@@ -106,7 +106,7 @@ static func wearing(outfit_name: String, female: bool) -> String:
 	return str(outfit(outfit_name)["female" if female else "male"])
 
 
-## "a man in a grey work jacket, carrying a tool bag".
+## "a man in a gray work jacket, carrying a tool bag".
 static func describe(outfit_name: String, female: bool) -> String:
 	return "%s in %s" % ["a woman" if female else "a man", wearing(outfit_name, female)]
 
@@ -114,3 +114,11 @@ static func describe(outfit_name: String, female: bool) -> String:
 static func cover_name(cover: String, female: bool) -> String:
 	var names: Array = of(cover).get("names", ["Stranger", "Stranger"])
 	return str(names[1 if female else 0])
+
+
+## A cover's title in the middle of a line: "agency waiter", but "Gaming
+## Board auditor" for a cover whose title starts with a name (`keep_case`).
+static func role(cover: String) -> String:
+	var c := of(cover)
+	var title := str(c.get("title", cover))
+	return title if bool(c.get("keep_case", false)) else title.to_lower()

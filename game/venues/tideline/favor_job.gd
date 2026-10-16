@@ -46,7 +46,7 @@ func _init() -> void:
 			"lines": TidelineRules.PLAYER_LINES.duplicate(),
 		},
 		"inspector": {
-			"title": "Gaming Board inspector", "names": ["Martin Kessler", "Marta Kessler"],
+			"title": "Gaming Board inspector", "keep_case": true, "names": ["Martin Kessler", "Marta Kessler"],
 			"job": "an inspector from the Caldera Gaming Board",
 			"story": "The Board's word is an order to the eye: if the Board asks Dmitri to watch a table, he watches it. Your card is a good copy. Tess is frightened of the Board.",
 			"outfit": "auditor", "for": "Dmitri, on the phone, and Tess",

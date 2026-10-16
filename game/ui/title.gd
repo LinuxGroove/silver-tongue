@@ -446,7 +446,7 @@ func show_lobby() -> void:
 	for id in ids:
 		var c: Dictionary = Session.crew[id]
 		var you := " (you)" if int(id) == Session.local_id() else ""
-		_text("%s%s: %s, %s" % [c.name, you, Covers.cover_name(str(c.cover), bool(c.female)), str(Covers.of(str(c.cover)).title).to_lower()])
+		_text("%s%s: %s, %s" % [c.name, you, Covers.cover_name(str(c.cover), bool(c.female)), Covers.role(str(c.cover))])
 	var row := GridContainer.new()
 	row.columns = 2
 	row.add_theme_constant_override("h_separation", 8)
