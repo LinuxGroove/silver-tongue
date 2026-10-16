@@ -55,6 +55,7 @@ jobs:
             marlin) job="marlin_safe" ;;
             tideline) job="tideline_count" ;;
             vantage) job="vantage_board 482913" ;;
+            mae) job="mae_party" ;;
             *) echo "no LAN check for ${{ matrix.part }} yet"; exit 0 ;;
           esac
           XDG_DATA_HOME=$RUNNER_TEMP/a godot --headless --path . tools/net_check.tscn -- host net.code $job > host.log 2>&1 &

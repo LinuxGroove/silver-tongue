@@ -74,6 +74,11 @@ func show_report(r: Dictionary, me := 1) -> void:
 		_col.add_child(HotelTheme.hud_label("The take: %s" % money(int(r.take)), 20, HotelTheme.BRASS))
 	elif won and str(r.get("unpaid", "")) != "":
 		_col.add_child(HotelTheme.hud_label("No take: the rule was %s." % str(r.unpaid).to_lower(), 18, HotelTheme.WARN))
+	# The finale's last word, and what happened next.
+	if str(r.get("mae_says", "")) != "":
+		_add_said("Mae", "mae", str(r.mae_says))
+	if str(r.get("epilogue", "")) != "":
+		_col.add_child(_text(str(r.epilogue), true))
 	for c in r.get("crew", []):
 		var bits := PackedStringArray()
 		if bool(c.get("inside", false)):
@@ -126,15 +131,20 @@ func _add_line(heading: String, l: Dictionary) -> void:
 	_col.add_child(HotelTheme.hud_label(heading + (", at " + str(l.clock) if str(l.get("clock", "")) != "" else ""), 16, HotelTheme.BRASS))
 	_col.add_child(_text("You: \"%s\"" % str(l.get("said", ""))))
 	if str(l.get("reply", "")) != "":
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 10)
-		var said := _text("%s: \"%s\"" % [l.get("name", ""), l.reply])
-		said.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(said)
-		var b := LGUi.button("Play", _replay.bind(str(l.get("char", "")), str(l.reply)), 100)
-		row.add_child(b)
-		_buttons.append(b)
-		_col.add_child(row)
+		_add_said(str(l.get("name", "")), str(l.get("char", "")), str(l.reply))
+
+
+## Someone's line, with a button to hear it again in their voice.
+func _add_said(who: String, char_id: String, text: String) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	var said := _text("%s: \"%s\"" % [who, text])
+	said.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(said)
+	var b := LGUi.button("Play", _replay.bind(char_id, text), 100)
+	row.add_child(b)
+	_buttons.append(b)
+	_col.add_child(row)
 
 
 func _add_button(text: String, call: Callable, w: int) -> void:
@@ -158,6 +168,10 @@ static func as_text(r: Dictionary) -> String:
 		lines.append("No take: the rule was %s." % str(r.unpaid).to_lower())
 	if not r.get("rules", []).is_empty():
 		lines.append("Rules: %s." % ", ".join(PackedStringArray(r.rules)))
+	if str(r.get("mae_says", "")) != "":
+		lines.append("Mae: \"%s\"" % str(r.mae_says))
+	if str(r.get("epilogue", "")) != "":
+		lines.append(str(r.epilogue))
 	var scores := PackedStringArray()
 	for sc in SCORES:
 		scores.append("%s: %s" % [sc[1], "yes" if bool(r.get(sc[0], false)) else "no"])

@@ -110,6 +110,19 @@ func test_report_card(t) -> void:
 		t.check(b in card.button_texts(), "the card has " + b)
 	var path: String = await card.save_picture()
 	t.check(path == "" or FileAccess.file_exists(path), "a picture is saved when there's a screen to take it from (%s)" % path)
+	# The finale's report has Mae's last word, to hear again, and what came after.
+	var fin := {"job_title": "Mae's house party", "venue_name": "Mae's house", "outcome": "forgiven", "win": true, "title": "MAE'S BLESSING", "text": "",
+		"mae_says": "Go on, love.", "epilogue": "Mae gave Gray his money back."}
+	t.check(JobReportCard.as_text(fin).contains("Mae: \"Go on, love.\"\nMae gave Gray his money back."), "the text has Mae's last word and the epilogue")
+	var heard := []
+	card.replay.connect(func(id, text): heard.append([id, text]))
+	card.show_report(fin)
+	await t.frames(2)
+	var plays := card._buttons.filter(func(b): return b.text == "Play")
+	t.check(plays.size() == 1, "one line to play on the finale's card")
+	if not plays.is_empty():
+		plays[0].pressed.emit()
+	t.check(heard == [["mae", "Go on, love."]], "and it's Mae's: %s" % str(heard))
 	layer.queue_free()
 	await t.frames(1)
 
