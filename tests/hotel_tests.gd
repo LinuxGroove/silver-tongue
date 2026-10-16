@@ -82,7 +82,7 @@ func test_builds(t) -> void:
 	for l in h.links:
 		t.check(h.points.has(l[0]) and h.points.has(l[1]), "hotel: link %s-%s joins two points" % [l[0], l[1]])
 		t.check(l[2] == "" or h.doors.has(l[2]), "hotel: link %s-%s goes through a door there is" % [l[0], l[1]])
-	t.check(Meridian.environment() is Environment, "hotel: an environment")
+	t.check(h.environment() is Environment, "hotel: an environment")
 	h.queue_free()
 
 

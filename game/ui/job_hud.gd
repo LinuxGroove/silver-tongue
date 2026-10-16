@@ -1,8 +1,9 @@
 class_name JobHud
 extends Control
-## The HUD at the gala: the clock and the venue's heat at the top, who
-## you're dealing with and what they make of you on the right, your cover
-## on the left, subtitles (with the speaker, or the radio) at the bottom,
+## The HUD on a job: the clock and the venue's heat at the top, who you're
+## dealing with and what they make of you on the right, your cover, what
+## to do and who's on the phone on the left, subtitles (with the speaker,
+## where they are, or the radio) at the bottom,
 ## your crewmates' lines and the earpiece down the left side, what you can
 ## use in front of you in the middle, and the timing readout M0 started.
 
@@ -16,6 +17,8 @@ const SUSPICION := ["relaxed", "at ease", "unsure", "doesn't buy it", "about to 
 var _brain: Label
 var _voice: Label
 var _cover: Label
+var _goal: Label
+var _call: Label
 var _clock: Label
 var _heat: Label
 var _who: PanelContainer
@@ -38,6 +41,7 @@ var _prompt: Label
 var _toast_panel: PanelContainer
 var _toast: Label
 var _held: PanelContainer
+var _held_line: Label
 var _fade: ColorRect
 var _sub_t := 0.0
 var _toast_t := 0.0
@@ -56,6 +60,14 @@ func _ready() -> void:
 	_brain = HotelTheme.hud_label("Brain: starting", 14, HotelTheme.DIM)
 	_voice = HotelTheme.hud_label("Voice: starting", 14, HotelTheme.DIM)
 	col.add_child(_cover)
+	_goal = HotelTheme.hud_label("", 15, HotelTheme.BRASS, false)
+	_goal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_goal.custom_minimum_size.x = 320
+	_goal.visible = false
+	col.add_child(_goal)
+	_call = HotelTheme.hud_label("", 15, HotelTheme.GREEN)
+	_call.visible = false
+	col.add_child(_call)
 	col.add_child(_brain)
 	col.add_child(_voice)
 	add_child(state)
@@ -204,9 +216,9 @@ func _ready() -> void:
 	var ht := HotelTheme.title_label("HELD", 28, HotelTheme.WARN)
 	ht.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hcol.add_child(ht)
-	var hl := HotelTheme.hud_label("In the security office. Talk the guard into letting you out through the door.", 16, HotelTheme.TEXT, false)
-	hl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hcol.add_child(hl)
+	_held_line = HotelTheme.hud_label("In the security office. Talk the guard into letting you out through the door.", 16, HotelTheme.TEXT, false)
+	_held_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hcol.add_child(_held_line)
 	add_child(_held)
 	_fade = ColorRect.new()
 	_fade.color = Color(0, 0, 0, 0)
@@ -253,12 +265,30 @@ func set_voice(state: String, detail: String) -> void:
 
 ## Your cover, and what you're carrying.
 func set_cover(c: CrewInfo) -> void:
-	var t := "%s, %s" % [c.cover_name, str(Covers.ALL[c.cover].title).to_lower()]
-	if c.outfit == "waiter_jacket":
-		t += " · in a waiter's jacket"
-	if c.has_invitation:
-		t += " · the invitation"
+	var cover := Covers.of(c.cover)
+	var t := "%s, %s" % [c.cover_name, str(cover.get("title", c.cover)).to_lower()]
+	if c.outfit != str(cover.get("outfit", c.outfit)):
+		t += " · in " + Covers.wearing(c.outfit, c.female)
+	for it in c.items:
+		var info: Dictionary = Jobs.current.items.get(it, {}) if Jobs.current else {}
+		t += " · " + str(info.get("name", it))
 	_cover.text = t
+
+
+## What to do now.
+func set_goal(text: String) -> void:
+	_goal.text = text
+	_goal.visible = text != ""
+
+
+## Who you're on the phone with ("" when you're not).
+func set_call(number_name: String) -> void:
+	_call.text = "On the phone: " + number_name if number_name != "" else ""
+	_call.visible = number_name != ""
+
+
+func goal_text() -> String:
+	return _goal.text
 
 
 func set_clock(text: String) -> void:
@@ -281,10 +311,13 @@ func set_face(who: String, suspicion: int) -> void:
 		_pips[i].color = c if i < suspicion else Color(1, 1, 1, 0.12)
 
 
-## A character spoke where you could hear.
-func say(speaker: String, text: String) -> void:
+## A character spoke where you could hear: who, and which way they are
+## ("left", "right", "behind", or "" ahead) when the setting shows it.
+func say(speaker: String, text: String, where := "") -> void:
 	if not bool(LGSettings.get_value("play", "subtitles", true)):
 		return
+	if where != "" and bool(LGSettings.get_value("play", "subtitle_where", true)):
+		speaker += {"left": ", to your left", "right": ", to your right", "behind": ", behind you"}.get(where, "")
 	_speaker.text = speaker
 	_subtitle.text = text
 	_sub_panel.visible = text != ""
@@ -368,8 +401,13 @@ func toast(text: String) -> void:
 	_toast_panel.modulate.a = 1.0
 
 
-func set_held(on: bool) -> void:
+func set_held(on: bool, where := "the security office") -> void:
+	_held_line.text = "In %s. Talk the guard into letting you out through the door." % where
 	_held.visible = on
+
+
+func speaker_text() -> String:
+	return _speaker.text
 
 
 func is_held() -> bool:

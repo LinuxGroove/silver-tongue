@@ -4,15 +4,15 @@ extends Node
 ## with the host's device running the job. Peer 1 is the host; each
 ## player's crew id is their peer id.
 ##
-## The gala itself goes through [JobNet]; this only gathers the crew, says
-## who's wearing what, and starts everyone together.
+## The job itself goes through [JobNet]; this only gathers the crew, says
+## which job it is and who's wearing what, and starts everyone together.
 
 signal roster_changed
 signal hosts_found(hosts: Array)
 signal joined
 signal left(reason: String)
 signal status(text: String)
-## Host: a guest's gala scene is up and wants the night's state.
+## Host: a guest's job scene is up and wants the night's state.
 signal guest_ready(peer: int)
 
 enum Mode { NONE, SOLO, LAN_HOST, LAN_CLIENT }
@@ -25,9 +25,11 @@ var crew := {}
 var join_code := ""
 var lan_address := ""
 var in_job := false
+## The job the crew will play (see [Jobs]); the host picks it.
+var job_id := "meridian_gala"
 ## This device's pick before it's in a crew, for the hello.
 var wanted := {"cover": "guest", "female": false}
-## Host: guests whose gala scene is up (it can load before the host's).
+## Host: guests whose job scene is up (it can load before the host's).
 var ready_peers := {}
 var _beacon: LanBeacon
 var _pending_hello := {}
@@ -138,9 +140,30 @@ func leave(reason := "") -> void:
 
 #region The crew
 
+## Host (or alone): picks the job, and makes every cover one it has.
+func set_job(p_job: String) -> void:
+	if not is_host() or not Jobs.exists(p_job):
+		return
+	job_id = p_job
+	Jobs.current = Jobs.make(p_job)
+	if not Covers.has(str(wanted.cover)):
+		wanted["cover"] = Covers.first()
+	for id in crew:
+		if not Covers.has(str(crew[id].cover)):
+			crew[id].cover = Covers.first()
+	_broadcast_roster()
+
+
+## Makes sure [member Jobs.current] is the crew's job.
+func ensure_job() -> void:
+	if Jobs.current == null or Jobs.current.id != job_id:
+		Jobs.current = Jobs.make(job_id if Jobs.exists(job_id) else "meridian_gala")
+
+
 ## Picks this device's cover and body.
 func set_cover(cover: String, female: bool) -> void:
-	if not Covers.ALL.has(cover):
+	ensure_job()
+	if not Covers.has(cover):
 		return
 	wanted = {"cover": cover, "female": female}
 	if mode == Mode.NONE:
@@ -156,31 +179,26 @@ func can_start() -> bool:
 	return is_host() and not in_job and not crew.is_empty()
 
 
-## Host: the night's crew, as [CrewInfo] dicts: their covers, and the
-## forged invitation for whoever's the guest (or the host, if nobody is).
+## Host: the night's crew, as [CrewInfo] dicts: their covers, and what
+## the job gives them to carry (the gala's invitation goes to the guest).
 func job_crew() -> Array:
-	var out: Array = []
+	ensure_job()
 	var ids := crew.keys()
 	ids.sort()
-	var invited := -1
-	for id in ids:
-		if str(crew[id].cover) == "guest":
-			invited = id
-			break
-	if invited < 0:
-		invited = ids[0]
+	var crews: Array = []
 	for id in ids:
 		var c := CrewInfo.make(int(id), int(id), str(crew[id].name), str(crew[id].cover), bool(crew[id].female))
-		c.has_invitation = id == invited
-		out.append(c.to_dict())
-	return out
+		c.burned = Progress.burned if int(id) == local_id() else bool(crew[id].get("burned", false))
+		crews.append(c)
+	Jobs.current.give_items(crews)
+	return crews.map(func(c): return c.to_dict())
 
 
-## Host: starts the gala on every device.
+## Host: starts the job on every device.
 func start_job() -> void:
 	if not can_start():
 		return
-	var config := {"crew": job_crew(), "seed": randi()}
+	var config := {"job": job_id, "crew": job_crew(), "seed": randi()}
 	in_job = true
 	ready_peers.clear()
 	_beacon.update_info({"state": "playing"})
@@ -190,7 +208,7 @@ func start_job() -> void:
 	_start(config)
 
 
-## Guest: this device's gala scene is up. It goes through here, not the
+## Guest: this device's job scene is up. It goes through here, not the
 ## scene, since the host's scene may not be up yet.
 func job_ready() -> void:
 	if mode == Mode.LAN_CLIENT:
@@ -199,6 +217,8 @@ func job_ready() -> void:
 
 func _start(config: Dictionary) -> void:
 	config["me"] = local_id()
+	job_id = str(config.get("job", job_id))
+	ensure_job()
 	JobScene.setup = config
 	SetupScreen.play_gala()
 
@@ -239,6 +259,8 @@ func _on_peer_disconnected(id: int) -> void:
 func _on_connected_to_server() -> void:
 	var m := me()
 	_c_hello.rpc_id(1, GameConfig.PROTOCOL, GameConfig.player_name(), str(m.get("cover", "guest")), bool(m.get("female", false)))
+	# After the hello, which stays the same from version to version.
+	_c_face.rpc_id(1, Progress.burned)
 
 
 func _on_connection_failed() -> void:
@@ -265,15 +287,23 @@ func _c_hello(protocol: int, p_name: String, cover: String, female: bool) -> voi
 	if crew.size() >= GameConfig.MAX_CREW:
 		_kick(id, "The crew's full.")
 		return
-	crew[id] = {"name": _unique_name(p_name.strip_edges().left(16)), "cover": cover if Covers.ALL.has(cover) else "guest", "female": female}
+	crew[id] = {"name": _unique_name(p_name.strip_edges().left(16)), "cover": cover if Covers.has(cover) else Covers.first(), "female": female}
 	_broadcast_roster()
 	status.emit("%s joined." % crew[id].name)
+
+
+## Whether Halberd has this guest's face on file.
+@rpc("any_peer", "reliable")
+func _c_face(burned: bool) -> void:
+	var id := multiplayer.get_remote_sender_id()
+	if mode == Mode.LAN_HOST and crew.has(id):
+		crew[id]["burned"] = burned
 
 
 @rpc("any_peer", "reliable")
 func _c_set_cover(cover: String, female: bool) -> void:
 	var id := multiplayer.get_remote_sender_id()
-	if mode == Mode.LAN_HOST and crew.has(id) and Covers.ALL.has(cover):
+	if mode == Mode.LAN_HOST and crew.has(id) and Covers.has(cover):
 		crew[id].cover = cover
 		crew[id].female = female
 		_broadcast_roster()
@@ -288,10 +318,13 @@ func _c_job_ready() -> void:
 
 
 @rpc("authority", "reliable")
-func _h_roster(p_crew: Dictionary, p_code: String) -> void:
+func _h_roster(p_crew: Dictionary, p_code: String, p_job: String) -> void:
 	var first := crew.is_empty()
 	crew = p_crew
 	join_code = p_code
+	if Jobs.exists(p_job):
+		job_id = p_job
+		ensure_job()
 	if first:
 		joined.emit()
 	roster_changed.emit()
@@ -312,7 +345,7 @@ func _broadcast_roster() -> void:
 	if mode == Mode.LAN_HOST:
 		for p in multiplayer.get_peers():
 			if not _pending_hello.has(p):
-				_h_roster.rpc_id(p, crew, join_code)
+				_h_roster.rpc_id(p, crew, join_code, job_id)
 		_beacon.update_info({"players": crew.size()})
 	roster_changed.emit()
 

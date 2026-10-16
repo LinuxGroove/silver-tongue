@@ -58,7 +58,7 @@ var arms_folded := true
 ## What reception says when this character checks: a line, or "" for no reception.
 var reception_line := ""
 
-# The gala's cast (see Cast): how they fit in the job.
+# The gala's cast (see MeridianCast): how they fit in the job.
 
 ## "guard", "reception", "waiter", "bar", "manager" or "guest".
 var role := "guard"
@@ -84,6 +84,17 @@ var chatter: Array[String] = []
 ## The scripted brain, for no model: [[words, reply]], the first match wins
 ## (see ScriptedBrain). A reply's "do" can be "?check" for their usual check.
 var replies: Array = []
+## The door they keep: what "let_through" opens.
+var door := ""
+## What they do for papers that pass a look ("none" for nothing).
+var papers_do := "let_through"
+## What they say picking up the phone.
+var phone_hello := "Hello?"
+## Actions the job adds to [constant ACTIONS] (see [member JobDef.actions]).
+var more_actions := {}
+## Words that make them look up when they overhear them, on top of
+## [constant ScriptedBrain.HOT].
+var hot_words: Array = []
 
 
 ## Marcus Hale, the Halberd guard on the Meridian's service door: M0's one guard.
@@ -140,3 +151,27 @@ static func marcus() -> CharacterSheet:
 ## The look for [Person.make].
 func person_look() -> Dictionary:
 	return look
+
+
+## What an action means, for their prompt.
+func action_text(act: String) -> String:
+	if action_words.has(act):
+		return str(action_words[act])
+	if more_actions.has(act):
+		return str(more_actions[act].get("text", act))
+	return str(ACTIONS.get(act, act))
+
+
+## Opens something for a crew member: a door, the list, a job.
+func is_opening(act: String) -> bool:
+	return act in JobRules.OPENING or str(more_actions.get(act, {}).get("kind", "")) == "opening"
+
+
+## Checks a story with a colleague.
+func is_check(act: String) -> bool:
+	return act in JobRules.CHECKS or str(more_actions.get(act, {}).get("kind", "")) == "check"
+
+
+## Nobody does it at Lockdown.
+func locks_down(act: String) -> bool:
+	return act in JobRules.LOCKED_DOWN or bool(more_actions.get(act, {}).get("lockdown", false))

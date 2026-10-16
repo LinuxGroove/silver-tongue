@@ -1,4 +1,4 @@
-class_name Cast
+class_name MeridianCast
 extends RefCounted
 ## The gala's cast of eight at the Hotel Meridian (job 1): who they are,
 ## what they know and won't say, how they check a story, what gets to them,
@@ -104,6 +104,7 @@ static func marcus() -> CharacterSheet:
 	s.not_heard = ["Sorry?", "Speak up, I can't hear you.", "What?"]
 	s.actions = ["none", "ask_for_badge", "ask_reception", "let_through", "radio_security", "release"]
 	s.checks_with = {"ask_reception": "dana"}
+	s.door = "service"
 	s.start_suspicion = 1
 	s.arms_folded = true
 	s.replies = [
@@ -163,6 +164,7 @@ static func teo() -> CharacterSheet:
 	s.not_heard = ["Sorry, I didn't catch that.", "Pardon?"]
 	s.actions = ["none", "ask_for_invitation", "ask_reception", "call_manager", "let_through", "radio_security", "release"]
 	s.checks_with = {"ask_reception": "dana", "call_manager": "okafor"}
+	s.door = "ballroom"
 	s.start_suspicion = 1
 	s.arms_folded = false
 	s.replies = [
@@ -179,6 +181,7 @@ static func teo() -> CharacterSheet:
 ## Dana Pryce on reception: the guest list, the bookings, and a broken freezer.
 static func dana() -> CharacterSheet:
 	var s := _base("dana", "Dana")
+	s.phone_hello = "Meridian Hotel, reception. Dana speaking."
 	s.job = "the Meridian's night receptionist, thirty-four, six years on the desk"
 	s.post = "the reception desk in the Meridian's lobby, beside the staff-only door to the back corridor"
 	s.role = "reception"
@@ -238,6 +241,7 @@ static func dana() -> CharacterSheet:
 ## Laurent Moreau, head waiter, two agency temps short.
 static func laurent() -> CharacterSheet:
 	var s := _base("laurent", "Laurent")
+	s.phone_hello = "Kitchen. Laurent. What is it?"
 	s.job = "the Meridian's head waiter, fifty-two, thirty years in hotel kitchens"
 	s.post = "the kitchen, by the pass into the ballroom, running the gala's service"
 	s.role = "waiter"
@@ -340,6 +344,7 @@ static func benny() -> CharacterSheet:
 ## Mr Okafor, the night manager, dreading the owner's family.
 static func okafor() -> CharacterSheet:
 	var s := _base("okafor", "Mr Okafor")
+	s.phone_hello = "Okafor."
 	s.job = "the Meridian's night manager, forty-eight"
 	s.post = "the Meridian on the night of the gala, between the lobby and the ballroom"
 	s.role = "manager"

@@ -24,6 +24,9 @@ func _ready() -> void:
 	HotelTheme.apply(get_tree().root, 22)
 	LGInput.register_actions(GameConfig.ACTIONS)
 	LGInput.extend_ui_actions()
+	# A season of the tests' own, not the player's.
+	Progress.load_from("user://test_progress.cfg")
+	Progress.reset()
 	await get_tree().process_frame
 	if only != "" and has_method(only):
 		printerr("- " + only)

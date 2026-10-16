@@ -30,15 +30,15 @@ static func reply(sheet: CharacterSheet, face: Dictionary, turn: Dictionary, rng
 				r.tone = "wary"
 			return r
 		"overheard":
-			if _hot(heard):
+			if _hot(heard, sheet):
 				r.suspicion = s + 1
 				r.tone = "wary"
 			return r
 		"papers":
 			if str(face.get("papers", "")) == "passed":
 				r.say = "Thank you."
-				r.believes = ["has an invitation"]
-				r.do = "let_through" if "let_through" in sheet.actions else "none"
+				r.believes = [str(turn.get("belief", "has an invitation"))]
+				r.do = sheet.papers_do if sheet.papers_do in sheet.actions else "none"
 				r.tone = "friendly"
 			else:
 				r.say = _pick(["This isn't right.", "Where did you get this?"], rng)
@@ -51,7 +51,13 @@ static func reply(sheet: CharacterSheet, face: Dictionary, turn: Dictionary, rng
 			return r
 		"event":
 			return r
-	if str(face.get("papers", "")) == "passed" and "let_through" in sheet.actions:
+		"phone":
+			r.say = sheet.phone_hello
+			return r
+		"mae":
+			r.say = str(turn.get("answer", "Right away."))
+			return r
+	if str(face.get("papers", "")) == "passed" and "let_through" in sheet.actions and sheet.papers_do == "let_through":
 		r.say = "Enjoy the evening."
 		r.do = "let_through"
 		r.believes = ["has an invitation"]
@@ -72,14 +78,14 @@ static func reply(sheet: CharacterSheet, face: Dictionary, turn: Dictionary, rng
 		var act := str(rule.get("do", "none"))
 		if act == "?check":
 			act = "none"
-			for a in JobRules.CHECKS:
-				if a in sheet.actions and sheet.checks_with.has(a):
+			for a in sheet.actions:
+				if sheet.is_check(a) and sheet.checks_with.has(a):
 					act = a
 					break
 			if act != "none" and (face.get("checks", {}) as Dictionary).has(act):
 				act = "none"
 				r.say = "I already checked."
-		if act in JobRules.OPENING and int(face.get("turns", 0)) < JobRules.MIN_TURNS and rule.has("first"):
+		if sheet.is_opening(act) and int(face.get("turns", 0)) < JobRules.MIN_TURNS and rule.has("first"):
 			r.say = str(rule.first)
 			act = "none"
 		r.do = act
@@ -89,7 +95,7 @@ static func reply(sheet: CharacterSheet, face: Dictionary, turn: Dictionary, rng
 				r.say = "Between us? " + str(sheet.secrets[i].text)
 				r.tone = "friendly"
 		return r
-	if _hot(heard):
+	if _hot(heard, sheet):
 		r.suspicion = s + 1
 		r.tone = "wary"
 	r.say = _pick(sheet.fallbacks, rng)
@@ -101,6 +107,9 @@ static func opening(sheet: CharacterSheet) -> String:
 	for a in ["let_through", "escort_in", "put_to_work", "plus_one", "add_to_list", "book_visit"]:
 		if a in sheet.actions:
 			return a
+	for a in sheet.actions:
+		if sheet.is_opening(a) and a != "release":
+			return a
 	return "none"
 
 
@@ -108,10 +117,14 @@ static func opening(sheet: CharacterSheet) -> String:
 const HOT := ["forged", "forgery", "fake", "con ", "the rose", "diamond", "mae", "cameras", "steal", "heist", "the job", "the code"]
 
 
-static func _hot(heard: String) -> bool:
+static func _hot(heard: String, sheet: CharacterSheet = null) -> bool:
 	for w in HOT:
 		if heard.contains(w):
 			return true
+	if sheet:
+		for w in sheet.hot_words:
+			if heard.contains(str(w)):
+				return true
 	return false
 
 

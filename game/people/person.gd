@@ -81,6 +81,8 @@ const LOOPS := ["Idle", "Jump", "Sprint", "Jog_Fwd", "Walk", "Walk_Formal", "Cro
 const HEAD_BONES := ["Head", "neck_01"]
 const FOOT_BONES := ["foot_l", "foot_r", "ball_l", "ball_r", "ball_leaf_l", "ball_leaf_r"]
 
+## Looks jobs add, by name, shaped like [constant JOBS]' (see [method add_looks]).
+static var looks := {}
 static var _libs := {}
 static var _baked := {}
 static var _mats := {}
@@ -103,18 +105,33 @@ var _layers := 1
 
 ## A person. `look` can set "skin", "hair" and "style" (indexes), "beard"
 ## and the "main", "accent", "shirt" and "tie" colours; anything missing comes from
-## `seed`. `p_job` is a key of [constant JOBS].
+## `seed`. `p_job` is a key of [constant JOBS] or one a job added.
 static func make(p_job := "staff", p_female := false, seed := 0, look := {}) -> Person:
 	var c := Person.new()
 	c.name = "Person"
-	c.job = p_job if JOBS.has(p_job) else "staff"
+	c.job = p_job if has_look(p_job) else "staff"
 	c.female = p_female
 	c._build(seed, look)
 	return c
 
 
+## Adds the looks a job dresses its cast and crowd in (a yacht's crew, a
+## croupier), shaped like [constant JOBS]' entries.
+static func add_looks(more: Dictionary) -> void:
+	looks.merge(more, true)
+
+
+static func has_look(job_name: String) -> bool:
+	return JOBS.has(job_name) or looks.has(job_name)
+
+
+## What a job wears: from [constant JOBS], or a look a job added.
+static func look_of(job_name: String) -> Dictionary:
+	return looks[job_name] if looks.has(job_name) else JOBS.get(job_name, JOBS["staff"])
+
+
 func _build(seed: int, look: Dictionary) -> void:
-	var j: Dictionary = JOBS[job].duplicate()
+	var j: Dictionary = look_of(job).duplicate()
 	var wear: Variant = j.get("wardrobe", "")
 	if wear is Dictionary:
 		wear = wear.get("female" if female else "male", "")

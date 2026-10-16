@@ -1,10 +1,11 @@
 class_name JobScene
 extends Node3D
-## The gala: the Meridian, its cast, the crew and you. On the host it runs
-## the [Job]; on a guest's device the characters are puppets of the host's.
+## One job: its venue, its cast, the crew and you. On the host it runs the
+## [Job]; on a guest's device the characters are puppets of the host's.
 ## Every device hears its own player ([LGVoice]) and plays the characters'
-## lines itself, from them or from the nearest radio; [JobNet] carries the
-## rest. Ends with the job report, which it also writes to user://jobs/.
+## lines itself, from them, from the nearest radio, or in your ear on the
+## phone; [JobNet] carries the rest. Ends with the job report, which it also
+## writes to user://jobs/.
 
 const SCENE := "res://game/job/job_scene.tscn"
 const TITLE := "res://game/ui/title.tscn"
@@ -22,17 +23,14 @@ const LIGHT_EVERY := 0.25
 const SNAP_EVERY := 0.1
 ## How far you can reach to use something.
 const REACH := 2.4
-const PROMPTS := {
-	"jackets": ["Put on a waiter's jacket", "Hang the jacket up"],
-	"keypad": ["Use the keypad", ""],
-}
 
 static var current: JobScene
-## Set before the scene starts (see [method play]): "crew" (CrewInfo dicts),
-## "me" (this device's crew id) and "seed".
+## Set before the scene starts (see [method play]): "job" (an id from
+## [Jobs]), "crew" (CrewInfo dicts), "me" (this device's crew id) and "seed".
 static var setup := {}
 
-var hotel: Meridian
+var def: JobDef
+var venue: Venue
 var job: Job
 var net: JobNet
 var crew: Array[CrewInfo] = []
@@ -45,6 +43,7 @@ var hud: JobHud
 var pause: HotelPause
 var text_line: TextLinePanel
 var keypad: KeypadPanel
+var phone: PhonePanel
 var report_card: JobReportCard
 var ui: CanvasLayer
 var over := false
@@ -59,23 +58,31 @@ var _earpiece_player: AudioStreamPlayer
 var _replay_player: AudioStreamPlayer
 var _relaying := false
 var _use_target := ""
+## The keypad being used.
+var _pad := ""
+## Who you're on the phone with ("" for nobody).
+var _call := ""
+## Mae's calls this device has asked for (a guest doesn't know the host's).
+var _mae_made := {}
 ## Host: guests whose scene isn't ready yet.
 var _waiting := {}
 
 
-## Starts the gala (after the setup screen has the models ready). `crew`
-## is CrewInfo dicts; solo, one is made from `cover`.
+## Starts a job (after the setup screen has the models ready). `crew` is
+## CrewInfo dicts; solo, one is made from `cover`.
 static func play(p_setup := {}) -> void:
 	setup = p_setup
 	LGScenes.change_scene(SCENE)
 
 
 ## One crew member on this device: solo setup.
-static func solo(cover := "guest", female := false, player_name := "") -> Dictionary:
+static func solo(cover := "", female := false, player_name := "", job_id := "meridian_gala") -> Dictionary:
+	Jobs.current = Jobs.make(job_id)
 	var n := player_name if player_name != "" else GameConfig.player_name()
-	var c := CrewInfo.make(1, 1, n, cover, female)
-	c.has_invitation = true
-	return {"crew": [c.to_dict()], "me": 1, "seed": randi()}
+	var c := CrewInfo.make(1, 1, n, cover if cover != "" else Covers.first(), female)
+	c.burned = Progress.burned
+	Jobs.current.give_items([c])
+	return {"job": job_id, "crew": [c.to_dict()], "me": 1, "seed": randi()}
 
 
 func _ready() -> void:
@@ -83,21 +90,25 @@ func _ready() -> void:
 	started_at = Time.get_ticks_msec()
 	if setup.is_empty():
 		setup = solo()
+	var job_id := str(setup.get("job", "meridian_gala"))
+	def = Jobs.make(job_id if Jobs.exists(job_id) else "meridian_gala")
+	Jobs.current = def
+	Person.add_looks(def.looks)
+	venue = def.venue()
+	venue.name = "Venue"
 	var env := WorldEnvironment.new()
-	env.environment = Meridian.environment()
+	env.environment = venue.environment()
 	add_child(env)
-	hotel = Meridian.new()
-	hotel.name = "Hotel"
-	add_child(hotel)
-	if hotel.has_method("build") and hotel.spots.is_empty():
-		hotel.build()
+	add_child(venue)
+	if venue.spots.is_empty():
+		venue.build()
 	net = JobNet.new()
 	net.name = "Net"
 	add_child(net)
 	for d in setup.get("crew", []):
 		crew.append(CrewInfo.from_dict(d))
-	if not crew.any(func(c): return c.has_invitation) and not crew.is_empty():
-		crew[0].has_invitation = true
+	if not crew.is_empty() and not crew.any(func(c): return not c.items.is_empty()):
+		def.give_items(crew)
 	var my_id := int(setup.get("me", net.my_id()))
 	for c in crew:
 		if c.id == my_id:
@@ -112,7 +123,8 @@ func _ready() -> void:
 		job = Job.new()
 		job.name = "Job"
 		add_child(job)
-		job.setup(hotel, crew, int(setup.get("seed", 0)))
+		job.memories = Progress.memories_for(def.venue_id)
+		job.setup(def, venue, crew, int(setup.get("seed", 0)))
 		cast = job.cast
 		_connect_job()
 		for p in net.expected():
@@ -123,9 +135,12 @@ func _ready() -> void:
 	else:
 		_add_puppets()
 		net.ready_for_state()
-	hud.set_clock(job.clock_text() if job else "8:45 pm")
+	hud.set_clock(job.clock_text() if job else JobDef.clock_text(def.start))
 	hud.set_cover(me)
+	hud.set_goal(def.goal)
 	hud.set_hint(_hint())
+	for it in def.items:
+		_on_item(it, int(job.items[it].holder) if job else 0, str(job.items[it].at) if job else str(def.items[it].get("at", "")))
 	if job and job.hold:
 		hud.toast("Waiting for your crew")
 	LGFocusPause.watch(self, player.open_pause)
@@ -162,6 +177,12 @@ func _build_ui() -> void:
 	keypad.entered.connect(_on_keypad_entered)
 	keypad.cancelled.connect(_on_panel_closed)
 	ui.add_child(keypad)
+	phone = PhonePanel.new()
+	phone.dialed.connect(_on_dialed)
+	phone.mae_asked.connect(_on_mae_asked)
+	phone.hung_up.connect(_on_hung_up)
+	phone.closed.connect(_on_panel_closed)
+	ui.add_child(phone)
 	pause = HotelPause.new()
 	pause.leave.connect(_on_quit)
 	pause.quit_to_title.connect(_on_quit)
@@ -186,7 +207,7 @@ func _build_ui() -> void:
 func _add_people() -> void:
 	var i := 0
 	for c in crew:
-		var at: Transform3D = hotel.spots.get("crew_%d" % i, hotel.spots.get("crew_0", Transform3D.IDENTITY))
+		var at: Transform3D = venue.spots.get("crew_%d" % i, venue.spots.get("crew_0", Transform3D.IDENTITY))
 		i += 1
 		if c == me:
 			player = CREW.instantiate()
@@ -198,10 +219,11 @@ func _add_people() -> void:
 			player.talk_ended.connect(_on_talk_ended)
 			player.text_requested.connect(_on_text_requested)
 			player.use_pressed.connect(_on_use_pressed)
+			player.phone_pressed.connect(_on_phone_pressed)
 			c.node = player
 		else:
 			var a := CrewAvatar.make(c)
-			hotel.add_child(a)
+			venue.add_child(a)
 			a.global_transform = at
 			VoiceRelay.prepare(a.voice_player)
 			avatars[c.id] = a
@@ -211,21 +233,10 @@ func _add_people() -> void:
 ## Each room's lights light only what's in it: people take the render
 ## layers of wherever they're standing.
 func _light_people() -> void:
-	if not hotel.has_method("light_layers_at"):
-		return
 	for ch in cast.values():
-		ch.person.set_light_layers(hotel.light_layers_at(ch.global_position))
+		ch.person.set_light_layers(venue.light_layers_at(ch.global_position))
 	for a in avatars.values():
-		a.person.set_light_layers(hotel.light_layers_at(a.global_position))
-
-
-## Hides a jacket on the staff room's rack for each crew member wearing one.
-func _update_rack() -> void:
-	var worn := crew.filter(func(c): return c.outfit == "waiter_jacket").size()
-	var jackets := hotel.find_children("Jacket_?", "Node3D", true, false)
-	jackets.sort_custom(func(a, b): return String(a.name) > String(b.name))
-	for i in jackets.size():
-		jackets[i].visible = i >= worn
+		a.person.set_light_layers(venue.light_layers_at(a.global_position))
 
 
 ## A spot faces its +z, as people do; the player looks down their -z, and
@@ -236,29 +247,32 @@ static func _player_at(spot: Transform3D) -> Transform3D:
 
 ## On a guest: the cast, standing where the host says.
 func _add_puppets() -> void:
-	for sheet in Cast.all():
+	for sheet in def.sheets():
 		var ch := Character.make(sheet)
 		ch.puppet = true
-		hotel.add_child(ch)
-		ch.global_transform = hotel.spots.get(sheet.spot, Transform3D.IDENTITY)
+		venue.add_child(ch)
+		ch.global_transform = venue.spots.get(sheet.spot, Transform3D.IDENTITY)
 		cast[sheet.id] = ch
 
 
-## The rest of the gala: guests in the ballroom and lobby, cooks in the
-## kitchen. Posed, not animated, so they cost little.
+## The crowd: guests, cooks, crew, dressed as the job says for each zone
+## ([member JobDef.extras]). Posed, not animated, so they cost little.
 func _add_extras() -> void:
 	var n := 0
-	for zone in hotel.extras:
-		for t in hotel.extras[zone]:
+	for zone in venue.extras:
+		var dress: Variant = def.extras.get(zone, "guest")
+		var as_job := str(dress.get("job", "guest")) if dress is Dictionary else str(dress)
+		var clips: Array = dress.get("clips", []) if dress is Dictionary else []
+		if clips.is_empty():
+			clips = ["Idle", "Interact"] if as_job == "kitchen" else ["Idle", "Idle_Talking", "Idle_FoldArms"]
+		for t in venue.extras[zone]:
 			n += 1
-			var p := Person.make("kitchen" if zone == "kitchen" else "guest", n % 2 == 0, 500 + n)
+			var p := Person.make(as_job, n % 2 == 0, 500 + n)
 			p.name = "Extra%d" % n
-			hotel.add_child(p)
+			venue.add_child(p)
 			p.global_transform = t
-			var clips := ["Idle", "Idle_Talking", "Idle_FoldArms"] if zone != "kitchen" else ["Idle", "Interact"]
 			p.pose(clips[n % clips.size()], fmod(n * 0.37, 1.0))
-			if hotel.has_method("light_layers_at"):
-				p.set_light_layers(hotel.light_layers_at(t.origin))
+			p.set_light_layers(venue.light_layers_at(t.origin))
 
 
 func _connect_job() -> void:
@@ -270,6 +284,11 @@ func _connect_job() -> void:
 	job.door_changed.connect(_on_door_host)
 	job.faced.connect(_on_faced_host)
 	job.clock_changed.connect(_on_clock_host)
+	job.item_changed.connect(_on_item_host)
+	job.shown.connect(_on_shown_host)
+	job.goal_changed.connect(_on_goal_host)
+	job.mae_said.connect(_on_mae_host)
+	job.call_changed.connect(_on_call_host)
 	job.ended.connect(_on_job_ended)
 	for ch in cast.values():
 		ch.thought.connect(_on_thought)
@@ -280,6 +299,14 @@ func _connect_net() -> void:
 	net.line_requested.connect(_on_line_requested)
 	net.use_requested.connect(_on_use_requested)
 	net.keypad_requested.connect(_on_keypad_requested)
+	net.phone_requested.connect(_on_phone_requested)
+	net.hang_up_requested.connect(_on_hang_up_requested)
+	net.mae_requested.connect(_on_mae_requested)
+	net.item_received.connect(_on_item)
+	net.shown_received.connect(_on_shown)
+	net.goal_received.connect(_on_goal)
+	net.mae_received.connect(_on_mae)
+	net.call_received.connect(_on_call)
 	net.pose_received.connect(_on_pose)
 	net.voice_received.connect(_on_voice)
 	net.line_received.connect(_on_line)
@@ -390,10 +417,18 @@ func _on_talk_ended() -> void:
 
 
 func _on_text_requested() -> void:
-	if over or text_line.is_open() or keypad.is_open() or get_tree().paused:
+	if over or text_line.is_open() or keypad.is_open() or phone.is_open() or get_tree().paused:
 		return
 	player.is_movement_paused = true
-	text_line.ask()
+	text_line.ask(_suggestions())
+
+
+## Lines for text mode: what your cover might say.
+func _suggestions() -> PackedStringArray:
+	var out := PackedStringArray()
+	for l in Covers.of(me.cover).get("lines", []):
+		out.append(str(l) % me.cover_name if "%s" in str(l) else str(l))
+	return out
 
 
 func _on_text_submitted(text: String) -> void:
@@ -440,18 +475,24 @@ func _on_voice(crew_id: int, data: PackedByteArray, earpiece: bool) -> void:
 		VoiceRelay.play(avatars[crew_id].voice_player, data)
 
 
-## A character speaks: shown and spoken here if you're near them, or near
-## a radio when it's on the radio.
-func _on_line(char_id: String, text: String, tone: String, radio: bool) -> void:
+## A character speaks: shown and spoken here if you're near them, near a
+## radio when it's on the radio, or in your ear when they're on the phone
+## with you.
+func _on_line(char_id: String, text: String, tone: String, channel: String) -> void:
 	if job:
-		net.line(char_id, text, tone, radio)
+		net.line(char_id, text, tone, channel)
 	var ch: Character = cast.get(char_id)
 	if ch == null or player == null:
+		return
+	if channel == "phone:%d" % me.id:
+		hud.say(ch.sheet.name + " (phone)", text)
+		if speaking:
+			LGVoice.say(text, ch.sheet.voice, _earpiece_player, ch.sheet.voice_speed)
 		return
 	var at := player.global_position
 	var near := ch.global_position.distance_to(at)
 	var through: Character = null
-	if radio:
+	if channel == "radio":
 		var best := minf(near, HEAR_RADIO)
 		for other in cast.values():
 			if other != ch and other.sheet.radio:
@@ -461,7 +502,7 @@ func _on_line(char_id: String, text: String, tone: String, radio: bool) -> void:
 					through = other
 	if near > HEAR_LINE and through == null:
 		return
-	hud.say(ch.sheet.name + (" (radio)" if through else ""), text)
+	hud.say(ch.sheet.name + (" (radio)" if through else ""), text, _where(through if through else ch))
 	if not speaking:
 		return
 	if through:
@@ -484,6 +525,25 @@ func _on_crew_line(crew_id: int, text: String, voice: String, earpiece: bool) ->
 		return
 	if earpiece or c.position().distance_to(player.global_position) <= float(CREW_HEAR.get(voice, 9.0)):
 		hud.crew(c.name, text, earpiece)
+
+
+## Which way someone is from you, for subtitles: "" ahead, else "left",
+## "right" or "behind".
+func _where(n: Node3D) -> String:
+	if n == null or player == null:
+		return ""
+	var to := n.global_position - player.global_position
+	to.y = 0.0
+	if to.length() < 0.5:
+		return ""
+	var look := player.look_dir()
+	look.y = 0.0
+	var a := rad_to_deg(look.normalized().signed_angle_to(to.normalized(), Vector3.UP))
+	if absf(a) < 40.0:
+		return ""
+	if absf(a) > 130.0:
+		return "behind"
+	return "left" if a > 0.0 else "right"
 
 #endregion
 
@@ -530,15 +590,20 @@ func _prompt_for(what: String) -> String:
 	if what == "":
 		return ""
 	var key := LGInput.label_for_action("interact")
-	if what == "jackets":
-		return "%s: %s" % [key, PROMPTS.jackets[1 if me.outfit == "waiter_jacket" else 0]]
-	if what == "keypad":
-		return "%s: %s" % [key, PROMPTS.keypad[0]]
+	var said: Variant = def.prompt_for(me, what)
+	if said != null:
+		return "%s: %s" % [key, said] if str(said) != "" else ""
+	if def.keypads.has(what):
+		return "%s: Use the keypad" % key
+	if what.begins_with("item:"):
+		var info: Dictionary = def.items.get(what.trim_prefix("item:"), {})
+		return "%s: Take %s" % [key, info.get("name", "it")] if not info.is_empty() and not me.held else ""
 	if what.begins_with("character:"):
-		return "%s: Show the invitation" % key if me.has_invitation and not me.held else ""
+		var paper := def.papers_for(me.items, what.trim_prefix("character:"))
+		return "%s: Show %s" % [key, def.items[paper].get("name", "your papers")] if paper != "" and not me.held else ""
 	if what.begins_with("door:"):
-		var d = hotel.doors.get(what.trim_prefix("door:"))
-		if d == null or what == "door:front":
+		var d = venue.doors.get(what.trim_prefix("door:"))
+		if d == null or d.get("auto") == true:
 			return ""
 		return "%s: %s" % [key, "Close" if d.is_open else "Open"]
 	return ""
@@ -547,11 +612,12 @@ func _prompt_for(what: String) -> String:
 func _on_use_pressed() -> void:
 	if over or _use_target == "":
 		return
-	if _use_target == "keypad":
+	if def.keypads.has(_use_target):
 		if me.held:
 			return
+		_pad = _use_target
 		player.is_movement_paused = true
-		keypad.ask()
+		keypad.ask(str(def.keypads[_pad].get("label", "Keypad")))
 		return
 	if job:
 		_toast_back(job.use(me.id, _use_target))
@@ -562,9 +628,56 @@ func _on_use_pressed() -> void:
 func _on_keypad_entered(code: String) -> void:
 	player.is_movement_paused = false
 	if job:
-		_toast_back(job.keypad(me.id, code))
+		_toast_back(job.keypad(me.id, code, _pad))
 	else:
-		net.send_keypad(code)
+		net.send_keypad(code, _pad)
+
+
+## The phone: the job's numbers, the caller ID to show, and (alone) Auntie
+## Mae's calls.
+func _on_phone_pressed() -> void:
+	if over or me.held or text_line.is_open() or keypad.is_open() or phone.is_open() or get_tree().paused:
+		return
+	if def.phone.is_empty() and def.mae_calls.is_empty():
+		hud.toast("No numbers for this job")
+		return
+	player.is_movement_paused = true
+	phone.ask(def, _call, _mae_open(), crew.size() == 1)
+
+
+## Mae's calls not made yet (asked of the host's job, or as far as this
+## device knows).
+func _mae_open() -> Array:
+	if job:
+		return job.mae_left()
+	return def.mae_calls.filter(func(m): return not _mae_made.has(str(m.id)))
+
+
+
+func _on_dialed(number_id: String, as_who: String) -> void:
+	player.is_movement_paused = false
+	if job:
+		_toast_back(job.ring(me.id, number_id, as_who))
+	else:
+		net.send_phone(number_id, as_who)
+
+
+func _on_hung_up() -> void:
+	player.is_movement_paused = false
+	if job:
+		job.hang_up(me.id)
+	else:
+		net.send_hang_up()
+
+
+func _on_mae_asked(call_id: String) -> void:
+	player.is_movement_paused = false
+	_mae_made[call_id] = true
+	if job:
+		if not job.mae_call(me.id, call_id):
+			hud.toast("Mae can't make that call now")
+	else:
+		net.send_mae(call_id)
 
 
 func _toast_back(text: String) -> void:
@@ -580,10 +693,16 @@ func _on_guest_ready(peer: int) -> void:
 	job.hold = not _waiting.is_empty()
 	for c in crew:
 		net.crew(c.to_dict(), peer)
-	for n in hotel.doors:
-		if hotel.doors[n].get("auto") != true:
-			net.door(n, hotel.doors[n].is_open, hotel.doors[n].locked, peer)
+	for n in venue.doors:
+		if venue.doors[n].get("auto") != true:
+			net.door(n, venue.doors[n].is_open, venue.doors[n].locked, peer)
 	net.heat(job.heat.level, peer)
+	for it in job.items:
+		net.item(it, int(job.items[it].holder), str(job.items[it].at), peer)
+	var shown_now := job.shown_nodes()
+	for n in shown_now:
+		net.shown(n, bool(shown_now[n]), peer)
+	net.goal(peer, job.goal_for(peer))
 
 
 func _on_line_requested(peer: int, text: String, voice: String, earpiece: bool, at: Vector3, look: Vector3) -> void:
@@ -598,10 +717,54 @@ func _on_use_requested(peer: int, what: String) -> void:
 		net.toast(peer, said)
 
 
-func _on_keypad_requested(peer: int, code: String) -> void:
-	var said := job.keypad(peer, code)
+func _on_keypad_requested(peer: int, code: String, pad: String) -> void:
+	var said := job.keypad(peer, code, pad)
 	if said != "":
 		net.toast(peer, said)
+
+
+func _on_phone_requested(peer: int, number_id: String, as_who: String) -> void:
+	var said := job.ring(peer, number_id, as_who)
+	if said != "":
+		net.toast(peer, said)
+
+
+func _on_hang_up_requested(peer: int) -> void:
+	job.hang_up(peer)
+
+
+func _on_mae_requested(peer: int, call_id: String) -> void:
+	if not job.mae_call(peer, call_id):
+		net.toast(peer, "Mae can't make that call now")
+
+
+func _on_item_host(item: String, holder: int, at: String) -> void:
+	net.item(item, holder, at)
+	_on_item(item, holder, at)
+
+
+func _on_shown_host(node_name: String, is_visible: bool) -> void:
+	net.shown(node_name, is_visible)
+
+
+func _on_goal_host(crew_id: int, text: String) -> void:
+	net.goal(crew_id, text)
+	if crew_id == 0 or crew_id == me.id:
+		_on_goal(text)
+
+
+func _on_mae_host(crew_id: int, text: String) -> void:
+	if crew_id == me.id:
+		_on_mae(text)
+	else:
+		net.mae(crew_id, text)
+
+
+func _on_call_host(crew_id: int, char_id: String, number_name: String) -> void:
+	if crew_id == me.id:
+		_on_call(char_id, number_name)
+	else:
+		net.call_state(crew_id, char_id, number_name)
 
 
 func _on_toast_for(crew_id: int, text: String) -> void:
@@ -656,7 +819,8 @@ func _on_crew_received(info: Dictionary) -> void:
 		return
 	var fresh := CrewInfo.from_dict(info)
 	c.outfit = fresh.outfit
-	c.has_invitation = fresh.has_invitation
+	c.items = fresh.items
+	c.flags = fresh.flags
 	var was_held := c.held
 	c.held = fresh.held
 	c.inside = fresh.inside
@@ -665,16 +829,15 @@ func _on_crew_received(info: Dictionary) -> void:
 
 ## Shows a crew member's change: clothes, held, inside.
 func _apply_crew(c: CrewInfo, was_held := false) -> void:
-	_update_rack()
 	if avatars.has(c.id):
 		avatars[c.id].dress()
 	if c != me:
 		return
 	hud.set_cover(me)
 	if c.held and not hud.is_held():
-		hud.set_held(true)
+		hud.set_held(true, str(def.office.get("name", "the security office")))
 		var i := crew.find(c)
-		var at: Transform3D = hotel.spots.get("held", player.global_transform)
+		var at: Transform3D = venue.spots.get(str(def.office.get("held", "held")), player.global_transform)
 		at.origin += at.basis.x * (0.8 * i)
 		hud.fade()
 		await get_tree().create_timer(0.35).timeout
@@ -694,7 +857,7 @@ func _on_heat(level: int) -> void:
 
 
 func _on_door_received(door_name: String, is_open: bool, locked: bool) -> void:
-	var d = hotel.doors.get(door_name)
+	var d = venue.doors.get(door_name)
 	if d == null:
 		return
 	if is_open and not d.is_open:
@@ -711,9 +874,43 @@ func _on_faced(char_id: String, suspicion: int) -> void:
 
 
 func _on_clock(minute: int) -> void:
-	hud.set_clock("%d:%02d pm" % [8 + minute / 60, minute % 60])
-	if hotel.has_method("set_clock"):
-		hotel.set_clock(20 * 60 + minute)
+	hud.set_clock(JobDef.clock_text(minute))
+	venue.set_clock(minute)
+
+
+## An item moved: it shows at the use it lies at (any of the venue's uses
+## for it), and nowhere else.
+func _on_item(item: String, _holder: int, at: String) -> void:
+	for u in venue.uses:
+		var n: Node3D = venue.uses[u]
+		if n == null or str(n.get_meta("use", "")) != "item:" + item:
+			continue
+		var here := str(u) == at
+		n.visible = here
+		if n is CollisionObject3D:
+			(n as CollisionObject3D).collision_layer = Kit.LAYER_INTERACT if here else 0
+
+
+func _on_shown(node_name: String, is_visible: bool) -> void:
+	var n := venue.find_child(node_name, true, false) as Node3D
+	if n:
+		n.visible = is_visible
+
+
+func _on_goal(text: String) -> void:
+	hud.set_goal(text)
+
+
+## Auntie Mae, in your ear.
+func _on_mae(text: String) -> void:
+	hud.say("Auntie Mae (earpiece)", text)
+	if speaking:
+		LGVoice.say(text, GameConfig.MAE_VOICE, _earpiece_player, 0.95)
+
+
+func _on_call(char_id: String, number_name: String) -> void:
+	_call = char_id
+	hud.set_call(number_name)
 
 
 func _on_snapshot(chars: Dictionary) -> void:
@@ -732,7 +929,7 @@ func _on_pose(crew_id: int, at: Vector3, look: Vector3, crouch: bool) -> void:
 func _on_peer_gone(peer: int) -> void:
 	if peer == 1 and not net.is_host() and not over:
 		hud.toast("The host left")
-		_finish({"outcome": "lost", "crew": [], "best": {}, "worst": {}})
+		_finish({"outcome": "lost", "title": "THE HOST LEFT", "text": "The night ended when the host's game did.", "crew": [], "best": {}, "worst": {}})
 		return
 	_waiting.erase(peer)
 	var c := _crew(peer)
@@ -776,13 +973,14 @@ func _finish(r: Dictionary) -> void:
 	if player.talking:
 		player.end_talk()
 	report["file"] = _write(report)
+	Progress.record(report, me.id)
 	LGPlaytest.moment("job_" + str(report.get("outcome", "")), {"clock": report.get("clock", ""), "heat_peak": report.get("heat_peak", 0)})
 	report_card.show_report(report, me.id)
 
 
 func _write(r: Dictionary) -> String:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT_DIR))
-	var path := "%s/gala-%s.json" % [OUT_DIR, Time.get_datetime_string_from_system(true).replace(":", "-")]
+	var path := "%s/%s-%s.json" % [OUT_DIR, def.id, Time.get_datetime_string_from_system(true).replace(":", "-")]
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
 		return ""
@@ -799,7 +997,7 @@ func _write(r: Dictionary) -> String:
 
 ## Plays a line from the report again, in the character's voice.
 func _on_replay(char_id: String, text: String) -> void:
-	var sheet := Cast.sheet(char_id)
+	var sheet := def.sheet(char_id)
 	if sheet == null or not LGVoice.is_ready():
 		return
 	LGVoice.hush(_replay_player)
@@ -811,6 +1009,7 @@ func _again() -> void:
 	if net.lan:
 		_on_quit()
 		return
+	setup = solo(me.cover, me.female, me.name, def.id) if not net.lan else setup
 	LGScenes.change_scene(SCENE)
 
 

@@ -5,9 +5,10 @@ extends Node
 ##   XDG_DATA_HOME=/tmp/a godot --headless --path . tools/net_check.tscn -- host /tmp/code &
 ##   XDG_DATA_HOME=/tmp/b godot --headless --path . tools/net_check.tscn -- join /tmp/code
 ## The guest joins, picks a cover and walks up to Teo; the host sees them
-## arrive and move, and Teo's answer reaches the guest's subtitles. Then the
-## host opens the ballroom, both walk in, and both get the report. Each
-## prints "NET OK" and exits 0 when its side worked.
+## arrive and move, and Teo's answer reaches the guest's subtitles. The guest
+## rings reception and hears Dana in their ear. Then the host opens the
+## ballroom, both walk in, and both get the report. Each prints "NET OK" and
+## exits 0 when its side worked.
 
 const TIMEOUT := 40.0
 
@@ -57,7 +58,7 @@ func _host() -> bool:
 	if not await _until(func(): return str(Session.crew[guest_id].cover) == "press"):
 		return _fail("the guest's cover never changed")
 	var crew := Session.job_crew()
-	if not (crew[0].has_invitation and not crew[1].has_invitation):
+	if not ("invitation" in crew[0].items and not "invitation" in crew[1].items):
 		return _fail("the invitation should go to the host, the one guest: %s" % str(crew))
 	Session.start_job()
 	if not await _until(func(): return _scene() != null and _scene().job != null and not _scene().job.hold):
@@ -76,7 +77,7 @@ func _host() -> bool:
 	print("Teo heard the guest: %s" % str(teo.turns.back().get("reply", {}).get("say", "")))
 	await get_tree().create_timer(2.0).timeout
 	s.job._open_for("ballroom", 20.0)
-	s.player.global_transform = JobScene._player_at(s.hotel.spots.ballroom_in)
+	s.player.global_transform = JobScene._player_at(s.venue.spots.ballroom_in)
 	if not await _until(func(): return s.over):
 		return _fail("the job never ended")
 	print("the job ended: %s, %s" % [s.report.get("outcome"), s.report.get("clock")])
@@ -110,9 +111,16 @@ func _join() -> bool:
 	if not await _until(func(): return s.hud._speaker.text.begins_with("Teo")):
 		return _fail("Teo's answer never reached here")
 	print("Teo answered: %s" % s.hud._subtitle.text)
-	if not await _until(func(): return s.hotel.doors.ballroom.is_open):
+	s._on_dialed("reception", "Caldera Museum")
+	if not await _until(func(): return s.hud._speaker.text == "Dana (phone)" and s._call == "dana"):
+		return _fail("Dana never picked up the phone (%s: %s)" % [s.hud._speaker.text, s.hud._subtitle.text])
+	print("Dana on the phone: %s" % s.hud._subtitle.text)
+	s._on_hung_up()
+	if not await _until(func(): return s._call == ""):
+		return _fail("the call never ended")
+	if not await _until(func(): return s.venue.doors.ballroom.is_open):
 		return _fail("never saw the ballroom open")
-	s.player.global_transform = JobScene._player_at(s.hotel.spots.ballroom_in)
+	s.player.global_transform = JobScene._player_at(s.venue.spots.ballroom_in)
 	if not await _until(func(): return s.over):
 		return _fail("no report from the host")
 	print("report from the host: %s at %s" % [s.report.get("outcome"), s.report.get("clock")])

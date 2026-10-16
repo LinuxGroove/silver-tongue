@@ -1,7 +1,7 @@
 class_name KeypadPanel
 extends Control
-## The service door's keypad: four digits, typed or picked with the pad.
-## Enter tries them, Escape steps back.
+## A door's keypad: four digits, typed or picked with the pad. Enter tries
+## them, Escape steps back.
 
 signal entered(code: String)
 signal cancelled
@@ -11,6 +11,7 @@ const DIGITS := 4
 var code := ""
 var _panel: PanelContainer
 var _display: Label
+var _label: Label
 var _buttons: Array[Button] = []
 
 
@@ -27,7 +28,8 @@ func _ready() -> void:
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 10)
 	_panel.add_child(col)
-	col.add_child(LGUi.label("Kitchen door", "DimLabel"))
+	_label = LGUi.label("Keypad", "DimLabel")
+	col.add_child(_label)
 	_display = HotelTheme.title_label("_ _ _ _", 34, HotelTheme.BRASS)
 	_display.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(_display)
@@ -49,7 +51,8 @@ func is_open() -> bool:
 	return visible
 
 
-func ask() -> void:
+func ask(what := "Keypad") -> void:
+	_label.text = what
 	code = ""
 	_show()
 	visible = true

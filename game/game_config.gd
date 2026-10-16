@@ -5,7 +5,7 @@ extends RefCounted
 const GAME_ID := "silver-tongue"
 ## Bump PROTOCOL whenever network messages change; mismatched builds are told
 ## to update instead of joining.
-const PROTOCOL := 1
+const PROTOCOL := 2
 ## The crew on a job, on this many devices (one player each).
 const MAX_CREW := 2
 
@@ -44,6 +44,8 @@ const SETTING_DEFAULTS := {
 		"fov": 75.0,
 		# Subtitles for everyone who speaks, and your own words as the guard heard them.
 		"subtitles": true,
+		# Subtitles say which way the speaker is when they're not ahead of you.
+		"subtitle_where": true,
 	},
 	"voice": {
 		# How you talk: "push" (hold to talk), "open" (the mic is always on)
@@ -89,6 +91,8 @@ const ACTIONS := {
 	"earpiece": ["key:Tab", "axis:lt+"],
 	# Type a line instead of saying it.
 	"text": ["key:T", "joy:y"],
+	# The phone: ring a number on the job's list, or Auntie Mae.
+	"phone": ["key:P", "joy:up"],
 	# Cogito reads these; Silver Tongue has no inventory screen.
 	"inventory": [],
 	"inventory_move_item": [],
@@ -106,6 +110,10 @@ const ACTIONS := {
 	"ui_next_tab": ["key:E", "joy:rb"],
 	"ui_prev_tab": ["key:Q", "joy:lb"],
 }
+
+
+## Auntie Mae's voice (Kokoro), on the board and in your ear.
+const MAE_VOICE := "bf_emma"
 
 
 static func version() -> String:

@@ -44,6 +44,8 @@ var busy := false
 var puppet := false
 ## Minds the security office (a Halberd guard standing in for a post).
 var minding := false
+## The crew member on the phone with them (0 for nobody).
+var on_call := 0
 ## The spot they belong at now ("" when walking somewhere for a reason).
 var post := ""
 var walking := false
@@ -118,6 +120,8 @@ func forward() -> Vector3:
 func face_of(crew_id: int) -> Dictionary:
 	if not faces.has(crew_id):
 		faces[crew_id] = JobRules.new_face(sheet, job.heat.level if job else Heat.CALM)
+		if job:
+			job.new_face(self, crew_id, faces[crew_id])
 	return faces[crew_id]
 
 
@@ -137,7 +141,7 @@ func is_speaking() -> bool:
 ## A crew member said something this character heard. `addressed`: it was
 ## said to them; otherwise it's overheard, and they think only when `hot`.
 func hear(crew_id: int, said: String, heard: String, how: String, distance: float, voice: String, addressed: bool, hot := false, through_wall := false) -> void:
-	var who: String = job.describe(crew_id) if job else "someone"
+	var who: String = job.describe_to(crew_id, self) if job else "someone"
 	var f := face_of(crew_id)
 	f["met"] = true
 	if heard == "":
@@ -350,7 +354,7 @@ func _mood(tone: String) -> void:
 			_idle = "Idle"
 
 
-## Walks to a spot through the hotel's points, opening doors on the way.
+## Walks to a spot through the venue's points, opening doors on the way.
 func walk_to(spot_name: String) -> void:
 	if job == null:
 		return
@@ -376,8 +380,8 @@ func _walk(delta: float) -> void:
 		return
 	var target: Vector3 = _path[0]
 	var door: String = _path_doors[0]
-	if door != "" and job.hotel.doors.has(door):
-		var hd = job.hotel.doors[door]
+	if door != "" and job.venue.doors.has(door):
+		var hd = job.venue.doors[door]
 		if not hd.is_open:
 			job.open_door(door, global_position)
 			_opened.append(hd)

@@ -1,9 +1,9 @@
 class_name CrewInfo
 extends RefCounted
 ## One member of the crew on a job: who's playing, their cover and clothes,
-## the forged invitation, and whether they're held or inside. `node` is
-## their body on this device: the player's own [CrewMember], or a
-## [CrewAvatar] for someone on another device.
+## what they carry, and whether they're held or inside. `node` is their body
+## on this device: the player's own [CrewMember], or a [CrewAvatar] for
+## someone on another device.
 
 var id := 1
 ## The device's peer (1 is the host).
@@ -17,10 +17,24 @@ var female := false
 ## Skin, hair and style, for [Person.make].
 var look := {}
 var outfit := "guest"
-var has_invitation := false
+## The items they carry (ids from [member JobDef.items]).
+var items: Array[String] = []
+## What the job has noted about them: let in, booked, hired, and so on.
+var flags := {}
+## Held at an earlier job this season: Halberd has their photo.
+var burned := false
 var held := false
 var inside := false
 var node: Node3D
+## Carrying the gala's invitation.
+var has_invitation: bool:
+	get:
+		return "invitation" in items
+	set(v):
+		if v and not "invitation" in items:
+			items.append("invitation")
+		elif not v:
+			items.erase("invitation")
 
 
 static func make(p_id: int, p_peer: int, p_name: String, p_cover: String, p_female: bool, p_look := {}) -> CrewInfo:
@@ -28,11 +42,11 @@ static func make(p_id: int, p_peer: int, p_name: String, p_cover: String, p_fema
 	c.id = p_id
 	c.peer = p_peer
 	c.name = p_name
-	c.cover = p_cover if Covers.ALL.has(p_cover) else "guest"
+	c.cover = p_cover if Covers.has(p_cover) else Covers.first()
 	c.female = p_female
 	c.look = p_look
 	c.cover_name = Covers.cover_name(c.cover, p_female)
-	c.outfit = str(Covers.ALL[c.cover].outfit)
+	c.outfit = str(Covers.of(c.cover).get("outfit", "guest"))
 	return c
 
 
@@ -59,13 +73,15 @@ func position() -> Vector3:
 
 ## For the session: everything another device needs to know about them.
 func to_dict() -> Dictionary:
-	return {"id": id, "peer": peer, "name": name, "cover": cover, "female": female, "look": look, "outfit": outfit, "has_invitation": has_invitation, "held": held, "inside": inside}
+	return {"id": id, "peer": peer, "name": name, "cover": cover, "female": female, "look": look, "outfit": outfit, "items": items.duplicate(), "flags": flags.duplicate(), "burned": burned, "held": held, "inside": inside}
 
 
 static func from_dict(d: Dictionary) -> CrewInfo:
 	var c := make(int(d.get("id", 1)), int(d.get("peer", 1)), str(d.get("name", "Stranger")), str(d.get("cover", "guest")), bool(d.get("female", false)), d.get("look", {}))
 	c.outfit = str(d.get("outfit", c.outfit))
-	c.has_invitation = bool(d.get("has_invitation", false))
+	c.items.assign(d.get("items", []))
+	c.flags = d.get("flags", {}).duplicate()
+	c.burned = bool(d.get("burned", false))
 	c.held = bool(d.get("held", false))
 	c.inside = bool(d.get("inside", false))
 	return c

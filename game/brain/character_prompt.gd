@@ -50,7 +50,7 @@ static func system(sheet: CharacterSheet, mind_language := false) -> String:
 	lines.append("\"suspicion\" is about the person in the last line: how sure you are that something's wrong with them. 0 relaxed, 1 your usual, 2 something's off, 3 you don't buy it, 4 about to call it in, 5 calling it in. It moves a step at a time, two when something is plainly wrong, and comes down slowly.")
 	var acts := PackedStringArray()
 	for a in sheet.actions:
-		acts.append('"%s" (%s)' % [a, sheet.action_words.get(a, CharacterSheet.ACTIONS.get(a, a))])
+		acts.append('"%s" (%s)' % [a, sheet.action_text(a)])
 	lines.append("\"do\" is what you do right now about that person, one of: %s. Pick \"none\" unless you mean it. You only do something for someone when you believe who they are and why they're here; a good story alone isn't enough." % ", ".join(acts))
 	lines.append("\"say\" is short and plain, the way you talk. Don't repeat yourself. Don't describe actions in it; \"do\" does that.")
 	if mind_language:
@@ -77,6 +77,8 @@ static func crew_line(clock: String, who: String, heard: String, distance: float
 			manner = "whispering"
 		"shout":
 			manner = "shouting"
+	if voice == "phone":
+		return "[%s. %s, on the phone, to you] \"%s\"" % [clock, _cap(who), heard]
 	if through_wall:
 		manner += ", through a wall"
 	if how == "muffled":

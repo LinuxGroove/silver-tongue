@@ -1,6 +1,6 @@
 class_name JobNet
 extends Node
-## The gala between devices, for co-op on LAN: the host runs the [Job] and
+## A job between devices, for co-op on LAN: the host runs the [Job] and
 ## sends each guest what they need (characters' lines, where everyone is,
 ## doors, heat, their own toasts); guests send what their player says and
 ## does. Requests are `_c_*`, state is `_h_*`, always with `rpc_id`. Crew
@@ -15,10 +15,13 @@ extends Node
 signal guest_ready(peer: int)
 signal line_requested(peer: int, text: String, voice: String, earpiece: bool, at: Vector3, look: Vector3)
 signal use_requested(peer: int, what: String)
-signal keypad_requested(peer: int, code: String)
+signal keypad_requested(peer: int, code: String, pad: String)
+signal phone_requested(peer: int, number_id: String, as_who: String)
+signal hang_up_requested(peer: int)
+signal mae_requested(peer: int, call_id: String)
 signal pose_received(crew_id: int, at: Vector3, look: Vector3, crouch: bool)
 signal voice_received(crew_id: int, data: PackedByteArray, earpiece: bool)
-signal line_received(char_id: String, text: String, tone: String, radio: bool)
+signal line_received(char_id: String, text: String, tone: String, channel: String)
 signal crew_line_received(crew_id: int, text: String, voice: String, earpiece: bool)
 signal toast_received(text: String)
 signal heat_received(level: int)
@@ -27,6 +30,11 @@ signal door_received(door_name: String, is_open: bool, locked: bool)
 signal faced_received(char_id: String, suspicion: int)
 signal clock_received(minute: int)
 signal snapshot_received(chars: Dictionary)
+signal item_received(item: String, holder: int, at: String)
+signal shown_received(node_name: String, is_visible: bool)
+signal goal_received(text: String)
+signal mae_received(text: String)
+signal call_received(char_id: String, number_name: String)
 signal report_received(report: Dictionary)
 signal peer_gone(peer: int)
 
@@ -96,9 +104,26 @@ func send_use(what: String) -> void:
 		_c_use.rpc_id(1, what)
 
 
-func send_keypad(code: String) -> void:
+func send_keypad(code: String, pad: String) -> void:
 	if lan and synced and not multiplayer.is_server():
-		_c_keypad.rpc_id(1, code)
+		_c_keypad.rpc_id(1, code, pad)
+
+
+## Rings a number on the job's phone list, showing `as_who` as the caller.
+func send_phone(number_id: String, as_who: String) -> void:
+	if lan and synced and not multiplayer.is_server():
+		_c_phone.rpc_id(1, number_id, as_who)
+
+
+func send_hang_up() -> void:
+	if lan and synced and not multiplayer.is_server():
+		_c_hang_up.rpc_id(1)
+
+
+## Asks Auntie Mae to make one of her calls.
+func send_mae(call_id: String) -> void:
+	if lan and synced and not multiplayer.is_server():
+		_c_mae.rpc_id(1, call_id)
 
 
 ## Where this device's player is (guests send it to the host; the host
@@ -140,9 +165,27 @@ func _c_use(what: String) -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable")
-func _c_keypad(code: String) -> void:
+func _c_keypad(code: String, pad: String) -> void:
 	if multiplayer.is_server():
-		keypad_requested.emit(_sender(), code.left(8))
+		keypad_requested.emit(_sender(), code.left(8), pad.left(64))
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _c_phone(number_id: String, as_who: String) -> void:
+	if multiplayer.is_server():
+		phone_requested.emit(_sender(), number_id.left(64), as_who.left(64))
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _c_hang_up() -> void:
+	if multiplayer.is_server():
+		hang_up_requested.emit(_sender())
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _c_mae(call_id: String) -> void:
+	if multiplayer.is_server():
+		mae_requested.emit(_sender(), call_id.left(64))
 
 
 @rpc("any_peer", "call_remote", "unreliable_ordered")
@@ -163,9 +206,9 @@ func _c_voice(data: PackedByteArray, earpiece: bool) -> void:
 #region Host to guests
 
 ## A character's line, to every guest.
-func line(char_id: String, text: String, tone: String, radio: bool) -> void:
+func line(char_id: String, text: String, tone: String, channel: String) -> void:
 	for p in guests():
-		_h_line.rpc_id(p, char_id, text, tone, radio)
+		_h_line.rpc_id(p, char_id, text, tone, channel)
 
 
 func crew_line(crew_id: int, text: String, voice: String, earpiece: bool) -> void:
@@ -220,9 +263,40 @@ func report(r: Dictionary) -> void:
 		_h_report.rpc_id(p, r)
 
 
+func item(item_id: String, holder: int, at: String, to := 0) -> void:
+	for p in guests():
+		if to == 0 or p == to:
+			_h_item.rpc_id(p, item_id, holder, at)
+
+
+func shown(node_name: String, is_visible: bool, to := 0) -> void:
+	for p in guests():
+		if to == 0 or p == to:
+			_h_shown.rpc_id(p, node_name, is_visible)
+
+
+## What one guest (0: every guest) should do now.
+func goal(peer: int, text: String) -> void:
+	for p in guests():
+		if peer == 0 or p == peer:
+			_h_goal.rpc_id(p, text)
+
+
+## Auntie Mae, in one guest's ear.
+func mae(peer: int, text: String) -> void:
+	if peer in guests():
+		_h_mae.rpc_id(peer, text)
+
+
+## One guest's phone call started (or ended: both "").
+func call_state(peer: int, char_id: String, number_name: String) -> void:
+	if peer in guests():
+		_h_call.rpc_id(peer, char_id, number_name)
+
+
 @rpc("authority", "call_remote", "reliable")
-func _h_line(char_id: String, text: String, tone: String, radio: bool) -> void:
-	line_received.emit(char_id, text, tone, radio)
+func _h_line(char_id: String, text: String, tone: String, channel: String) -> void:
+	line_received.emit(char_id, text, tone, channel)
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -279,5 +353,30 @@ func _h_voice(crew_id: int, data: PackedByteArray, earpiece: bool) -> void:
 @rpc("authority", "call_remote", "reliable")
 func _h_report(r: Dictionary) -> void:
 	report_received.emit(r)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _h_item(item_id: String, holder: int, at: String) -> void:
+	item_received.emit(item_id, holder, at)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _h_shown(node_name: String, is_visible: bool) -> void:
+	shown_received.emit(node_name, is_visible)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _h_goal(text: String) -> void:
+	goal_received.emit(text)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _h_mae(text: String) -> void:
+	mae_received.emit(text)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _h_call(char_id: String, number_name: String) -> void:
+	call_received.emit(char_id, number_name)
 
 #endregion

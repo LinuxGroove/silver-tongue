@@ -6,7 +6,6 @@ extends Node
 const WIDTH := 540
 const NAME := "SILVER\nTONGUE"
 const SHADE_RIGHT := HotelTheme.SHADE_RIGHT
-const BRIEFING := "Auntie Mae: \"The Caldera Museum's gala is in the Meridian's ballroom tonight, and the Rose comes with it. I need you inside before Halvorsen's speech at half past nine, to see who's carrying what. Nobody on the crew is invited, so talk your way in. The staff hear everything. Mind what you say, and how loud.\""
 
 var backdrop: MenuBackdrop
 var _ui: Control
@@ -116,25 +115,30 @@ func _play() -> void:
 
 #region The gala
 
-## Auntie Mae's briefing, your cover, and how you're playing.
+## Auntie Mae's briefing for the crew's job, your cover, and how you're
+## playing.
 func show_gala() -> void:
+	Session.ensure_job()
+	var def := Jobs.current
+	if not Covers.has(_cover):
+		_cover = Covers.first()
 	_clear("gala")
-	_heading("The gala")
-	_text(BRIEFING)
+	_heading(def.title)
+	_text("Auntie Mae: \"%s\"" % def.briefing)
 	_col.add_child(HotelTheme.hud_label("Your cover", 20, HotelTheme.BRASS))
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 8)
 	_col.add_child(grid)
-	for id in Covers.ORDER:
-		var b := LGUi.button(str(Covers.ALL[id].title), _pick_cover.bind(id), (WIDTH - 8) / 2)
+	for id in Covers.order():
+		var b := LGUi.button(str(Covers.of(id).title), _pick_cover.bind(id), (WIDTH - 8) / 2)
 		if id == _cover:
 			b.add_theme_color_override("font_color", HotelTheme.BRASS)
 			b.add_theme_color_override("font_focus_color", HotelTheme.BRASS)
 			b.text = "> %s <" % b.text
 		grid.add_child(b)
-	var c: Dictionary = Covers.ALL[_cover]
+	var c: Dictionary = Covers.of(_cover)
 	_text("%s, %s. %s Made for %s." % [Covers.cover_name(_cover, _female), c.job, c.story, c["for"]], true)
 	_col.add_child(LGUi.button("You look like: %s" % ("a woman" if _female else "a man"), _toggle_body, WIDTH))
 	_col.add_child(Control.new())
@@ -149,10 +153,10 @@ func _pick_cover(id: String) -> void:
 	_cover = id
 	Session.set_cover(_cover, _female)
 	if _page == "lobby":
-		_queue_lobby("> %s <" % Covers.ALL[id].title)
+		_queue_lobby("> %s <" % Covers.of(id).title)
 		return
 	show_gala()
-	_focus_text("> %s <" % Covers.ALL[id].title)
+	_focus_text("> %s <" % Covers.of(id).title)
 
 
 func _toggle_body() -> void:
@@ -251,14 +255,14 @@ func show_lobby() -> void:
 	for id in ids:
 		var c: Dictionary = Session.crew[id]
 		var you := " (you)" if int(id) == Session.local_id() else ""
-		_text("%s%s: %s, %s" % [c.name, you, Covers.cover_name(str(c.cover), bool(c.female)), str(Covers.ALL[str(c.cover)].title).to_lower()])
+		_text("%s%s: %s, %s" % [c.name, you, Covers.cover_name(str(c.cover), bool(c.female)), str(Covers.of(str(c.cover)).title).to_lower()])
 	var row := GridContainer.new()
 	row.columns = 2
 	row.add_theme_constant_override("h_separation", 8)
 	row.add_theme_constant_override("v_separation", 8)
 	_col.add_child(row)
-	for id in Covers.ORDER:
-		var b := LGUi.button(str(Covers.ALL[id].title), _pick_cover.bind(id), (WIDTH - 8) / 2)
+	for id in Covers.order():
+		var b := LGUi.button(str(Covers.of(id).title), _pick_cover.bind(id), (WIDTH - 8) / 2)
 		if id == _cover:
 			b.text = "> %s <" % b.text
 			b.add_theme_color_override("font_color", HotelTheme.BRASS)

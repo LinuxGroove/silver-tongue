@@ -1,11 +1,14 @@
 extends Node
-## Pictures of the Meridian and of the gala in play:
-##   xvfb-run -a -s "-screen 0 1280x800x24" godot --path . --resolution 1280x800 tools/screenshot.tscn -- --all=docs/screenshots [group=hotel|gala]
-## writes <dir>/hotel/<view>.png (the hotel's views, Meridian.views, with the
-## cast at their posts and the crowd) and <dir>/gala/<shot>.png (the gala
-## with the staff on scripted lines: the briefing, the HUD, talking, papers,
-## the keypad, the office, the report), each with a README listing them.
-##   ... tools/screenshot.tscn -- --view=lobby --out=/tmp/lobby.png
+## Pictures of the venues and of the jobs in play:
+##   xvfb-run -a -s "-screen 0 1280x800x24" godot --path . --resolution 1280x800 tools/screenshot.tscn -- --all=docs/screenshots [group=hotel|gala|jobs|<venue>]
+## writes <dir>/hotel/<view>.png (the Meridian's views, with the gala's cast
+## at their posts and the crowd), <dir>/<venue>/<view>.png for every other
+## venue (marlin, tideline, vantage, mae: its views, with its first job's
+## cast), <dir>/gala/<shot>.png (the gala with the staff on scripted lines:
+## the briefing, the HUD, talking, papers, the keypad, the office, the
+## report) and <dir>/jobs/<job>.png (each job's first moment, from where
+## the crew starts), each with a README listing them.
+##   ... tools/screenshot.tscn -- [--venue=marlin] --view=deck --out=/tmp/deck.png
 ## writes one view; `--only=lobby,bar` with --all shoots just those (and
 ## leaves the READMEs alone), and `--eye=x,y,z --at=x,y,z --out=<file>`
 ## looks from anywhere. For the real renderer on a machine with no GPU, set
@@ -46,7 +49,7 @@ const GALA := {
 	"report": "The job report: how it went, the scores, the night's best and worst lines",
 }
 
-var hotel: Meridian
+var venue: Venue
 var cam: Camera3D
 
 
@@ -58,6 +61,7 @@ func _ready() -> void:
 	var only: Array = []
 	var eye := ""
 	var at := ""
+	var venue_id := "meridian"
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--eye="):
 			eye = arg.trim_prefix("--eye=")
@@ -69,6 +73,8 @@ func _ready() -> void:
 			out = arg.trim_prefix("--out=")
 		elif arg.begins_with("--all="):
 			all = arg.trim_prefix("--all=")
+		elif arg.begins_with("--venue="):
+			venue_id = arg.trim_prefix("--venue=")
 		elif arg.begins_with("--only="):
 			only = Array(arg.trim_prefix("--only=").split(","))
 		elif arg.trim_prefix("--").begins_with("group="):
@@ -77,22 +83,26 @@ func _ready() -> void:
 	LGInput.register_actions(GameConfig.ACTIONS)
 	LGInput.extend_ui_actions()
 	HotelTheme.apply(get_tree().root, 22)
-	if all != "" and group != "gala":
-		await _hotel_shots(all, only)
-	if all != "" and group != "hotel":
-		await _gala_shots(all.path_join("gala"), only)
 	if all != "":
+		for v in Jobs.VENUES:
+			var folder := "hotel" if v == "meridian" else str(v)
+			if (group == "" or group == folder) and not Jobs.at_venue(v).filter(func(j): return Jobs.exists(j)).is_empty():
+				await _venue_shots(v, all.path_join(folder), only)
+		if group in ["", "gala"]:
+			await _gala_shots(all.path_join("gala"), only)
+		if group in ["", "jobs"]:
+			await _job_shots(all.path_join("jobs"), only)
 		get_tree().quit()
 		return
-	await _build_hotel()
+	await _build_venue(venue_id)
 	if eye != "" and at != "":
 		# Anywhere, for a closer look: --eye=x,y,z --at=x,y,z.
 		var e := eye.split_floats(",")
 		var a := at.split_floats(",")
-		hotel.views["_look"] = Transform3D.IDENTITY.looking_at(Vector3(a[0], a[1], a[2]) - Vector3(e[0], e[1], e[2]), Vector3.UP).translated(Vector3(e[0], e[1], e[2]))
+		venue.views["_look"] = Transform3D.IDENTITY.looking_at(Vector3(a[0], a[1], a[2]) - Vector3(e[0], e[1], e[2]), Vector3.UP).translated(Vector3(e[0], e[1], e[2]))
 		await _shoot("_look", out if out != "" else "/tmp/look.png")
 	elif view != "":
-		if not hotel.views.has(view):
+		if not venue.views.has(view):
 			printerr("No view called %s; there are %s" % [view, ", ".join(_order())])
 			get_tree().quit(1)
 			return
@@ -104,15 +114,28 @@ func _ready() -> void:
 	get_tree().quit()
 
 
-#region The hotel
+#region The venues
 
-func _build_hotel() -> void:
+## A venue's first job built so far, for its cast and crowd.
+func _first_job(venue_id: String) -> JobDef:
+	for j in Jobs.at_venue(venue_id):
+		if Jobs.exists(j):
+			return Jobs.make(j)
+	return null
+
+
+func _build_venue(venue_id: String) -> void:
+	var def := _first_job(venue_id)
+	Jobs.current = def
+	Person.add_looks(def.looks)
+	venue = def.venue()
 	var env := WorldEnvironment.new()
-	env.environment = Meridian.environment()
+	env.environment = venue.environment()
 	add_child(env)
-	hotel = Meridian.new()
-	add_child(hotel)
-	_cast()
+	add_child(venue)
+	if venue.spots.is_empty():
+		venue.build()
+	_cast(def)
 	cam = Camera3D.new()
 	cam.fov = 70.0
 	cam.near = 0.05
@@ -123,15 +146,15 @@ func _build_hotel() -> void:
 		await get_tree().process_frame
 
 
-func _hotel_shots(all: String, only: Array) -> void:
-	await _build_hotel()
-	var dir := all.path_join("hotel")
+func _venue_shots(venue_id: String, dir: String, only: Array) -> void:
+	await _build_venue(venue_id)
 	DirAccess.make_dir_recursive_absolute(dir)
-	var lines := ["# The Meridian", "", "Made by `tools/screenshot.tscn -- --all=docs/screenshots group=hotel` (see `tools/screenshot.gd`).", ""]
-	for v in _order():
+	var lines := ["# %s" % Jobs.VENUES[venue_id], "", "Made by `tools/screenshot.tscn -- --all=docs/screenshots group=%s` (see `tools/screenshot.gd`)." % dir.get_file(), ""]
+	var about: Dictionary = ABOUT if venue_id == "meridian" else venue.view_about
+	for v in _order(about):
 		if only.is_empty() or v in only:
 			await _shoot(v, dir.path_join(v + ".png"))
-		lines.append("- [`%s`](%s.png): %s" % [v, v, ABOUT.get(v, v)])
+		lines.append("- [`%s`](%s.png): %s" % [v, v, about.get(v, v)])
 	if only.is_empty():
 		_readme(dir, lines)
 	for c in get_children():
@@ -139,42 +162,75 @@ func _hotel_shots(all: String, only: Array) -> void:
 	await get_tree().process_frame
 
 
-func _order() -> Array:
+func _order(about := ABOUT) -> Array:
 	var out := []
-	for v in ABOUT:
-		if hotel.views.has(v):
+	for v in about:
+		if venue.views.has(v):
 			out.append(v)
-	for v in hotel.views:
+	for v in venue.views:
 		if not v in out:
 			out.append(v)
 	return out
 
 
 func _shoot(view: String, path: String) -> void:
-	cam.global_transform = hotel.views[view]
+	cam.global_transform = venue.views[view]
 	for i in FRAMES:
 		await get_tree().process_frame
 	_save(path)
 
 
 ## The cast at their posts and the crowd, posed, lit by their rooms.
-func _cast() -> void:
+func _cast(def: JobDef) -> void:
 	var n := 0
-	for sheet in Cast.all():
+	for sheet in def.sheets():
 		var p := Person.make(sheet.person_job, sheet.female, sheet.seed, sheet.person_look())
-		hotel.add_child(p)
-		p.global_transform = hotel.spots[sheet.spot]
+		venue.add_child(p)
+		p.global_transform = venue.spots.get(sheet.spot, Transform3D.IDENTITY)
 		p.pose("Idle_FoldArms" if sheet.halberd else "Idle", 0.3)
-		p.set_light_layers(hotel.light_layers_at(p.global_position))
-	for zone in hotel.extras:
-		for t in hotel.extras[zone]:
+		p.set_light_layers(venue.light_layers_at(p.global_position))
+	for zone in venue.extras:
+		var dress: Variant = def.extras.get(zone, "guest")
+		var as_job := str(dress.get("job", "guest")) if dress is Dictionary else str(dress)
+		var clips: Array = dress.get("clips", []) if dress is Dictionary else []
+		if clips.is_empty():
+			clips = ["Idle", "Interact"] if as_job == "kitchen" else ["Idle", "Idle_Talking", "Idle_FoldArms"]
+		for t in venue.extras[zone]:
 			n += 1
-			var p := Person.make("kitchen" if zone == "kitchen" else "guest", n % 2 == 0, 500 + n)
-			hotel.add_child(p)
+			var p := Person.make(as_job, n % 2 == 0, 500 + n)
+			venue.add_child(p)
 			p.global_transform = t
-			var clips := ["Idle", "Idle_Talking", "Idle_FoldArms"] if zone != "kitchen" else ["Idle", "Interact"]
 			p.pose(clips[n % clips.size()], fmod(n * 0.37, 1.0))
-			p.set_light_layers(hotel.light_layers_at(t.origin))
+			p.set_light_layers(venue.light_layers_at(t.origin))
+
+#endregion
+
+#region Every job's first moment
+
+func _job_shots(dir: String, only: Array) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	LGSettings.set_value("ai", "mode", "off", false)
+	LGSettings.set_value("voice", "talk", "text", false)
+	LGSettings.set_value("voice", "speaking", false, false)
+	var lines := ["# The jobs", "", "Made by `tools/screenshot.tscn -- --all=docs/screenshots group=jobs` (see `tools/screenshot.gd`): each job's first moment, alone, in its first cover, from where the crew starts.", ""]
+	for j in Jobs.available():
+		var def := Jobs.make(j)
+		lines.append("- [`%s`](%s.png): %s, %s. %s" % [j, j, def.title, def.venue_name, def.goal])
+		if not only.is_empty() and not j in only:
+			continue
+		Session.start_solo(def.first_cover(), j.hash() % 2 == 0)
+		JobScene.setup = JobScene.solo(def.first_cover(), j.hash() % 2 == 0, "Ruby", j)
+		var s: JobScene = load(JobScene.SCENE).instantiate()
+		add_child(s)
+		await _frames(SETTLE)
+		s.job.hold = true
+		await _frames(FRAMES)
+		_save(dir.path_join(j + ".png"))
+		s.queue_free()
+		Session.leave()
+		await _frames(4)
+	if only.is_empty():
+		_readme(dir, lines)
 
 #endregion
 
@@ -223,13 +279,13 @@ func _gala_shots(dir: String, only: Array) -> void:
 			_save(dir.path_join("teo.png"))
 		await _frames(2)
 		s._on_use_pressed()
-		await _until(func(): return s.hotel.doors.ballroom.is_open)
+		await _until(func(): return s.venue.doors.ballroom.is_open)
 		await _frames(70)
 		if want.call("papers"):
 			_save(dir.path_join("papers.png"))
 	if want.call("inside"):
-		s.hotel.doors.ballroom.locked = false
-		s.hotel.doors.ballroom.open()
+		s.venue.doors.ballroom.locked = false
+		s.venue.doors.ballroom.open()
 		_face(s, Vector3(-5.5, 0, -21.5), Vector3(-1.0, 1.0, -28.0))
 		await _frames(FRAMES * 4)
 		_save(dir.path_join("inside.png"))
@@ -244,13 +300,13 @@ func _gala_shots(dir: String, only: Array) -> void:
 		await _frames(30)
 		_save(dir.path_join("bar.png"))
 	if want.call("jackets"):
-		var rack: Node3D = s.hotel.uses.jackets
+		var rack: Node3D = s.venue.uses.jackets
 		_face(s, rack.global_position + Vector3(1.0, 0, 2.3), rack.global_position)
 		s.hud._sub_t = 0.01
 		await _frames(FRAMES * 3)
 		_save(dir.path_join("jackets.png"))
 	if want.call("keypad"):
-		var pad: Node3D = s.hotel.uses.keypad
+		var pad: Node3D = s.venue.uses.keypad
 		# Back far enough that the service door shows beside the panel.
 		_face(s, pad.global_position + Vector3(-1.9, 0, 2.4), pad.global_position + Vector3(-1.1, 0, 0))
 		await _frames(FRAMES)
@@ -264,14 +320,14 @@ func _gala_shots(dir: String, only: Array) -> void:
 	if want.call("held"):
 		job._hold(s.me.id, s.cast.marcus)
 		await _frames(60)
-		var guard: Vector3 = s.hotel.spots.office_guard.origin
+		var guard: Vector3 = s.venue.spots.office_guard.origin
 		s.player.look_at(Vector3(guard.x, s.player.global_position.y + 0.1, guard.z), Vector3.UP)
 		await _frames(FRAMES * 4)
 		_save(dir.path_join("held.png"))
 		job._release(s.me.id, s.cast.marcus)
 		await _frames(FRAMES)
 	if want.call("report"):
-		s.player.global_transform = JobScene._player_at(s.hotel.spots.ballroom_in)
+		s.player.global_transform = JobScene._player_at(s.venue.spots.ballroom_in)
 		s.player.reset_physics_interpolation()
 		s.hud._toast_t = 0.01
 		job.hold = false

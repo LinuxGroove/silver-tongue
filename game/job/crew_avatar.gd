@@ -54,7 +54,7 @@ func dress() -> void:
 	_outfit = info.outfit
 	if person:
 		person.queue_free()
-	var o: Dictionary = Covers.OUTFITS.get(info.outfit, Covers.OUTFITS["guest"])
+	var o: Dictionary = Covers.outfit(info.outfit)
 	person = Person.make(str(o.job), info.female, 1000 + info.id, info.look)
 	add_child(person)
 	face = Face.make(person)

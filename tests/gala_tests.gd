@@ -19,7 +19,7 @@ class Body:
 
 
 func test_rules(t) -> void:
-	var teo := Cast.sheet("teo")
+	var teo := MeridianCast.sheet("teo")
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 5
 	var f := JobRules.new_face(teo)
@@ -55,7 +55,7 @@ func test_rules(t) -> void:
 	t.check(r.do == "ask_reception" and f.checks.has("ask_reception"), "a check goes ahead and is remembered")
 	r = JobRules.resolve({"say": "One moment.", "do": "ask_reception", "believes": [], "suspicion": 1}, f, teo, {}, rng)
 	t.check(r.vetoed == "ask_reception", "but only once")
-	var celeste := Cast.sheet("celeste")
+	var celeste := MeridianCast.sheet("celeste")
 	r = JobRules.resolve({"say": "Hm.", "do": "ask_reception", "believes": [], "suspicion": 1}, JobRules.new_face(celeste), celeste, {}, rng)
 	t.check(r.do == "none", "a guest can't call reception")
 	f = JobRules.new_face(teo)
@@ -63,7 +63,7 @@ func test_rules(t) -> void:
 	t.check(not JobRules.drift(f, teo, 60.0) and JobRules.drift(f, teo, 31.0) and f.suspicion == 2, "suspicion drifts down a step after ninety quiet seconds")
 	JobRules.nudge(f, 2)
 	t.check(f.suspicion == 4 and f.quiet == 0.0, "a nudge raises it and resets the quiet")
-	var benny := Cast.sheet("benny")
+	var benny := MeridianCast.sheet("benny")
 	f = JobRules.new_face(benny)
 	f.turns = 2
 	f.suspicion = 1
@@ -90,12 +90,12 @@ func test_heat(t) -> void:
 
 
 func test_prompt(t) -> void:
-	var teo := Cast.sheet("teo")
+	var teo := MeridianCast.sheet("teo")
 	var sys := CharacterPrompt.system(teo)
-	t.check(sys.begins_with("You are Teo,") and sys.contains(Cast.SITUATION), "the prompt says who they are and what tonight is")
+	t.check(sys.begins_with("You are Teo,") and sys.contains(MeridianCast.SITUATION), "the prompt says who they are and what tonight is")
 	t.check(sys.contains("\"let_through\"") and sys.contains("\"ask_for_invitation\""), "it lists their actions")
 	t.check(not sys.contains("4471"), "the kitchen code is in nobody's prompt")
-	t.check(not CharacterPrompt.system(Cast.sheet("benny")).contains("4471"), "not even Benny's, until he's warmed to you")
+	t.check(not CharacterPrompt.system(MeridianCast.sheet("benny")).contains("4471"), "not even Benny's, until he's warmed to you")
 	var line := CharacterPrompt.crew_line("8:52 pm", "a man in a black dinner suit", "Evening.", 1.5, "whisper", "clear", true)
 	t.check(line.contains("right in front of you") and line.contains("whispering") and line.contains("to you"), "a line says where, how and to whom: %s" % line)
 	var over := CharacterPrompt.crew_line("8:52 pm", "a man", "the Rose", 8.0, "normal", "muffled", false, true)
@@ -113,7 +113,7 @@ func test_prompt(t) -> void:
 
 
 func test_scripted(t) -> void:
-	var teo := Cast.sheet("teo")
+	var teo := MeridianCast.sheet("teo")
 	var f := JobRules.new_face(teo)
 	var r := ScriptedBrain.reply(teo, f, {"kind": "line", "heard": "I'm Felix Halvorsen, the owner's nephew."})
 	t.check(r.do == "ask_reception" and not r.believes.is_empty(), "with no model, Teo checks a name with reception")
@@ -124,7 +124,7 @@ func test_scripted(t) -> void:
 	t.check(r.do == "let_through" and r.suspicion <= JobRules.TRUST, "a good answer opens the door")
 	r = ScriptedBrain.reply(teo, JobRules.new_face(teo), {"kind": "question", "answer": "Yes, he's on the list."})
 	t.check(r.say == "Yes, he's on the list." and r.do == "none", "a question on the radio gets the answer it was given")
-	var marcus := Cast.sheet("marcus")
+	var marcus := MeridianCast.sheet("marcus")
 	r = ScriptedBrain.reply(marcus, JobRules.new_face(marcus), {"kind": "overheard", "heard": "the invitation's forged"})
 	t.check(r.suspicion == 2, "a hot word overheard puts anyone on edge")
 	r = ScriptedBrain.reply(marcus, JobRules.new_face(marcus), {"kind": "seen", "heard": ""})
@@ -138,20 +138,20 @@ func test_covers(t) -> void:
 	c.has_invitation = true
 	var back := CrewInfo.from_dict(c.to_dict())
 	t.check(back.id == 7 and back.cover == "press" and back.cover_name == "Sam Okoye" and back.has_invitation and back.outfit == "press", "a crew member goes over the network and back")
-	t.check(CrewInfo.make(1, 1, "x", "nonsense", false).cover == "guest", "an unknown cover is a guest")
+	t.check(CrewInfo.make(1, 1, "x", "nonsense", false).cover == Covers.first(), "an unknown cover is the first on offer")
 	Session.leave()
 	Session.start_solo("facilities", false)
 	var crew := Session.job_crew()
-	t.check(crew.size() == 1 and bool(crew[0].has_invitation), "alone, you carry the invitation whatever your cover")
+	t.check(crew.size() == 1 and "invitation" in crew[0].items, "alone, you carry the invitation whatever your cover")
 	Session.crew[5] = {"name": "Drew", "cover": "guest", "female": true}
 	crew = Session.job_crew()
-	t.check(not bool(crew[0].has_invitation) and bool(crew[1].has_invitation) and crew[1].cover == "guest", "in a crew, the guest carries it")
+	t.check(not "invitation" in crew[0].items and "invitation" in crew[1].items and crew[1].cover == "guest", "in a crew, the guest carries it")
 	Session.leave()
 	for job in Person.JOBS:
 		t.check(Person.JOBS[job].has("outfit") and Person.JOBS[job].has("main"), "%s has clothes" % job)
 	for o in Covers.OUTFITS:
 		t.check(Person.JOBS.has(str(Covers.OUTFITS[o].job)), "the %s outfit dresses a person" % o)
-	for sheet in Cast.all():
+	for sheet in MeridianCast.all():
 		t.check(Person.JOBS.has(sheet.person_job), "%s has clothes for their job" % sheet.name)
 
 
@@ -167,7 +167,8 @@ func _job(t, covers := ["guest"]) -> Job:
 	var i := 0
 	for cv in covers:
 		var c := CrewInfo.make(i + 1, i + 1, "Crew%d" % i, cv, false)
-		c.has_invitation = i == 0
+		if i == 0:
+			c.items.append("invitation")
 		var b := Body.new()
 		root.add_child(b)
 		b.global_transform = hotel.spots["crew_%d" % i]
@@ -176,7 +177,7 @@ func _job(t, covers := ["guest"]) -> Job:
 		i += 1
 	var job := Job.new()
 	root.add_child(job)
-	job.setup(hotel, crew, 7)
+	job.setup(MeridianGalaJob.new(), hotel, crew, 7)
 	job.brains = false
 	return job
 
@@ -205,7 +206,7 @@ func test_job_basics(t) -> void:
 	var job := _job(t)
 	await t.frames(2)
 	t.check(job.cast.size() == 8 and job.clock_text() == "8:45 pm", "the night starts at 8:45 with a cast of eight")
-	t.check(job.hotel.doors.front.is_open and job.hotel.doors.ballroom.locked and not job.hotel.doors.office.locked, "the front is open, the ballroom locked, the office not")
+	t.check(job.venue.doors.front.is_open and job.venue.doors.ballroom.locked and not job.venue.doors.office.locked, "the front is open, the ballroom locked, the office not")
 	t.check(job.describe(1) == "a man in a black dinner suit", "the crew are described by their clothes")
 	var teo: Character = job.cast.teo
 	t.check(teo.global_position.distance_to(job.spot("teo").origin) < 0.01, "everyone starts at their spot")
@@ -217,7 +218,7 @@ func test_job_basics(t) -> void:
 	t.check(job.lookup("dana", 1, teo).verdict == "good", "Felix Halvorsen is on her list")
 	job._told["teo|1"] = " We're the Marlowes."
 	t.check(job.lookup("dana", 1, teo).verdict == "bad", "the Marlowes already checked in, so it isn't them")
-	job.listed.append(1)
+	job.crew_by_id(1).flags["listed"] = true
 	t.check(job.lookup("dana", 1, teo).verdict == "good", "a name she added herself checks out")
 	t.check(job.lookup("okafor", 1, teo).verdict == "bad", "Okafor doesn't know you")
 	job._told["teo|1"] = " I'm his nephew."
@@ -241,7 +242,7 @@ func test_job_talk(t) -> void:
 	t.check(job.lines.size() == 1 and job.lines[0].to == "teo", "the line is logged with who it was for")
 	job.show_papers(1, teo)
 	t.check(await t.until(func(): return not job._open.is_empty() or teo.turns.size() >= 2 and not teo.busy, 5.0), "he looks at the invitation")
-	t.check(job.hotel.doors.ballroom.is_open and job._open.has("ballroom"), "it passes a glance, and he opens the doors (%s)" % str(teo.turns.back().get("reply", {})))
+	t.check(job.venue.doors.ballroom.is_open and job._open.has("ballroom"), "it passes a glance, and he opens the doors (%s)" % str(teo.turns.back().get("reply", {})))
 	_stand(job, 1, Vector3(-4, 0, -24), Vector3(-4, 0, -30))
 	t.check(await t.until(func(): return job.done, 3.0), "walking in ends the job")
 	_done(job)
@@ -259,7 +260,7 @@ func test_job_check(t) -> void:
 	t.check(dana.turns[0].kind == "question" and dana.turns[0].reply.do == "none", "her answer is words only")
 	t.check(await t.until(func(): return teo.turns.size() >= 2 and not teo.busy, 8.0), "then Teo makes up his mind")
 	t.check(teo.face_of(1).checks.get("ask_reception", "") == "good", "Felix is on the list: it checks out")
-	t.check(job.hotel.doors.ballroom.is_open, "and he opens the doors on the strength of it (%s)" % str(teo.turns.back().get("reply", {})))
+	t.check(job.venue.doors.ballroom.is_open, "and he opens the doors on the strength of it (%s)" % str(teo.turns.back().get("reply", {})))
 	_done(job)
 	await t.frames(2)
 
@@ -267,20 +268,20 @@ func test_job_check(t) -> void:
 func test_job_back_of_house(t) -> void:
 	var job := _job(t, ["facilities", "agency"])
 	await t.frames(2)
-	t.check(job.use(1, "door:service") != "" and not job.hotel.doors.service.is_open, "the service door's locked")
-	t.check(job.keypad(1, "1234") == "Wrong code." and not job.keypad_used, "a wrong code does nothing")
+	t.check(job.use(1, "door:service") != "" and not job.venue.doors.service.is_open, "the service door's locked")
+	t.check(job.keypad(1, "1234") == "Wrong code." and not job.flags.has("keypad:keypad"), "a wrong code does nothing")
 	_stand(job, 1, Vector3(9, 0, -12), Vector3(9, 0, -30))
 	job.cast.marcus.walk_to("smoke")
 	await t.frames(2)
-	t.check(job.keypad(1, "4471") == "The lock clicks." and job.hotel.doors.service.is_open and job.keypad_used, "the kitchen code opens it")
-	t.check(job.use(2, "door:pass") != "" and not job.hotel.doors.pass.is_open, "the pass is for waiters")
+	t.check(job.keypad(1, "4471") == "The lock clicks." and job.venue.doors.service.is_open and job.flags.has("keypad:keypad"), "the kitchen code opens it")
+	t.check(job.use(2, "door:pass") != "" and not job.venue.doors.pass.is_open, "the pass is for waiters")
 	t.check(job.use(2, "jackets") == "You put on a waiter's jacket." and job.crew_by_id(2).outfit == "waiter_jacket", "the jacket goes on")
 	job.use(2, "door:pass")
-	t.check(job.hotel.doors.pass.is_open, "in the jacket, the pass opens")
+	t.check(job.venue.doors.pass.is_open, "in the jacket, the pass opens")
 	t.check(job.use(2, "jackets") == "You hang the jacket back up." and job.crew_by_id(2).outfit == "agency", "and comes off again")
 	job.heat.bump(Heat.CAUGHT * 2.0)
 	await t.frames(3)
-	t.check(job.heat.level == Heat.LOCKDOWN and not job.hotel.doors.service.is_open and not job.hotel.doors.pass.is_open, "at Lockdown the kitchen's shut")
+	t.check(job.heat.level == Heat.LOCKDOWN and not job.venue.doors.service.is_open and not job.venue.doors.pass.is_open, "at Lockdown the kitchen's shut")
 	t.check(job.keypad(1, "4471").contains("dead"), "and the keypad's dead")
 	_done(job)
 	await t.frames(2)
@@ -291,7 +292,7 @@ func test_job_office(t) -> void:
 	await t.frames(2)
 	var marcus: Character = job.cast.marcus
 	job._hold(1, marcus)
-	t.check(job.crew_by_id(1).held and job.hotel.doors.office.locked and not job.done, "one called in is held, the office locked, and the job goes on")
+	t.check(job.crew_by_id(1).held and job.venue.doors.office.locked and not job.done, "one called in is held, the office locked, and the job goes on")
 	var minder: Character = null
 	for ch in job.cast.values():
 		if ch.minding:
@@ -299,7 +300,7 @@ func test_job_office(t) -> void:
 	t.check(minder != null and minder.sheet.halberd and minder.post == "office_guard", "a Halberd guard goes to mind the office")
 	t.check(job.heat.events >= Heat.CAUGHT, "and the venue heats up")
 	job.on_reply(minder, 2, {"kind": "line"}, {"do": "release"})
-	t.check(not job.crew_by_id(1).held and not job.hotel.doors.office.locked and not minder.minding, "talked round by a crewmate, the guard lets them go")
+	t.check(not job.crew_by_id(1).held and not job.venue.doors.office.locked and not minder.minding, "talked round by a crewmate, the guard lets them go")
 	job._hold(1, marcus)
 	job._hold(2, marcus)
 	t.check(not job.done, "with the whole crew held, there's still time to talk their way out")
@@ -321,16 +322,16 @@ func test_job_clock(t) -> void:
 	var ended := []
 	job.ended.connect(func(r): ended.append(r))
 	await t.frames(2)
-	job.minutes = 60.5
+	job.minutes = 21 * 60 + 0.5
 	await t.frames(2)
 	t.check(job.cast.marcus.walking and job.cast.marcus.post == "smoke", "at nine Marcus goes out for his smoke")
-	job.minutes = 65.5
+	job.minutes = 21 * 60 + 5.5
 	await t.frames(2)
-	t.check(job.cast.celeste.post == "celeste_in" and job.hotel.doors.ballroom.is_open, "at five past the Marlowes go in")
-	job.minutes = Job.SHUT + 0.5
+	t.check(job.cast.celeste.post == "celeste_in" and job.venue.doors.ballroom.is_open, "at five past the Marlowes go in")
+	job.minutes = MeridianGalaJob.SHUT + 0.5
 	await t.frames(2)
-	t.check(not job.hotel.doors.ballroom.is_open and job.context_for(job.cast.teo, 1).shut, "at twenty past the doors shut for the speech")
-	job.minutes = Job.SPEECH + 0.1
+	t.check(not job.venue.doors.ballroom.is_open and job.context_for(job.cast.teo, 1).shut, "at twenty past the doors shut for the speech")
+	job.minutes = MeridianGalaJob.SPEECH + 0.1
 	await t.frames(2)
 	t.check(job.done and ended.size() == 1 and ended[0].outcome == "late", "the speech with nobody inside ends it")
 	var r: Dictionary = ended[0]
@@ -420,8 +421,8 @@ func test_fake_gala(t) -> void:
 	t.check(await t.until(func(): return s.hud.prompt_text().contains("invitation"), 3.0), "facing him, Interact shows the invitation: '%s'" % s.hud.prompt_text())
 	s._on_use_pressed()
 	t.check(await t.until(func(): return teo.turns.size() >= 2 and not teo.busy, 10.0), "he looks it over")
-	t.check(teo.turns[1].reply.do == "let_through" and s.hotel.doors.ballroom.is_open, "it looks right, and he opens the doors: %s" % str(teo.turns[1].get("reply")))
-	s.player.global_transform = JobScene._player_at(s.hotel.spots.ballroom_in)
+	t.check(teo.turns[1].reply.do == "let_through" and s.venue.doors.ballroom.is_open, "it looks right, and he opens the doors: %s" % str(teo.turns[1].get("reply")))
+	s.player.global_transform = JobScene._player_at(s.venue.spots.ballroom_in)
 	t.check(await t.until(func(): return s.over, 5.0) and str(s.report.get("outcome", "")) == "in", "walking in ends it: you're in")
 	t.check(s.report_card.visible and not s.report_card.button_texts().is_empty(), "the job report shows")
 	t.check(FileAccess.file_exists(str(s.report.get("file", ""))), "and is written to user://jobs")
@@ -446,7 +447,7 @@ func test_title_gala(t) -> void:
 	await t.frames(1)
 	var texts: PackedStringArray = title.button_texts()
 	for b in ["Play alone", "Host a crew on this network", "Join a crew", "> Guest <", "Press", "Back"]:
-		t.check(b in texts, "the briefing has " + b)
+		t.check(b in texts, "the briefing has %s (%s)" % [b, ", ".join(texts)])
 	title._pick_cover("press")
 	await t.frames(1)
 	t.check("> Press <" in title.button_texts() and Session.me().cover == "press", "a picked cover is marked and kept for joining")
@@ -487,7 +488,7 @@ func test_job_in_meridian(t) -> void:
 	crew.append(c)
 	var job := Job.new()
 	root.add_child(job)
-	job.setup(hotel, crew, 3)
+	job.setup(MeridianGalaJob.new(), hotel, crew, 3)
 	job.brains = false
 	await t.frames(2)
 	var zones := {"teo": "lobby", "dana": "lobby", "benny": "lobby", "marcus": "corridor", "laurent": "kitchen", "held": "office",
@@ -496,7 +497,7 @@ func test_job_in_meridian(t) -> void:
 		t.check(hotel.zone_at(hotel.spots[s].origin) == zones[s], "%s's spot is in the %s (%s)" % [s, zones[s], hotel.zone_at(hotel.spots[s].origin)])
 	t.check(hotel.doors.ballroom.locked and hotel.doors.service.locked and not hotel.doors.front.is_open, "the ballroom and service doors are locked to the crew, and the front opens by itself")
 	t.check(hotel.uses.has("jackets") and hotel.zone_at(hotel.uses.jackets.global_position) == "staff_room", "the jackets hang in the staff room")
-	for r in Job.ROUTINE:
+	for r in job.def.routine:
 		var ch: Character = job.cast[r[1]]
 		ch.walk_to(str(r[2]))
 		for i in 4000:

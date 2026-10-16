@@ -61,7 +61,7 @@ static func resolve(reply: Dictionary, face: Dictionary, sheet: CharacterSheet, 
 	var believes: Array = out.get("believes", [])
 	var held := bool(ctx.get("held", false))
 	var lockdown := int(ctx.get("heat", Heat.CALM)) >= Heat.LOCKDOWN
-	if act in OPENING:
+	if sheet.is_opening(act):
 		var trust := RELEASE_TRUST if act == "release" else TRUST
 		var why := ""
 		if act == "release":
@@ -69,7 +69,7 @@ static func resolve(reply: Dictionary, face: Dictionary, sheet: CharacterSheet, 
 				why = "silent"
 		elif held:
 			why = "silent"
-		if why == "" and ((lockdown and act in LOCKED_DOWN) or (bool(ctx.get("shut", false)) and act == "let_through")):
+		if why == "" and ((lockdown and sheet.locks_down(act)) or (bool(ctx.get("shut", false)) and act == "let_through")):
 			why = "locked"
 		var vouched := (face.get("checks", {}) as Dictionary).values().has("good")
 		if why == "" and (int(out.suspicion) > trust or (int(face.get("turns", 0)) < MIN_TURNS and not vouched) or (believes.is_empty() and (face.get("believes", []) as Array).is_empty())):
@@ -85,7 +85,7 @@ static func resolve(reply: Dictionary, face: Dictionary, sheet: CharacterSheet, 
 		if int(out.suspicion) < ALARM:
 			out["vetoed"] = act
 			act = "none"
-	elif act in CHECKS:
+	elif sheet.is_check(act):
 		if (face.get("checks", {}) as Dictionary).has(act) or not sheet.checks_with.has(act) or held:
 			out["vetoed"] = act
 			act = "none"
@@ -93,7 +93,8 @@ static func resolve(reply: Dictionary, face: Dictionary, sheet: CharacterSheet, 
 		act = "radio_security"
 		out["tone"] = "alarmed"
 	out["do"] = act
-	if act in OPENING:
+	out["checked"] = sheet.is_check(act)
+	if sheet.is_opening(act):
 		out["ended"] = "open"
 	elif act == "radio_security":
 		out["ended"] = "caught"
@@ -107,9 +108,9 @@ static func apply(out: Dictionary, face: Dictionary) -> void:
 	if not believes.is_empty():
 		face["believes"] = believes.duplicate()
 	var act := str(out.get("do", ""))
-	if act in CHECKS:
+	if bool(out.get("checked", false)) or act in CHECKS:
 		face["checks"][act] = "asked"
-	if act in OPENING and not act in face["opened"]:
+	if (str(out.get("ended", "")) == "open" or act in OPENING) and not act in face["opened"]:
 		face["opened"].append(act)
 	face["quiet"] = 0.0
 

@@ -1,19 +1,18 @@
 class_name JobReportCard
 extends Control
-## The job report: in or not, when, who ended up held, how hot the venue
-## got, the three scores (Clean, Quiet, Silver), and the night's best and
-## worst lines, each with the character's answer and a button that plays
-## it again in their voice.
+## The job report: how it went, who ended up held, how hot the venue got,
+## the take, the three scores (Clean, Quiet, Silver), and the night's best
+## and worst lines, each with the character's answer and a button that
+## plays it again in their voice.
 
 signal again
 signal to_title
 ## Play a character's line again.
 signal replay(char_id: String, text: String)
 
+## For a report with no heading of its own.
 const TITLES := {
-	"in": ["YOU'RE IN", "Inside the ballroom at %s."],
 	"held": ["ALL HELD", "The whole crew ended up in the security office."],
-	"late": ["TOO LATE", "The speech started with nobody inside."],
 	"lost": ["THE HOST LEFT", "The night ended when the host's game did."],
 }
 const SCORES := [
@@ -57,9 +56,14 @@ func show_report(r: Dictionary, me := 1) -> void:
 		c.queue_free()
 	_buttons.clear()
 	var outcome := str(r.get("outcome", "late"))
-	var t: Array = TITLES.get(outcome, TITLES["late"])
-	_col.add_child(HotelTheme.title_label(str(t[0]), 40, HotelTheme.BRASS if outcome == "in" else HotelTheme.WARN))
+	var t: Array = [r.title, r.get("text", "")] if r.has("title") else TITLES.get(outcome, [outcome.to_upper(), ""])
+	var won := bool(r.get("win", outcome == "in"))
+	if str(r.get("job_title", "")) != "":
+		_col.add_child(HotelTheme.hud_label("%s, %s" % [r.job_title, str(r.get("venue_name", ""))], 16, HotelTheme.DIM))
+	_col.add_child(HotelTheme.title_label(str(t[0]), 40, HotelTheme.BRASS if won else HotelTheme.WARN))
 	_col.add_child(_text(str(t[1]) % str(r.get("clock", "")) if "%s" in str(t[1]) else str(t[1])))
+	if won and int(r.get("take", 0)) > 0:
+		_col.add_child(HotelTheme.hud_label("The take: %s" % money(int(r.take)), 20, HotelTheme.BRASS))
 	for c in r.get("crew", []):
 		var bits := PackedStringArray()
 		if bool(c.get("inside", false)):
@@ -120,6 +124,16 @@ func _add_line(heading: String, l: Dictionary) -> void:
 		row.add_child(b)
 		_buttons.append(b)
 		_col.add_child(row)
+
+
+## Dollars as the crew would write them: "$12,500".
+static func money(dollars: int) -> String:
+	var digits := str(absi(dollars))
+	var out := ""
+	while digits.length() > 3:
+		out = "," + digits.right(3) + out
+		digits = digits.left(digits.length() - 3)
+	return ("-$" if dollars < 0 else "$") + digits + out
 
 
 func _text(s: String, dim := false) -> Label:

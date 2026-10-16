@@ -101,5 +101,5 @@ func _door(n: String, at: Vector3, yaw: float) -> void:
 	doors[n] = d
 
 
-static func environment() -> Environment:
+func environment() -> Environment:
 	return Environment.new()

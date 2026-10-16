@@ -1,8 +1,10 @@
 class_name Covers
 extends RefCounted
-## The crew's covers for the gala: a name, a job, a reason to be there and
-## the clothes that go with it. What characters see is the outfit; what
-## they're told is up to you.
+## The crew's covers: a name, a job, a reason to be there and the clothes
+## that go with it. What characters see is the outfit; what they're told is
+## up to you. Each job has its own ([member JobDef.covers]); the functions
+## here answer for the job being played ([member Jobs.current]), and the
+## constants are the gala's and the outfits every job can use.
 
 const ALL := {
 	"facilities": {
@@ -57,16 +59,58 @@ const STAFF_LOOKING := ["facilities", "agency", "waiter_jacket"]
 const STAFF_ROOMS := {"corridor": "the back corridor", "kitchen": "the kitchen", "staff_room": "the staff room", "office": "the security office"}
 
 
-static func looks_staff(outfit: String) -> bool:
-	return outfit in STAFF_LOOKING
+## The covers on offer, by id.
+static func all() -> Dictionary:
+	return Jobs.current.covers if Jobs.current and not Jobs.current.covers.is_empty() else ALL
+
+
+## The order they're offered in.
+static func order() -> Array:
+	if Jobs.current and not Jobs.current.covers.is_empty():
+		return Jobs.current.cover_order if not Jobs.current.cover_order.is_empty() else Jobs.current.covers.keys()
+	return ORDER
+
+
+static func has(cover: String) -> bool:
+	return all().has(cover)
+
+
+## A cover's data (the first on offer for one that isn't).
+static func of(cover: String) -> Dictionary:
+	var a := all()
+	if a.has(cover):
+		return a[cover]
+	var o := order()
+	return a.get(o[0], {}) if not o.is_empty() else {}
+
+
+## The first cover on offer.
+static func first() -> String:
+	var o := order()
+	return str(o[0]) if not o.is_empty() else "guest"
+
+
+## An outfit: {"job", "male", "female"}.
+static func outfit(name: String) -> Dictionary:
+	if Jobs.current and Jobs.current.outfits.has(name):
+		return Jobs.current.outfits[name]
+	return OUTFITS.get(name, OUTFITS["guest"])
+
+
+static func looks_staff(outfit_name: String) -> bool:
+	return outfit_name in (Jobs.current.staff_looking if Jobs.current and not Jobs.current.covers.is_empty() else STAFF_LOOKING)
+
+
+## What an outfit is, as someone would say it: "a black dinner suit".
+static func wearing(outfit_name: String, female: bool) -> String:
+	return str(outfit(outfit_name)["female" if female else "male"])
 
 
 ## "a man in a grey work jacket, carrying a tool bag".
-static func describe(outfit: String, female: bool) -> String:
-	var o: Dictionary = OUTFITS.get(outfit, OUTFITS["guest"])
-	return "%s in %s" % ["a woman" if female else "a man", o["female" if female else "male"]]
+static func describe(outfit_name: String, female: bool) -> String:
+	return "%s in %s" % ["a woman" if female else "a man", wearing(outfit_name, female)]
 
 
 static func cover_name(cover: String, female: bool) -> String:
-	var names: Array = ALL.get(cover, ALL["guest"]).names
+	var names: Array = of(cover).get("names", ["Stranger", "Stranger"])
 	return str(names[1 if female else 0])

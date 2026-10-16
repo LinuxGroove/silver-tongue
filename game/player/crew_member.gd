@@ -15,6 +15,8 @@ signal talk_ended
 signal text_requested
 ## Interact was pressed (the scene works out what's in front of you).
 signal use_pressed
+## The phone button.
+signal phone_pressed
 
 ## Cogito player nodes Silver Tongue doesn't use.
 const UNUSED := ["CogtoTestCurrency", "StrengthAttribute", "LightMeterAttribute",
@@ -167,6 +169,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		text_requested.emit()
 	elif event.is_action_pressed("interact"):
 		use_pressed.emit()
+	elif event.is_action_pressed("phone"):
+		phone_pressed.emit()
 
 
 func end_talk() -> void:
