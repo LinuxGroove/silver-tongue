@@ -16,7 +16,7 @@ const KITCHEN_CODE := MeridianGalaJob.KITCHEN_CODE
 ## Halberd's couriers take the case.
 const SIGNING := 10 * 60 + 5
 const BACK := 10 * 60 + 15
-const COURIERS := 10 * 60 + 24
+const COURIERS := 10 * 60 + 26
 ## Game minutes the stage stays clear for the photographer's light.
 const CLEAR := 4.0
 ## What each story is about, as the people checking it would hear it.
@@ -31,7 +31,7 @@ func _init() -> void:
 	number = 3
 	title = "The display case"
 	venue_name = "The Hotel Meridian"
-	briefing = "This is the one, love. This morning the Rose sits on the Meridian's stage in its case for the press, and at twenty-four past ten Halberd's couriers carry that case to the Marlin. I've had a copy made, down to the scratches, with a lock I can open. Swap them, and the Rose travels in my case. Then get the real one out of the building, or hide it on the breakfast cart; my people collect that at eleven. Wren from the museum never leaves it, Priya's running the show, and Ingrid from Halberd is on the front door. One of you carries my copy in. Don't let anyone see you swap them."
+	briefing = "This is the one, love. This morning the Rose sits on the Meridian's stage in its case for the press, and at twenty-six past ten Halberd's couriers carry that case to the Marlin. I've had a copy made, down to the scratches, with a lock I can open. Swap them, and the Rose travels in my case. Then get the real one out of the building, or hide it on the breakfast cart; my people collect that at eleven. Wren from the museum never leaves it, Priya's running the show, and Ingrid from Halberd is on the front door. One of you carries my copy in. Don't let anyone see you swap them."
 	goal = "Swap the Rose's case for Mae's copy, then get the real one out or hide it"
 	situation = MeridianCast.PRESS
 	prize = "the Rose"
