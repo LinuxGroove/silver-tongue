@@ -47,7 +47,7 @@ const ORDER := ["facilities", "guest", "press", "agency"]
 ## What each outfit is to a Person (the job it dresses as) and to anyone
 ## looking (how they'd describe it).
 const OUTFITS := {
-	"facilities": {"job": "facilities", "male": "a grey work jacket, carrying a tool bag", "female": "a grey work jacket, carrying a tool bag"},
+	"facilities": {"job": "facilities", "male": "a gray work jacket, carrying a tool bag", "female": "a gray work jacket, carrying a tool bag"},
 	"guest": {"job": "guest", "male": "a black dinner suit", "female": "a long evening dress"},
 	"press": {"job": "press", "male": "a brown jacket with a press lanyard", "female": "a brown jacket with a press lanyard"},
 	"agency": {"job": "agency", "male": "a black waiter's suit", "female": "a black waiter's suit"},

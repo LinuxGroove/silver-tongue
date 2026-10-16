@@ -68,6 +68,10 @@ func _ready() -> void:
 	LGInput.extend_ui_actions()
 	HotelTheme.apply(get_tree().root, 22)
 	if all != "":
+		# A season of its own, so no shot finds a burned face or memories
+		# from an earlier one, and a real season is never touched.
+		Progress.load_from("user://shot_progress.cfg")
+		Progress.reset()
 		for v in Jobs.VENUES:
 			var folder := "hotel" if v == "meridian" else str(v)
 			if (group == "" or group == folder) and not Jobs.at_venue(v).filter(func(j): return Jobs.exists(j)).is_empty():
@@ -202,6 +206,7 @@ func _job_shots(dir: String, only: Array) -> void:
 		lines.append("- [`%s`](%s.png): %s, %s. %s" % [j, j, def.title, def.venue_name, def.goal])
 		if not only.is_empty() and not j in only:
 			continue
+		Progress.reset()
 		Session.start_solo(def.first_cover(), j.hash() % 2 == 0)
 		JobScene.setup = JobScene.solo(def.first_cover(), j.hash() % 2 == 0, "Ruby", j)
 		var s: JobScene = load(JobScene.SCENE).instantiate()
@@ -232,8 +237,7 @@ func _gala_shots(dir: String, only: Array) -> void:
 	add_child(title)
 	await _frames(SETTLE)
 	if want.call("board") or want.call("circuit"):
-		# A season a job in, on its own file so a real one is never touched.
-		Progress.load_from("user://shot_progress.cfg")
+		# A season a job in.
 		Progress.reset()
 		Progress.record({"job": "meridian_gala", "venue": "meridian", "outcome": "in", "win": true, "take": 2000,
 			"clean": true, "quiet": false, "silver": true, "crew": [{"id": 1, "was_held": false}]}, 1)

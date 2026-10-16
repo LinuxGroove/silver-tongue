@@ -6,8 +6,7 @@ extends RefCounted
 ##   var job := JobHarness.start(t, MarlinSafeJob.new(), ["steward"])
 ##   await t.frames(2)
 ##   JobHarness.face(job, 1, "purser")
-##   JobHarness.say(job, 1, "Evening. Agency sent me for the late shift.")
-##   t.check(await JobHarness.answered(t, job, "purser"), "the purser answers")
+##   t.check(await JobHarness.say_to(t, job, 1, "purser", "Evening. Agency sent me for the late shift."), "the purser answers")
 ##   ...
 ##   JobHarness.done(job)
 ##   await t.frames(2)
@@ -87,8 +86,19 @@ static func say(job: Job, id: int, text: String, voice := "normal") -> void:
 	job.crew_said(id, text, voice)
 
 
+## A crew member says something to a character, and waits for the answer
+## (scripted brains answer before [method say] returns, so count first).
+## False if they never answered.
+static func say_to(t, job: Job, id: int, char_id: String, text: String, voice := "normal", seconds := 6.0) -> bool:
+	var ch: Character = job.cast[char_id]
+	var want := ch.turns.size() + 1
+	say(job, id, text, voice)
+	return await t.until(func() -> bool: return ch.turns.size() >= want and not ch.busy, seconds)
+
+
 ## Waits until a character has answered `more` more times than they had, and
-## is done thinking. False if they never did.
+## is done thinking. False if they never did. For the answer to a line of
+## the crew's own, use [method say_to], which counts from before the line.
 static func answered(t, job: Job, char_id: String, more := 1, seconds := 6.0) -> bool:
 	var ch: Character = job.cast[char_id]
 	var want := ch.turns.size() + more
