@@ -440,6 +440,7 @@ func test_fake_gala(t) -> void:
 ## The title's gala pages: the briefing and covers, hosting a crew, the
 ## lobby, and leaving it.
 func test_title_gala(t) -> void:
+	Session.set_cover("guest", false)
 	var title: Node = load("res://game/ui/title.tscn").instantiate()
 	t.add_child(title)
 	await t.frames(2)

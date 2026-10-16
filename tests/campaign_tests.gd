@@ -274,6 +274,7 @@ func test_circuit(t) -> void:
 
 
 func test_circuit_page(t) -> void:
+	var wanted: Dictionary = Session.wanted.duplicate()
 	Progress.reset()
 	LGSettings.set_value("play", "all_jobs", false)
 	var title: Node = load("res://game/ui/title.tscn").instantiate()
@@ -305,6 +306,7 @@ func test_circuit_page(t) -> void:
 	title.queue_free()
 	await t.frames(1)
 	Session.set_job("meridian_gala")
+	Session.wanted = wanted
 	LGSettings.set_value("play", "all_jobs", false)
 	Progress.reset()
 
