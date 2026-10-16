@@ -802,7 +802,7 @@ func _graph() -> void:
 		"okafor_office": Vector2(18.1, -16.95),
 		# The wedding's and the press call's people.
 		"gus": Vector2(4.3, -11.4), "pippa": Vector2(-7.0, -14.6), "pippa_in": Vector2(-3.0, -29.2),
-		"ingrid": Vector2(-6.7, -2.6), "wren_lobby": Vector2(-6.2, -4.0), "priya_lobby": Vector2(-7.4, -3.8),
+		"front_watch": Vector2(-6.7, -2.6), "wren_lobby": Vector2(-6.2, -4.0), "priya_lobby": Vector2(-7.4, -3.8),
 		"wren": Vector2(-5.4, -29.2), "priya": Vector2(-1.4, -28.7), "ingrid_stage": Vector2(-2.4, -28.8),
 		"rafe": Vector2(1.6, -27.6), "okafor_bar": Vector2(-10.3, -11.0),
 	}
@@ -833,7 +833,7 @@ func _graph() -> void:
 		["corridor_n", "manager_out", ""], ["service_out", "manager_out", ""], ["manager_out", "manager_in", "manager"],
 		["manager_in", "manager_c", ""], ["manager_c", "okafor_office", ""],
 		["staff_lobby", "gus", ""], ["reception", "gus", ""], ["lobby_n", "pippa", ""],
-		["front_in", "ingrid", ""], ["crew_0", "ingrid", ""], ["lobby_s", "wren_lobby", ""], ["wren_lobby", "priya_lobby", ""], ["ingrid", "priya_lobby", ""],
+		["front_in", "front_watch", ""], ["crew_0", "front_watch", ""], ["lobby_s", "wren_lobby", ""], ["wren_lobby", "priya_lobby", ""], ["front_watch", "priya_lobby", ""],
 		["stage_front", "pippa_in", ""], ["stage_front", "wren", ""], ["stage_front", "priya", ""], ["stage_front", "ingrid_stage", ""],
 		["okafor_stage", "rafe", ""], ["lobby_w", "okafor_bar", ""], ["celeste", "okafor_bar", ""],
 	]
@@ -845,7 +845,7 @@ func _graph() -> void:
 		"smoke": Vector2(0, 1), "office_guard": Vector2(-1, 0), "held": Vector2(-1, 0),
 		"crew_0": Vector2(0, -1), "crew_1": Vector2(0, -1), "ballroom_in": Vector2(0, -1),
 		"crew_bay": Vector2(0, -1), "okafor_office": Vector2(-1, -0.4), "gus": Vector2(-1, 0.2), "pippa": Vector2(0.4, 1),
-		"pippa_in": Vector2(0, 1), "ingrid": Vector2(1, -0.3), "wren_lobby": Vector2(-0.3, 1), "priya_lobby": Vector2(0.4, 1),
+		"pippa_in": Vector2(0, 1), "front_watch": Vector2(1, -0.3), "wren_lobby": Vector2(-0.3, 1), "priya_lobby": Vector2(0.4, 1),
 		"wren": Vector2(0.3, 1), "priya": Vector2(-0.3, 1), "ingrid_stage": Vector2(-0.6, -1), "rafe": Vector2(-0.5, -1),
 		"okafor_bar": Vector2(-1, -0.2),
 	}

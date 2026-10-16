@@ -14,7 +14,7 @@ const SPOT_ZONES := {
 	"celeste_in": "ballroom", "hugo_in": "ballroom", "smoke": "outside", "office_guard": "corridor",
 	"held": "office", "crew_0": "lobby", "crew_1": "lobby", "ballroom_in": "ballroom",
 	"crew_bay": "outside", "okafor_office": "manager_office", "gus": "lobby", "pippa": "lobby", "pippa_in": "ballroom",
-	"ingrid": "lobby", "wren_lobby": "lobby", "priya_lobby": "lobby", "wren": "ballroom", "priya": "ballroom",
+	"front_watch": "lobby", "wren_lobby": "lobby", "priya_lobby": "lobby", "wren": "ballroom", "priya": "ballroom",
 	"ingrid_stage": "ballroom", "rafe": "ballroom", "okafor_bar": "lobby",
 }
 const VIEWS: Array[String] = ["entrance", "lobby", "reception", "bar", "ballroom_doors", "ballroom", "stage", "pass",
