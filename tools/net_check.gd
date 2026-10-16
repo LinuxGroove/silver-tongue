@@ -83,7 +83,10 @@ func _host() -> bool:
 				return ch
 		return null
 	if not await _until(func(): return heard.call() != null):
-		return _fail("nobody heard the guest (lines %s, the guest at %s looking %s)" % [str(s.job.lines), avatar.global_position, avatar.look_dir()])
+		var near := s.cast.values()
+		near.sort_custom(func(a, b): return a.global_position.distance_to(avatar.global_position) < b.global_position.distance_to(avatar.global_position))
+		return _fail("nobody heard the guest (lines %s, the guest at %s looking %s, the host at %s, nearest %s)" % [str(s.job.lines), avatar.global_position, avatar.look_dir(),
+				s.player.global_position, str(near.slice(0, 3).map(func(c): return "%s at %s" % [c.sheet.id, c.global_position]))])
 	var ch: Character = heard.call()
 	if ch.global_position.distance_to(avatar.global_position) > 3.0:
 		return _fail("%s heard the guest from %.1f m away" % [ch.sheet.name, ch.global_position.distance_to(avatar.global_position)])
@@ -137,6 +140,9 @@ func _join() -> bool:
 	if int(s.def.circuit.get("seed", 0)) != Session.circuit:
 		return _fail("the host's Circuit night never came here (%d, %s)" % [Session.circuit, str(s.def.circuit)])
 	print("in %s%s as %s" % [s.def.title, JobReportCard.night({"circuit": Session.circuit}), s.me.cover])
+	# A job can move the crew as it starts (catering in by the loading bay),
+	# so let that happen first.
+	await get_tree().create_timer(3.0).timeout
 	# Up to Teo at the gala; anywhere else, whoever's nearest.
 	var ch: Character = s.cast.get("teo") if gala else null
 	if ch == null:
@@ -144,6 +150,7 @@ func _join() -> bool:
 			if ch == null or c.global_position.distance_to(s.player.global_position) < ch.global_position.distance_to(s.player.global_position):
 				ch = c
 	var at := _beside(s.venue, ch)
+	print("up to %s" % ch.sheet.name)
 	s.player.global_position = Vector3(at.x, at.y + CrewMember.FEET, at.z)
 	s.player.look_at(Vector3(ch.global_position.x, s.player.global_position.y, ch.global_position.z), Vector3.UP)
 	await get_tree().create_timer(1.0).timeout

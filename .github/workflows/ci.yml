@@ -44,11 +44,20 @@ jobs:
           if [ "${{ matrix.part }}" = core ]; then part=--core; else part=--only=${{ matrix.part }}; fi
           godot --headless --path . tests/run_tests.tscn -- "$part" 2>&1 | tee test.log
           ! grep -q "SCRIPT ERROR" test.log
-      - name: Two copies play the gala on LAN
-        if: matrix.part == 'core'
+      - name: Two copies play a job on LAN
+        # The gala for the core; one of each venue's jobs (a Circuit night
+        # at Vantage) for the rest.
         timeout-minutes: 10
         run: |
-          XDG_DATA_HOME=$RUNNER_TEMP/a godot --headless --path . tools/net_check.tscn -- host net.code > host.log 2>&1 &
+          case "${{ matrix.part }}" in
+            core) job="" ;;
+            meridian) job="meridian_case" ;;
+            marlin) job="marlin_safe" ;;
+            tideline) job="tideline_count" ;;
+            vantage) job="vantage_board 482913" ;;
+            *) echo "no LAN check for ${{ matrix.part }} yet"; exit 0 ;;
+          esac
+          XDG_DATA_HOME=$RUNNER_TEMP/a godot --headless --path . tools/net_check.tscn -- host net.code $job > host.log 2>&1 &
           sleep 1
           XDG_DATA_HOME=$RUNNER_TEMP/b godot --headless --path . tools/net_check.tscn -- join net.code 2>&1 | tee join.log
           wait $! && cat host.log
