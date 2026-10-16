@@ -16,8 +16,8 @@ const SITUATIONS := {
 ## Who's aboard each night, in the order they're built.
 const IDS := {
 	"aboard": ["teo", "kofi", "jun", "bianca", "rocco", "ollie", "sal", "anders", "freya"],
-	"safe": ["teo", "kofi", "bianca", "rocco", "ollie", "anders", "freya", "rupert", "margit", "joost", "hugo", "celeste"],
-	"auction": ["teo", "kofi", "bianca", "anders", "rupert", "nina", "margit", "joost", "hugo", "celeste"],
+	"safe": ["teo", "kofi", "bianca", "rocco", "ollie", "anders", "freya", "rupert", "margit", "pieter", "hugo", "celeste"],
+	"auction": ["teo", "kofi", "bianca", "anders", "rupert", "nina", "margit", "pieter", "hugo", "celeste"],
 }
 ## What the Marlin's people wear, shaped like [constant Person.JOBS]: the
 ## officers' navy and gold, the stews' whites, the deck crew's polos, the
@@ -81,8 +81,8 @@ static func sheet(id: String, night := "aboard") -> CharacterSheet:
 			s = nina(night)
 		"margit":
 			s = margit(night)
-		"joost":
-			s = joost(night)
+		"pieter":
+			s = pieter(night)
 		"hugo":
 			s = hugo(night)
 		"celeste":
@@ -365,7 +365,7 @@ static func bianca(night: String) -> CharacterSheet:
 			]
 			s.actions = ["none"]
 			s.replies.append_array([
-				{"words": ["lindqvist", "margit", "achterberg", "joost", "gossip", "who's bidding"], "say": "Mrs Lindqvist is terrified of fakes. And Mr Achterberg tells everyone everything.", "tone": "friendly"},
+				{"words": ["lindqvist", "margit", "achterberg", "pieter", "gossip", "who's bidding"], "say": "Mrs Lindqvist is terrified of fakes. And Mr Achterberg tells everyone everything.", "tone": "friendly"},
 				{"words": ["drink", "champagne", "wine", "glass"], "say": "Of course. Champagne?", "tone": "friendly"},
 				{"words": ["hello", "evening", "hi "], "say": "Good evening.", "tone": "calm"},
 			])
@@ -774,9 +774,9 @@ static func margit(night: String) -> CharacterSheet:
 	s.person_job = "guest"
 	s.voice = "bf_alice"
 	s.voice_speed = 0.95
-	s.manner = "Cold, sharp and very rich. You came for the Rose and you mean to have her. Twenty years ago you paid a fortune for a stone with a forged certificate, and the thought of it still turns your stomach: the merest doubt about a stone and you're out. You trust Joost Achterberg's gossip even though you can't stand him."
+	s.manner = "Cold, sharp and very rich. You came for the Rose and you mean to have her. Twenty years ago you paid a fortune for a stone with a forged certificate, and the thought of it still turns your stomach: the merest doubt about a stone and you're out. You trust Pieter Achterberg's gossip even though you can't stand him."
 	s.never = ["Never say what you'll go to.", "Never admit you're not a person. You're Mrs Lindqvist."]
-	s.checks = ["Gossip about a stone, you check with Joost Achterberg, who hears everything first."]
+	s.checks = ["Gossip about a stone, you check with Pieter Achterberg, who hears everything first."]
 	s.weaknesses = ["Real knowledge of stones.", "Any doubt about a certificate.", "Being taken seriously."]
 	s.hesitations = ["Hm.", "One moment."]
 	s.fallbacks = ["I'm sorry?"]
@@ -791,7 +791,7 @@ static func margit(night: String) -> CharacterSheet:
 			s.post = "the Marlin's sky lounge at sea, at the auction's preview"
 			s.spot = "sky_c"
 			s.routine = ["You keep to the sky lounge, away from the crowd."]
-			s.knows = ["You mean to buy the Rose next week, and you've told your bank to give you room.", "Joost Achterberg is aboard. He'll bid, but he can't go as high as you."]
+			s.knows = ["You mean to buy the Rose next week, and you've told your bank to give you room.", "Pieter Achterberg is aboard. He'll bid, but he can't go as high as you."]
 			s.actions = ["none"]
 			s.replies.append_array([
 				{"words": ["hello", "evening", "hi "], "say": "Good evening.", "tone": "calm"},
@@ -802,22 +802,22 @@ static func margit(night: String) -> CharacterSheet:
 			s.routine = ["You stand by the windows until the sale, and bid from there."]
 			s.knows = [
 				"You mean to buy the Rose. You've a limit in your head and nobody will hear it.",
-				"Joost Achterberg is bidding too, but he can't go as high as you.",
+				"Pieter Achterberg is bidding too, but he can't go as high as you.",
 				"You've asked twice tonight whether the Rose's certificate is the original.",
 			]
-			s.checks = ["Gossip about a stone: if Joost Achterberg is spreading it, you believe it. He hears everything first."]
+			s.checks = ["Gossip about a stone: if Pieter Achterberg is spreading it, you believe it. He hears everything first."]
 			s.actions = ["none", "withdraw"]
 			s.replies.append_array([
 				{"words": ["certificate", "flaw", "fracture", "treated", "recut", "doubt", "rumor", "rumour", "not real", "swapped", "a copy"], "first": "What? Who told you that?", "say": "Then I'm not bidding on her. Not with a question over her.", "tone": "wary", "do": "withdraw", "believes": ["says there's doubt about the Rose's certificate"]},
-				{"words": ["joost", "achterberg"], "say": "Joost would sell his own mother for a rumor.", "tone": "calm"},
+				{"words": ["pieter", "achterberg"], "say": "Pieter would sell his own mother for a rumor.", "tone": "calm"},
 				{"words": ["hello", "evening", "hi "], "say": "Good evening.", "tone": "calm"},
 			])
 	return s
 
 
-## Joost Achterberg, a dealer and a terrible gossip.
-static func joost(night: String) -> CharacterSheet:
-	var s := _base("joost", "Mr Achterberg")
+## Pieter Achterberg, a dealer and a terrible gossip.
+static func pieter(night: String) -> CharacterSheet:
+	var s := _base("pieter", "Mr Achterberg")
 	s.job = "a diamond dealer from Antwerp, fifty-four, who was at the Meridian's gala with his wife"
 	s.role = "guest"
 	s.seed = 233
@@ -850,7 +850,7 @@ static func joost(night: String) -> CharacterSheet:
 			])
 		"auction":
 			s.post = "the main saloon of the Marlin before the sale, in the aisle, with a glass"
-			s.spot = "joost"
+			s.spot = "pieter"
 			s.routine = ["You work the room until the sale, and bid from the aisle."]
 			s.knows = [
 				"You'll bid for the Rose, up to a point. Margit can go higher than you, and you hate her for it.",
@@ -930,7 +930,7 @@ static func celeste(night: String) -> CharacterSheet:
 			s.routine = ["You watch the sale from the side, for the gossip."]
 			s.knows = [
 				"Margit Lindqvist will bid for the Rose, but one whisper about a certificate and she runs.",
-				"Joost Achterberg tells Margit everything, out of spite.",
+				"Pieter Achterberg tells Margit everything, out of spite.",
 				"Your brother Hugo bids for clients for three percent, and Rupert Ashcombe takes his word.",
 			]
 	return s

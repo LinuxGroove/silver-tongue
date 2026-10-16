@@ -93,8 +93,8 @@ func _init() -> void:
 	]
 	chatter = [
 		[20 * 60 + 33, "anders", "The Kestrel. Forty meters, and every one of them trying to kill me. Best year of my life.", "near"],
-		[20 * 60 + 37, "joost", "Hugo, is it true you sold them this boat? Only you've told me four times.", "near"],
-		[20 * 60 + 38, "hugo", "Five, Joost. Finest thing I ever sold.", "near"],
+		[20 * 60 + 37, "pieter", "Hugo, is it true you sold them this boat? Only you've told me four times.", "near"],
+		[20 * 60 + 38, "hugo", "Five, Pieter. Finest thing I ever sold.", "near"],
 		[20 * 60 + 41, "anders", "Ninety-eight. I was thirty-five. I still use her year for everything, God help me.", "near"],
 		[20 * 60 + 45, "bianca", "Ollie, the captain's cabin at ten to nine. Properly, this time.", "near"],
 		[20 * 60 + 52, "rupert", "Eleven carats, ladies and gentlemen, and not a flaw in her.", "near"],

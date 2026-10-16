@@ -20,7 +20,7 @@ const ROUND := 0.5
 ## The opening bid and each step, and how high each bidder goes.
 const OPENING := 1200000
 const STEP := 100000
-const JOOST_LIMIT := 1900000
+const PIETER_LIMIT := 1900000
 const MARGIT_LIMIT := 2400000
 const PROXY_LIMIT := 3000000
 ## Real seconds from the hammer to the end of the night.
@@ -38,7 +38,7 @@ func _init() -> void:
 	memory_from = ["meridian"]
 	title = "The auction"
 	venue_name = "The Marlin"
-	briefing = "Eight o'clock, love, in the Marlin's saloon: the Rose goes under the hammer, and she's coming home with us on money we haven't got. Here's what the captain's file told us. Margit Lindqvist's bank will take her to two and a half; Joost Achterberg's to two. Register with Ms Castell on my letter from Caldera Mutual, and when the bidding passes two million and she rings the bank, I'll be the bank. Or whisper about the certificate: Margit's been burned before, and Joost will tell her anything. Or get Hugo Marlowe to bid for a client. Ashcombe takes Hugo's word for anything."
+	briefing = "Eight o'clock, love, in the Marlin's saloon: the Rose goes under the hammer, and she's coming home with us on money we haven't got. Here's what the captain's file told us. Margit Lindqvist's bank will take her to two and a half; Pieter Achterberg's to two. Register with Ms Castell on my letter from Caldera Mutual, and when the bidding passes two million and she rings the bank, I'll be the bank. Or whisper about the certificate: Margit's been burned before, and Pieter will tell her anything. Or get Hugo Marlowe to bid for a client. Ashcombe takes Hugo's word for anything."
 	goal = "Win the Rose at the auction at eight"
 	situation = MarlinCast.SITUATIONS.auction
 	prize = "the Rose"
@@ -79,7 +79,7 @@ func _init() -> void:
 			"title": "Stew",
 			"names": ["Danny Price", "Dani Price"],
 			"job": "a temp stew serving drinks in the saloon during the sale",
-			"story": "Stews hear everything and pass on more. Joost Achterberg repeats any whisper to Margit Lindqvist, and one doubt about the certificate takes her out of the bidding. A guest who can't be seen bidding might want Hugo Marlowe to bid for them.",
+			"story": "Stews hear everything and pass on more. Pieter Achterberg repeats any whisper to Margit Lindqvist, and one doubt about the certificate takes her out of the bidding. A guest who can't be seen bidding might want Hugo Marlowe to bid for them.",
 			"outfit": "stew_whites",
 			"for": "Mr Achterberg, then Mrs Lindqvist, in the saloon",
 			"lines": [
@@ -106,8 +106,8 @@ func _init() -> void:
 	chatter = [
 		[19 * 60 + 32, "rupert", "Margaret and I are in fine voice tonight, Ms Castell.", "near"],
 		[19 * 60 + 33, "nina", "He's named his gavel. Registration's at the desk, ladies and gentlemen.", "near"],
-		[19 * 60 + 37, "joost", "Margit! You look terrified already. Is it the price, or the stone?", "near"],
-		[19 * 60 + 38, "margit", "Go away, Joost.", "near"],
+		[19 * 60 + 37, "pieter", "Margit! You look terrified already. Is it the price, or the stone?", "near"],
+		[19 * 60 + 38, "margit", "Go away, Pieter.", "near"],
 		[19 * 60 + 42, "celeste", "Hugo, if you bid for anyone tonight, at least make it someone with taste.", "near"],
 		[19 * 60 + 43, "hugo", "Rupert's taken my word for twenty years, Celeste. I'd hate to waste it.", "near"],
 		[19 * 60 + 48, "teo", "Kofi, Teo. Gangway's busy. Keep the crew door shut.", "radio"],
@@ -263,7 +263,7 @@ func on_action(job: Job, ch: Character, c: CrewInfo, act: String) -> bool:
 		"spread_word":
 			job.flags["rumor"] = c.id
 			ch.note("%s told you there's doubt about the Rose's certificate. You're off to tell Margit." % job.describe(c.id).capitalize())
-			ch.walk_to("joost_margit")
+			ch.walk_to("pieter_margit")
 			job.toast_for.emit(c.id, "Mr Achterberg is off to tell Mrs Lindqvist.")
 			return true
 		"bid_for":
@@ -358,7 +358,7 @@ func _next(job: Job) -> int:
 	return int(job.flags.price) + STEP if str(job.flags.get("high", "")) != "" else OPENING
 
 
-## Who bids next at `next`: Hugo for his client, Margit, then Joost, but
+## Who bids next at `next`: Hugo for his client, Margit, then Pieter, but
 ## never against themselves (and Hugo never against the crew).
 func _bidder(job: Job, next: int) -> String:
 	var high := str(job.flags.get("high", ""))
@@ -366,8 +366,8 @@ func _bidder(job: Job, next: int) -> String:
 		return "hugo"
 	if not job.flags.has("margit_out") and high != "margit" and next <= MARGIT_LIMIT:
 		return "margit"
-	if high != "joost" and next <= JOOST_LIMIT:
-		return "joost"
+	if high != "pieter" and next <= PIETER_LIMIT:
+		return "pieter"
 	return ""
 
 
@@ -378,7 +378,7 @@ func _bid(job: Job, who: String, amount: int) -> void:
 	var said := money(amount)
 	var line := ""
 	match who:
-		"joost":
+		"pieter":
 			line = "%s, Mr Achterberg." % said
 		"margit":
 			line = "%s, with Mrs Lindqvist." % said
@@ -484,16 +484,16 @@ func _margit_out(job: Job, crew_id: int) -> void:
 
 
 func tick(job: Job, _delta: float) -> void:
-	# Joost gets to Margit with the gossip.
-	if job.flags.has("rumor") and not job.flags.has("rumor_told") and _at(job, "joost", ["joost_margit"]):
+	# Pieter gets to Margit with the gossip.
+	if job.flags.has("rumor") and not job.flags.has("rumor_told") and _at(job, "pieter", ["pieter_margit"]):
 		job.flags["rumor_told"] = true
-		var joost: Character = job.cast.get("joost")
+		var pieter: Character = job.cast.get("pieter")
 		var margit: Character = job.cast.get("margit")
-		joost.say_scripted("Margit, darling. They're saying the Rose's certificate is a copy.")
+		pieter.say_scripted("Margit, darling. They're saying the Rose's certificate is a copy.")
 		if margit and not job.flags.has("margit_out"):
-			margit.say_scripted("What? Then I'm not bidding on her. Enjoy her, Joost.")
+			margit.say_scripted("What? Then I'm not bidding on her. Enjoy her, Pieter.")
 		_margit_out(job, int(job.flags.rumor))
-		joost.walk_to("joost")
+		pieter.walk_to("pieter")
 
 
 ## Whether a character stands at one of these spots, done walking.

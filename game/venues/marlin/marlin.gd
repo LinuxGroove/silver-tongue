@@ -1253,19 +1253,19 @@ func _graph() -> void:
 				"nina_side": Vector3(-2.3, MAIN, -8.3), "nina_desk": Vector3(-1.0, MAIN, -8.45),
 				"saloon_c": Vector3(-0.05, MAIN, -17.8), "rostrum_side": Vector3(0.35, MAIN, -19.45), "rupert": Vector3(-0.6, MAIN, -19.62),
 				"phone_side": Vector3(4.15, MAIN, -18.8), "nina_phone": Vector3(4.15, MAIN, -17.2),
-				"margit": Vector3(3.3, MAIN, -12.3), "joost": Vector3(-1.9, MAIN, -12.0),
-				"celeste_side": Vector3(-2.3, MAIN, -11.6), "hugo_side": Vector3(3.4, MAIN, -14.6), "joost_margit": Vector3(2.3, MAIN, -12.4),
+				"margit": Vector3(3.3, MAIN, -12.3), "pieter": Vector3(-1.9, MAIN, -12.0),
+				"celeste_side": Vector3(-2.3, MAIN, -11.6), "hugo_side": Vector3(3.4, MAIN, -14.6), "pieter_margit": Vector3(2.3, MAIN, -12.4),
 			})
 			L.append_array([
 				["crew_0", "gang_top", ""], ["crew_1", "aft_c", ""], ["crew_0", "crew_1", ""], ["aft_port", "nina_side", ""],
 				["nina_side", "nina_desk", ""], ["saloon_aisle", "saloon_c", ""], ["saloon_c", "saloon_fwd", ""],
 				["saloon_c", "rostrum_side", ""], ["rostrum_side", "rupert", ""], ["saloon_fwd", "phone_side", ""],
 				["phone_side", "nina_phone", ""], ["saloon_in", "margit", ""], ["margit", "hugo_side", ""],
-				["saloon_aisle", "joost", ""], ["joost", "celeste_side", ""], ["margit", "joost_margit", ""],
+				["saloon_aisle", "pieter", ""], ["pieter", "celeste_side", ""], ["margit", "pieter_margit", ""],
 			])
 			face.merge({"crew_0": Vector2(0, -1), "crew_1": Vector2(0, -1), "nina_desk": Vector2(0, 1), "rupert": Vector2(0, 1),
-				"nina_phone": Vector2(-1, 0), "margit": Vector2(-0.3, -1), "joost": Vector2(0.2, -1), "celeste_side": Vector2(0.4, -1),
-				"hugo_side": Vector2(-0.6, -1), "saloon_c": Vector2(0, 1), "joost_margit": Vector2(1, 0.1)})
+				"nina_phone": Vector2(-1, 0), "margit": Vector2(-0.3, -1), "pieter": Vector2(0.2, -1), "celeste_side": Vector2(0.4, -1),
+				"hugo_side": Vector2(-0.6, -1), "saloon_c": Vector2(0, 1), "pieter_margit": Vector2(1, 0.1)})
 	points = P
 	links = L
 	for k in face:

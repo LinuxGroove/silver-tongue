@@ -21,7 +21,7 @@ const NIGHT_SPOTS := {
 	"aboard": {"crew_0": "outside", "crew_1": "outside", "kofi": "outside", "jun": "outside", "bianca_quay": "outside", "sal": "outside"},
 	"safe": {"crew_0": "aft_deck", "crew_1": "aft_deck", "anders_saloon": "saloon", "teo_rose": "saloon", "rupert_rose": "saloon"},
 	"auction": {"crew_0": "aft_deck", "crew_1": "aft_deck", "nina_desk": "aft_deck", "rupert": "saloon", "nina_phone": "saloon",
-		"margit": "saloon", "joost": "saloon", "celeste_side": "saloon", "hugo_side": "saloon"},
+		"margit": "saloon", "pieter": "saloon", "celeste_side": "saloon", "hugo_side": "saloon"},
 }
 const DOORS: Array[String] = ["crew", "saloon", "galley", "cabin_a", "cabin_b", "sun", "captain", "safe", "bridge"]
 ## Places in each room.
@@ -94,7 +94,7 @@ func test_job_data(t) -> void:
 	var teo := MarlinCast.sheet("teo", "safe")
 	t.check(teo.voice == MeridianCast.teo().voice and teo.name == MeridianCast.teo().name, "Teo is the same man who kept the Meridian's ballroom doors")
 	var voices := {}
-	for id in ["teo", "kofi", "jun", "bianca", "rocco", "ollie", "sal", "anders", "freya", "rupert", "nina", "margit", "joost", "hugo", "celeste"]:
+	for id in ["teo", "kofi", "jun", "bianca", "rocco", "ollie", "sal", "anders", "freya", "rupert", "nina", "margit", "pieter", "hugo", "celeste"]:
 		var s := MarlinCast.sheet(id, "auction" if id in ["rupert", "nina"] else "aboard")
 		t.check(s != null and not voices.has(s.voice), "%s has a voice of their own (%s)" % [id, s.voice if s else "?"])
 		if s:
@@ -430,9 +430,9 @@ func test_auction_rumor(t) -> void:
 	var job := _start(t, MarlinAuctionJob.new(), ["bidder"])
 	await t.frames(2)
 	await _register(t, job)
-	t.check(await _talk(t, job, 1, "joost", "Between us, I heard something about the certificate.") == "none", "Mr Achterberg wants more")
-	t.check(await _talk(t, job, 1, "joost", "They say it's a copy. The real one's in Antwerp.") == "spread_word", "and he's off to tell Margit")
-	t.check(JobHarness.walk(job, job.cast.joost, "joost_margit"), "across the saloon")
+	t.check(await _talk(t, job, 1, "pieter", "Between us, I heard something about the certificate.") == "none", "Mr Achterberg wants more")
+	t.check(await _talk(t, job, 1, "pieter", "They say it's a copy. The real one's in Antwerp.") == "spread_word", "and he's off to tell Margit")
+	t.check(JobHarness.walk(job, job.cast.pieter, "pieter_margit"), "across the saloon")
 	await t.frames(2)
 	t.check(job.flags.has("margit_out") and job.cast.margit.post == "aft_port", "Mrs Lindqvist won't bid on her, and walks out")
 	await _sale(t, job, true)
