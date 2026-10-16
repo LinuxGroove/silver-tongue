@@ -17,6 +17,9 @@ tiling PNGs in assets/textures/hotel/ (python3 with numpy and Pillow):
   silk_stripe       the champagne silk stripe in the ballroom's wall panels
   marble_lobby      the lobby's floor: cream and black marble squares, 0.6 m,
                     laid as a chequerboard (2.4 m), and its normal map
+  painting_coast    the lobby's paintings, after the old masters: a coast at
+  painting_valley   dusk, a river valley in the evening and, for the
+  painting_caldera  museum's gala, a volcano at night (one picture each)
 
 Everything comes from fixed seeds, so the pictures only change when this
 script does.
@@ -365,6 +368,169 @@ def marble_lobby():
     save("marble_lobby_n", normal_map(smoothstep(0.0006, 0.0025, edge), 2.0))
 
 
+# --- Paintings ---------------------------------------------------------------------------------
+
+def ridge(w, rng, base, amp, points, rough=0.0):
+    """A skyline across the picture: y (0 top, 1 bottom) for each column."""
+    xs = np.linspace(0, 1, points)
+    ys = rng.random(points)
+    x = (np.arange(w) + 0.5) / w
+    y = np.interp(x, xs, ys)
+    # Smooth it, then add a little crag.
+    k = max(3, w // points)
+    kern = np.ones(k) / k
+    y = np.convolve(np.pad(y, k, mode="edge"), kern, mode="same")[k:-k]
+    if rough > 0:
+        y = y + (rng.random(w) - 0.5) * rough
+        y = np.convolve(np.pad(y, 3, mode="edge"), np.ones(5) / 5, mode="same")[3:-3]
+    return base - amp * y
+
+
+def mix(a, b, t):
+    t = np.asarray(t)
+    if t.ndim == 2:
+        t = t[..., None]
+    return a + (b - a) * t
+
+
+def finish_painting(img, rng, warm=0.0):
+    """Brushwork, old varnish and a darkened edge."""
+    h, w = img.shape[:2]
+    # Horizontal strokes: noise stretched along x.
+    n1 = smooth_noise(w, h, 64, rng, octaves=2)
+    n2 = smooth_noise(w // 8 if w > 256 else w, h, 96, rng, octaves=1)
+    n2 = np.array(Image.fromarray((n2 * 255).astype(np.uint8)).resize((w, h), Image.BILINEAR)) / 255.0
+    stroke = (n1 - 0.5) * 0.08 + (n2 - 0.5) * 0.1
+    img = img * (1.0 + stroke[..., None])
+    # Canvas weave.
+    U, V = grid(w, h)
+    weave = (np.sin(U * w * 1.4) * np.sin(V * h * 1.4)) * 0.015
+    img = img * (1.0 + weave[..., None])
+    # Varnish: warmer and a little darker.
+    img = img * np.array([1.0, 0.93, 0.78 - warm])
+    # Vignette.
+    d = ((U - 0.5) / 0.62) ** 2 + ((V - 0.5) / 0.62) ** 2
+    img = img * (1.0 - 0.45 * smoothstep(0.35, 1.3, d))[..., None]
+    return np.clip(img, 0, 1)
+
+
+def painting_coast():
+    """A rocky coast at dusk: the sun just over the sea, a headland on the left."""
+    w, h = 900, 600
+    rng = np.random.default_rng(31)
+    U, V = grid(w, h)
+    horizon = 0.6
+    sky_top, sky_low = srgb("#1f2a3c"), srgb("#e3a15a")
+    t = smoothstep(0.0, horizon, V) ** 1.6
+    img = mix(sky_top, sky_low, t)
+    sun = np.exp(-(((U - 0.66) / 0.05) ** 2 + ((V - (horizon - 0.06)) / 0.05) ** 2))
+    glow = np.exp(-(((U - 0.66) / 0.3) ** 2 + ((V - horizon) / 0.2) ** 2))
+    img = img + srgb("#ffd79a") * (sun * 0.9)[..., None] + srgb("#f09a50") * (glow * 0.35)[..., None]
+    # Clouds: long bands, dark above, lit underneath.
+    cl = smooth_noise(w, h, 5, rng, octaves=4)
+    band = np.sin(V * 22.0 + cl * 6.0) * 0.5 + 0.5
+    cloud = smoothstep(0.55, 0.85, band * cl * 1.6) * smoothstep(horizon - 0.02, 0.1, V)
+    img = mix(img, mix(srgb("#2b2730"), srgb("#c9784a"), smoothstep(0.1, horizon, V) * (0.4 + glow)), cloud * 0.75)
+    # The sea: dark, with the sun's road on it.
+    sea = V > horizon
+    s = (V - horizon) / (1 - horizon)
+    sea_col = mix(srgb("#3a3f48"), srgb("#10161c"), np.clip(s, 0, 1) ** 0.6)
+    ripple = smooth_noise(w, h, 48, rng, octaves=2)
+    streak = smooth_noise(w, h, 90, rng, octaves=2)
+    streak = np.array(Image.fromarray((streak * 255).astype(np.uint8)).resize((w // 6, h), Image.BILINEAR).resize((w, h), Image.BILINEAR)) / 255.0
+    road = np.exp(-((U - 0.66) / (0.04 + 0.2 * s)) ** 2) * smoothstep(0.45, 0.7, streak + ripple * 0.2)
+    sea_col = sea_col + srgb("#f2b46a") * (road * (0.8 - 0.5 * s))[..., None]
+    img = np.where(sea[..., None], sea_col, img)
+    # The headland, and rocks in front.
+    far = ridge(w, rng, horizon - 0.005, 0.12, 9) + smoothstep(0.3, 0.6, (np.arange(w) + 0.5) / w) * 0.6
+    near = ridge(w, rng, 1.02, 0.5, 7, rough=0.01) + smoothstep(0.2, 0.42, (np.arange(w) + 0.5) / w) * 0.6
+    land_far = V > far[None, :]
+    img = np.where(land_far[..., None], mix(srgb("#3a2e2a"), srgb("#241e1d"), cl) + srgb("#a0603a") * (glow * 0.25)[..., None], img)
+    land = V > near[None, :]
+    rock = mix(srgb("#231c17"), srgb("#0e0c0a"), smoothstep(0.6, 1.0, V)) * (0.7 + 0.6 * cl[..., None])
+    rim = np.exp(-((V - near[None, :]) / 0.012) ** 2) * 0.3
+    img = np.where(land[..., None], rock + srgb("#d08a4a") * rim[..., None], img)
+    save("painting_coast", finish_painting(img, rng))
+
+
+def painting_valley():
+    """A river valley in the evening: hills fading into haze, trees, the river."""
+    w, h = 900, 600
+    rng = np.random.default_rng(37)
+    U, V = grid(w, h)
+    sky_top, sky_low = srgb("#5d6f86"), srgb("#f0d29a")
+    img = mix(sky_top, sky_low, smoothstep(0.0, 0.55, V))
+    cl = smooth_noise(w, h, 6, rng, octaves=5)
+    puff = smoothstep(0.5, 0.75, cl) * smoothstep(0.55, 0.05, V)
+    img = mix(img, mix(srgb("#f4e2c0"), srgb("#8a8c98"), smoothstep(0.3, 0.8, cl)), puff * 0.8)
+    haze = srgb("#c9c2aa")
+    layers = [
+        (0.52, 0.12, 6, srgb("#7c8a8c"), 0.7),
+        (0.6, 0.12, 8, srgb("#5f6f5a"), 0.45),
+        (0.7, 0.15, 7, srgb("#3f4f33"), 0.2),
+        (0.86, 0.2, 6, srgb("#283420"), 0.0),
+    ]
+    for base, amp, pts, col, hz in layers:
+        y = ridge(w, rng, base, amp, pts, rough=0.004)
+        mask = V > y[None, :]
+        shade = mix(col, col * 0.7, smoothstep(0.0, 0.2, V - y[None, :]))
+        shade = mix(shade, haze, hz) * (0.9 + 0.25 * cl[..., None])
+        img = np.where(mask[..., None], shade, img)
+    # The river: a winding light band in the valley floor, reflecting the sky.
+    rv = 0.5 + 0.18 * np.sin(V * 9.0 + 1.0) * smoothstep(0.62, 1.0, V)
+    width = 0.004 + 0.09 * smoothstep(0.66, 1.0, V) ** 1.5
+    river = (np.abs(U - rv) < width) & (V > 0.66)
+    img = np.where(river[..., None], mix(srgb("#e8d6a8"), srgb("#8a9aa4"), smoothstep(0.66, 1.0, V)), img)
+    # Trees: dark clumps on the near slopes.
+    trees = smooth_noise(w, h, 24, rng, octaves=3)
+    clump = (trees > 0.66) & (V > 0.62) & ~river
+    img = np.where(clump[..., None], srgb("#1a2214") * (0.8 + 0.4 * trees[..., None]), img)
+    save("painting_valley", finish_painting(img, rng))
+
+
+def painting_caldera():
+    """A volcano at night, the crater glowing, smoke lit from beneath, a lake."""
+    w, h = 600, 800
+    rng = np.random.default_rng(41)
+    U, V = grid(w, h)
+    img = mix(srgb("#0b0d16"), srgb("#3a1a14"), smoothstep(0.0, 0.62, V))
+    # The cone: a trapezoid with a notch for the crater.
+    peak = 0.33
+    slope = np.abs(U - 0.5)
+    edge = ridge(w, rng, 0.0, 0.035, 14, rough=0.01)[None, :]
+    cone_top = peak + (np.maximum(0.0, slope - 0.09) ** 1.25) * 1.9 - edge
+    crater = (slope < 0.09) & (V > peak + 0.015)
+    cone = (V > cone_top) | crater
+    cone = cone & (V < 0.72)
+    cl = smooth_noise(w, h, 8, rng, octaves=5)
+    # Smoke: a column rising from the crater, spreading.
+    sx = (U - 0.5 - (peak - V) * 0.35 * cl) / (0.06 + (peak - V) * 0.6)
+    smoke = np.exp(-sx ** 2) * smoothstep(peak + 0.02, 0.02, V) * (0.4 + 0.8 * cl)
+    lit = smoothstep(0.0, peak, V) ** 2
+    img = mix(img, mix(srgb("#1d1716"), srgb("#c0502a"), lit), np.clip(smoke, 0, 1) * 0.85)
+    glow = np.exp(-(((U - 0.5) / 0.12) ** 2 + ((V - peak) / 0.05) ** 2))
+    img = img + srgb("#ff8a3a") * (glow * 0.8)[..., None]
+    rock = mix(srgb("#1a1412"), srgb("#0c0a0a"), smoothstep(peak, 0.72, V)) * (0.7 + 0.6 * cl[..., None])
+    # Lava runs down the slopes.
+    runs = np.exp(-((np.sin(U * 40.0 + cl * 8.0) * 0.5 + 0.5 - 0.98) / 0.012) ** 2)
+    runs = runs * smoothstep(0.72, peak, V) * (slope < 0.3)
+    rock = rock + srgb("#ff6a20") * (runs * 0.9 + glow * 0.4)[..., None]
+    img = np.where(cone[..., None], rock, img)
+    # The lake below, reflecting it all.
+    lake = V > 0.72
+    rv = np.clip(2 * 0.72 - V, 0, 1)
+    ref = np.zeros_like(img)
+    rows = np.clip((rv * h).astype(int), 0, h - 1)
+    ref = img[rows[:, 0], :, :]
+    ripple = smooth_noise(w, h, 40, rng, octaves=2)
+    ref = ref * (0.45 + 0.2 * np.sin(V * 600 + ripple * 10)[..., None])
+    img = np.where(lake[..., None], ref + srgb("#05070a"), img)
+    # The shore.
+    shore = ridge(w, rng, 0.75, 0.04, 8, rough=0.006)
+    img = np.where((np.abs(V - shore[None, :]) < 0.008)[..., None] & lake[..., None], srgb("#0a0808"), img)
+    save("painting_caldera", finish_painting(img, rng, warm=0.04))
+
+
 ALL = {
     "carpet_ballroom": carpet_ballroom,
     "rug_lobby": rug_lobby,
@@ -374,6 +540,9 @@ ALL = {
     "carpet_office": carpet_office,
     "silk_stripe": silk_stripe,
     "marble_lobby": marble_lobby,
+    "painting_coast": painting_coast,
+    "painting_valley": painting_valley,
+    "painting_caldera": painting_caldera,
 }
 
 
