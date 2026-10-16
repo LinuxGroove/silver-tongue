@@ -148,6 +148,7 @@ func _init() -> void:
 		"ask_security": {"text": "radio Marcus on the staff door to check (takes a moment)", "kind": "check"},
 		"let_in": {"text": "let them into the count room", "kind": "opening", "lockdown": true},
 		"hire_cleaner": {"text": "take them on as tonight's count room cleaner", "kind": "opening"},
+		"expect_cleaner": {"text": "expect the cleaner Harbor Cleaning is sending, and take them gladly", "kind": ""},
 		"log_relief": {"text": "put a Halberd relief guard on your log for tonight's drop", "kind": ""},
 		"expect_inspector": {"text": "tell Marcus to expect a Gaming Board auditor and give them every help", "kind": ""},
 	}
@@ -300,6 +301,10 @@ func on_action(job: Job, ch: Character, c: CrewInfo, act: String) -> bool:
 				if other:
 					other.note("On the radio, Pilar: \"I've a new cleaner from Harbor Cleaning, %s, doing the count room at a quarter past.\"" % job.describe(c.id))
 			job.toast_for.emit(c.id, "Pilar hires you and buzzes the staff door open. The count room is cleaned at 11:15, with Gloria there.")
+			return true
+		"expect_cleaner":
+			if TidelineRules.calling_as(job, c, ch, "Harbor Cleaning"):
+				_cleaner_expected(job, ch)
 			return true
 		"log_relief":
 			if not TidelineRules.on_phone(job, c, ch) or TidelineRules.calling_as(job, c, ch, "Halberd Dispatch"):

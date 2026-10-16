@@ -721,8 +721,9 @@ static func pilar(night := "count") -> CharacterSheet:
 				"When you take someone on, you radio Marcus on the staff door so he lets them through.",
 			]
 			s.checks = ["You'd take a cleaner Harbor Cleaning sent, or one who knows the work and can start now."]
-			s.actions = ["none", "hire_cleaner"]
+			s.actions = ["none", "expect_cleaner", "hire_cleaner"]
 			s.replies = [
+				{"words": ["harbor cleaning here", "this is harbor", "found you", "we found", "on their way", "sending someone", "we're sending"], "say": "You found someone? Oh, thank God. Send them to me, I'm on the floor.", "tone": "friendly", "do": "expect_cleaner", "believes": ["Harbor Cleaning, sending a cleaner after all"]},
 				{"words": ["harbor cleaning", "harbor", "agency", "cleaner", "cleaning", "sent me", "temp"], "first": "Harbor Cleaning? They told me nobody was free.", "say": "Then you're hired. The cart's in the staff room. Count room at a quarter past eleven, sharp.", "tone": "friendly", "do": "hire_cleaner", "believes": ["a temp cleaner from Harbor Cleaning"]},
 				{"words": ["short", "rough night", "hard night", "help", "run off your feet", "long night"], "say": "You have no idea. Three nights without a count room cleaner.", "tone": "friendly", "up": -1},
 				_hello("If you need housekeeping, I'm it."),
