@@ -1161,7 +1161,7 @@ func _graph() -> void:
 		"freya_stern": Vector3(-2.0, MAIN, -2.85), "aft_c": Vector3(1.1, MAIN, -5.0), "aft_mid": Vector3(1.3, MAIN, -7.0),
 		"aft_port": Vector3(-2.4, MAIN, -6.6), "bar_end": Vector3(-4.0, MAIN, -6.6), "bianca_bar": Vector3(-4.03, MAIN, -4.8),
 		"crew_out": Vector3(-3.6, MAIN, -8.9), "saloon_out": Vector3(1.4, MAIN, -8.9), "aft_sb": Vector3(2.4, MAIN, -3.3),
-		"stair1_foot": Vector3(3.8, MAIN, -2.75), "celeste_aft": Vector3(-2.3, MAIN, -3.7), "hugo_aft": Vector3(-1.5, MAIN, -3.9),
+		"stair1_foot": Vector3(3.8, MAIN, -2.75), "celeste_aft": Vector3(-2.3, MAIN, -3.7), "hugo_aft": Vector3(-1.7, MAIN, -4.5),
 		# The crew stair and the lower deck.
 		"crew_top": Vector3(-3.6, MAIN, -10.55), "crew_foot": Vector3(-3.7, LOWER, -16.1),
 		"passage": Vector3(-1.8, LOWER, -16.6), "hall_aft": Vector3(0.0, LOWER, -16.6),
@@ -1212,7 +1212,7 @@ func _graph() -> void:
 	]
 	var face := {
 		"teo_gang": Vector2(0, 1), "kofi_aft": Vector2(0, 1), "freya_stern": Vector2(0, 1), "bianca_bar": Vector2(1, 0),
-		"celeste_aft": Vector2(-1, 0.2), "hugo_aft": Vector2(-1, 0.3), "rocco": Vector2(1, 0), "ollie": Vector2(1, -0.8),
+		"celeste_aft": Vector2(0.6, -0.8), "hugo_aft": Vector2(-0.6, 0.8), "rocco": Vector2(1, 0), "ollie": Vector2(1, -0.8),
 		"held": Vector2(-1, 0.5), "held_guard": Vector2(1, 0), "ollie_bed": Vector2(0, 1), "anders_cabin": Vector2(-1, 0),
 		"safe_out": Vector2(0, -1), "safe_in": Vector2(0, -1), "ollie_ensuite": Vector2(0, -1), "freya": Vector2(0, -1),
 		"anders": Vector2(0, 1), "galley_c": Vector2(0, -1), "laundry": Vector2(1, 0), "lobby_c": Vector2(-1, 0),
@@ -1279,12 +1279,12 @@ func _crowd() -> void:
 	match night:
 		"aboard":
 			extras["outside"] = [_spot3(Vector3(-6.6, 0.0, 1.6), Vector2(1, -0.4)), _spot3(Vector3(7.4, 0.0, 3.6), Vector2(1, 0.3)),
-				_spot3(Vector3(-2.6, 0.0, 6.4), Vector2(-0.6, -1))] as Array[Transform3D]
+				_spot3(Vector3(-5.4, 0.0, 6.2), Vector2(0.5, -1))] as Array[Transform3D]
 			extras["galley"] = [_spot3(Vector3(2.0, LOWER, -21.35), Vector2(0, -1))] as Array[Transform3D]
 			extras["mess"] = [_spot3(Vector3(-2.0, LOWER, -23.6), Vector2(-1, 0.4))] as Array[Transform3D]
 		"safe":
 			var aft: Array[Transform3D] = []
-			aft.append_array(_knot3(Vector2(-1.2, -6.2), MAIN, 3, 0.6))
+			aft.append_array(_knot3(Vector2(2.5, -6.4), MAIN, 3, 0.5))
 			extras["aft_deck"] = aft
 			var saloon: Array[Transform3D] = []
 			saloon.append_array(_knot3(Vector2(-0.8, -18.8), MAIN, 3, 0.55))
@@ -1300,7 +1300,7 @@ func _crowd() -> void:
 				seats.append(_spot3(Vector3(s[0], MAIN, s[1]), Vector2(0, -1)))
 			extras["saloon"] = seats
 			var aft: Array[Transform3D] = []
-			aft.append_array(_knot3(Vector2(1.6, -6.3), MAIN, 2, 0.45))
+			aft.append_array(_knot3(Vector2(2.5, -6.5), MAIN, 2, 0.45))
 			aft.append_array([_spot3(Vector3(-2.0, MAIN, -4.6), Vector2(-1, 0.2))])
 			extras["aft_deck"] = aft
 			extras["dining"] = _knot3(Vector2(3.1, -21.9), MAIN, 2, 0.45)
