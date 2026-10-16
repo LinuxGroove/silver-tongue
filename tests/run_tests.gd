@@ -239,10 +239,14 @@ func _test_person() -> void:
 	var skin_mat := body.material_override as ShaderMaterial if body else null
 	check(skin_mat != null and skin_mat.get_shader_parameter("textured"), "his skin is the body's own texture")
 	check(p.bone_position("Head").y > 1.5, "the suit's skeleton stands him up")
-	var other := Person.make("guard", true, 3)
-	add_child(other)
-	check(other.outfit == "" and other.meshes.size() >= 1, "a guard the suit isn't made for gets the painted uniform")
-	other.queue_free()
+	var woman := Person.make("guard", true, 3)
+	add_child(woman)
+	check(woman.outfit == "halberd_suit" and woman.meshes.any(func(m): return String(m.name) == "Skirt"), "a woman guard wears the women's cut of the suit")
+	woman.queue_free()
+	var cook := Person.make("kitchen", false, 3)
+	add_child(cook)
+	check(cook.outfit == "" and cook.meshes.size() >= 1, "a job with no real clothes gets the painted uniform")
+	cook.queue_free()
 	for clip in ["Idle_FoldArms", "Idle", "Idle_Talking", "Idle_TalkingPhone", "Interact", "Idle_No", "Yes"]:
 		check(p.clip_path(clip) != "", "the libraries have " + clip)
 	p.play("Idle_Talking")

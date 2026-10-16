@@ -1,6 +1,6 @@
 # The Meridian
 
-Made by `tools/screenshot.tscn -- --all=docs/screenshots` (see `tools/screenshot.gd`).
+Made by `tools/screenshot.tscn -- --all=docs/screenshots group=hotel` (see `tools/screenshot.gd`).
 
 - [`street`](street.png): The street out front: the Meridian's arch, canopy and red carpet, the buildings across
 - [`entrance`](entrance.png): Just inside the front doors, where the crew starts, looking up the lobby

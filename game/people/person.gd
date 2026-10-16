@@ -23,12 +23,32 @@ const EYE_TEXTURE := "res://assets/people/textures/T_Eye_Brown.png"
 const SKIN_MEAN := Color(0.65, 0.46, 0.32)
 
 ## What each job wears: the painted outfit (see the shader), its colours, and
-## real clothes ("wardrobe", a key of [constant WARDROBE]) where it has them.
+## real clothes ("wardrobe", a key of [constant WARDROBE], or one for each
+## body as {"male", "female"}) where it has them, with the pieces it leaves
+## off ("hide": the Halberd pin and earpiece are for guards). A "palette"
+## gives the main colour by seed, so a room of guests isn't all one colour.
 const JOBS := {
 	"guard": {"outfit": 3, "main": Color(0.19, 0.195, 0.21), "accent": Color(0.85, 0.08, 0.12), "shirt": Color(0.86, 0.87, 0.88),
 		"tie": Color(0.36, 0.05, 0.07), "wardrobe": "halberd_suit"},
 	"staff": {"outfit": 2, "main": Color(0.16, 0.17, 0.22), "accent": Color(0.75, 0.15, 0.2), "shirt": Color(0.9, 0.9, 0.92)},
-	"guest": {"outfit": 2, "main": Color(0.3, 0.22, 0.16), "accent": Color(0.4, 0.55, 0.3), "shirt": Color(0.85, 0.82, 0.75)},
+	"reception": {"outfit": 2, "main": Color(0.34, 0.08, 0.11), "legs": Color(0.1, 0.1, 0.12), "accent": Color(0.78, 0.62, 0.3),
+		"shirt": Color(0.92, 0.91, 0.89), "tie": Color(0.72, 0.56, 0.26), "wardrobe": "halberd_suit", "hide": ["Earpiece"]},
+	"head_waiter": {"outfit": 2, "main": Color(0.05, 0.05, 0.06), "accent": Color(0.78, 0.62, 0.3), "shirt": Color(0.95, 0.95, 0.95),
+		"tie": Color(0.03, 0.03, 0.035), "wardrobe": "halberd_suit", "hide": ["Pin", "Earpiece"]},
+	"bartender": {"outfit": 2, "main": Color(0.07, 0.17, 0.13), "legs": Color(0.05, 0.05, 0.06), "accent": Color(0.78, 0.62, 0.3),
+		"shirt": Color(0.93, 0.93, 0.92), "tie": Color(0.04, 0.04, 0.045), "wardrobe": "halberd_suit", "hide": ["Pin", "Earpiece"]},
+	"manager": {"outfit": 2, "main": Color(0.1, 0.12, 0.21), "accent": Color(0.8, 0.66, 0.32), "shirt": Color(0.78, 0.84, 0.93),
+		"tie": Color(0.5, 0.33, 0.12), "wardrobe": "halberd_suit", "hide": ["Earpiece"]},
+	"guest": {"outfit": 2, "main": Color(0.04, 0.04, 0.05), "accent": Color(0.4, 0.55, 0.3), "shirt": Color(0.95, 0.95, 0.95),
+		"tie": Color(0.02, 0.02, 0.025), "wardrobe": {"male": "halberd_suit", "female": "evening_dress"}, "hide": ["Pin", "Earpiece"],
+		"palette": [Color(0.04, 0.04, 0.05), Color(0.05, 0.06, 0.12), Color(0.36, 0.05, 0.1), Color(0.06, 0.2, 0.16), Color(0.55, 0.42, 0.2), Color(0.12, 0.08, 0.2)]},
+	"facilities": {"outfit": 4, "main": Color(0.34, 0.36, 0.39), "accent": Color(0.9, 0.5, 0.1), "shirt": Color(0.3, 0.32, 0.35)},
+	"press": {"outfit": 2, "main": Color(0.36, 0.26, 0.17), "legs": Color(0.18, 0.18, 0.2), "accent": Color(0.2, 0.4, 0.7),
+		"shirt": Color(0.74, 0.82, 0.9), "wardrobe": "halberd_suit", "hide": ["Pin", "Earpiece", "Tie"]},
+	"agency": {"outfit": 2, "main": Color(0.05, 0.05, 0.06), "accent": Color(0.3, 0.3, 0.3), "shirt": Color(0.95, 0.95, 0.95),
+		"tie": Color(0.03, 0.03, 0.035), "wardrobe": "halberd_suit", "hide": ["Pin", "Earpiece"]},
+	"waiter": {"outfit": 2, "main": Color(0.9, 0.86, 0.76), "legs": Color(0.05, 0.05, 0.06), "accent": Color(0.78, 0.62, 0.3),
+		"shirt": Color(0.97, 0.97, 0.98), "tie": Color(0.03, 0.03, 0.035), "wardrobe": "halberd_suit", "hide": ["Pin", "Earpiece"]},
 	"kitchen": {"outfit": 4, "main": Color(0.9, 0.9, 0.9), "accent": Color(0.2, 0.2, 0.2), "shirt": Color(0.95, 0.95, 0.95)},
 }
 ## Real clothes, piece by piece (the outfit's mesh names): a colour (or the
@@ -36,7 +56,7 @@ const JOBS := {
 const WARDROBE := {
 	"halberd_suit": {
 		"Suit": ["main", 0.82, 0.14, 0.3, 0.0], "Skirt": ["main", 0.82, 0.14, 0.3, 0.0],
-		"Trousers": ["main", 0.82, 0.14, 0.3, 0.0], "Shirt": ["shirt", 0.7, 0.05, 0.15, 0.0],
+		"Trousers": ["legs", 0.82, 0.14, 0.3, 0.0], "Shirt": ["shirt", 0.7, 0.05, 0.15, 0.0],
 		"Tie": ["tie", 0.55, 0.12, 0.35, 0.0], "Shoes": [Color(0.03, 0.03, 0.035), 0.22, 0.0, 0.0, 0.0],
 		"Buttons": [Color(0.04, 0.04, 0.045), 0.35, 0.0, 0.0, 0.0], "Pin": ["accent", 0.3, 0.0, 0.0, 0.6],
 		"Earpiece": [Color(0.05, 0.05, 0.06), 0.4, 0.0, 0.0, 0.0],
@@ -78,6 +98,7 @@ var meshes: Array[MeshInstance3D] = []
 ## Where the eyes are in the model's space (from the Eyes mesh), for the face.
 var eyes_at := Vector3(0, 1.68, 0.065)
 var _current := ""
+var _layers := 1
 
 
 ## A person. `look` can set "skin", "hair" and "style" (indexes), "beard"
@@ -94,9 +115,12 @@ static func make(p_job := "staff", p_female := false, seed := 0, look := {}) -> 
 
 func _build(seed: int, look: Dictionary) -> void:
 	var j: Dictionary = JOBS[job].duplicate()
-	var dressed := OUTFIT % [j.get("wardrobe", ""), "female" if female else "male"]
-	if j.has("wardrobe") and ResourceLoader.exists(dressed):
-		outfit = str(j.wardrobe)
+	var wear: Variant = j.get("wardrobe", "")
+	if wear is Dictionary:
+		wear = wear.get("female" if female else "male", "")
+	var dressed := OUTFIT % [wear, "female" if female else "male"]
+	if str(wear) != "" and ResourceLoader.exists(dressed):
+		outfit = str(wear)
 	var ps: PackedScene = load(dressed if outfit != "" else (FEMALE if female else MALE))
 	model = ps.instantiate()
 	add_child(model)
@@ -107,13 +131,20 @@ func _build(seed: int, look: Dictionary) -> void:
 	var hair_i := int(look.get("hair", r.randi() % HAIR_COLORS.size())) % HAIR_COLORS.size()
 	var styles: Array = HAIR_STYLES["female" if female else "male"]
 	var style_i := int(look.get("style", r.randi() % styles.size())) % styles.size()
+	if j.has("palette"):
+		var palette: Array = j.palette
+		j["main"] = palette[r.randi() % palette.size()]
 	for k in ["main", "accent", "shirt", "legs", "tie"]:
 		if look.has(k):
 			j[k] = look[k]
 	j["wrist"] = 0.6 if female else 0.66
 	var mat := _material(j, skin_i)
+	var hide: Array = j.get("hide", [])
 	for mi in model.find_children("", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
+		if outfit != "" and String(m.name) in hide:
+			m.visible = false
+			continue
 		meshes.append(m)
 		if m.name.begins_with("Eye"):
 			if m.name == "Eyes" and m.mesh:
@@ -197,7 +228,7 @@ func _piece_material(p_outfit: String, piece: String, j: Dictionary, skin_i: int
 	var look: Array = WARDROBE[p_outfit].get(piece, [])
 	var col: Color = SKINS[skin_i]
 	if not look.is_empty():
-		col = look[0] if look[0] is Color else j.get(look[0], Color.MAGENTA)
+		col = look[0] if look[0] is Color else j.get(look[0], j.main if look[0] == "legs" else Color.MAGENTA)
 	var key := "%s/%s/%s/%s" % [p_outfit, piece, col.to_html(), "f" if female else "m"]
 	if _piece_mats.has(key):
 		return _piece_mats[key]
@@ -340,3 +371,13 @@ func bone_position(bone: String) -> Vector3:
 	if i < 0:
 		return global_position
 	return skeleton.global_transform * skeleton.get_bone_global_pose(i).origin
+
+
+## Puts everything drawn for them on render `layers`, so only the lights of
+## the room they're in light them.
+func set_light_layers(layers: int) -> void:
+	if layers == _layers:
+		return
+	_layers = layers
+	for v in find_children("", "VisualInstance3D", true, false):
+		(v as VisualInstance3D).layers = layers

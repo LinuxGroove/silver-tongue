@@ -1,18 +1,40 @@
 class_name SetupScreen
 extends Node
-## Before the door: Marcus's brain, ears and voice downloaded, loaded and
-## warmed up, a bar for each, so the corridor starts with him ready to
-## listen. Goes on to the door by itself once everything is ready; the
-## player can go in early (he answers with scripted lines until he's
-## ready) or go back, and the downloads carry on either way.
+## Before the door or the gala: the characters' brain, ears and voice
+## downloaded, loaded and warmed up, a bar for each, so the night starts
+## with them ready to listen. Goes on by itself once everything is ready;
+## the player can go in early (scripted lines until it's ready) or go back,
+## and the downloads carry on either way.
 
 const SCENE := "res://game/ui/setup_screen.tscn"
 const TITLE := "res://game/ui/title.tscn"
 const WIDTH := 560
 ## How long "Ready" shows before the door.
 const READY_PAUSE := 0.8
-const NAMES := {"brain": "His brain", "ears": "His ears", "voice": "His voice"}
-const ABOUT := {"brain": "the language model he thinks with", "ears": "the speech model that hears you", "voice": "the voice he answers in"}
+## The words for each place the screen leads to: M0's door, or the gala.
+const TEXTS := {
+	"door": {
+		"title": "Getting Marcus ready",
+		"intro": "Marcus thinks, hears and speaks on this computer. The first time, his models download, which can take a few minutes. After that he's ready in seconds.",
+		"names": {"brain": "His brain", "ears": "His ears", "voice": "His voice"},
+		"about": {"brain": "the language model he thinks with", "ears": "the speech model that hears you", "voice": "the voice he answers in"},
+		"early": "You can go in now: he answers with scripted lines until he's ready.",
+		"no_brain": "Marcus needs Lemonade, the local AI server. It comes with the game; when running from source, start one and choose it in Settings. You can still go in: he answers with scripted lines.",
+		"no_voice": "His brain is ready, but he can't hear or speak. Go in and type your lines with %s.",
+	},
+	"gala": {
+		"title": "Getting the Meridian ready",
+		"intro": "The staff and guests think, hear and speak on this computer. The first time, their models download, which can take a few minutes. After that they're ready in seconds.",
+		"names": {"brain": "Their brains", "ears": "Their ears", "voice": "Their voices"},
+		"about": {"brain": "the language model they think with", "ears": "the speech model that hears you", "voice": "the voices they answer in"},
+		"early": "You can go in now: they answer with scripted lines until they're ready.",
+		"no_brain": "The Meridian needs Lemonade, the local AI server. It comes with the game; when running from source, start one and choose it in Settings. You can still go in: everyone answers with scripted lines.",
+		"no_voice": "Their brains are ready, but they can't hear or speak. Go in and type your lines with %s.",
+	},
+}
+
+## Where the screen leads: "door" or "gala".
+static var target := "door"
 
 ## Goes on to the door by itself once ready (tests turn it off).
 var go_on := true
@@ -29,10 +51,32 @@ var _leaving := false
 
 ## The door, through this screen when there's anything to get ready.
 static func play_door() -> void:
+	target = "door"
+	_through()
+
+
+## The gala (with [member JobScene.setup] already set), the same way.
+static func play_gala() -> void:
+	target = "gala"
+	_through()
+
+
+static func _through() -> void:
 	if ModelSetup.needed():
 		LGScenes.change_scene(SCENE)
 	else:
+		_enter()
+
+
+static func _enter() -> void:
+	if target == "gala":
+		JobScene.play(JobScene.setup)
+	else:
 		ProofScene.play()
+
+
+func _text(key: String) -> Variant:
+	return TEXTS[target][key]
 
 
 func _ready() -> void:
@@ -55,8 +99,8 @@ func _ready() -> void:
 	_col = LGUi.centered_column(ui, WIDTH)
 	_col.get_parent().anchor_right = HotelTheme.SHADE_RIGHT
 	LGScreenFit.center(_col)
-	_col.add_child(HotelTheme.title_label("Getting Marcus ready", 44, HotelTheme.BRASS))
-	var intro := LGUi.label("Marcus thinks, hears and speaks on this computer. The first time, his models download, which can take a few minutes. After that he's ready in seconds.", "DimLabel")
+	_col.add_child(HotelTheme.title_label(_text("title"), 44, HotelTheme.BRASS))
+	var intro := LGUi.label(_text("intro"), "DimLabel")
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	intro.custom_minimum_size.x = WIDTH
 	_col.add_child(intro)
@@ -87,7 +131,7 @@ func _add_row(step: String) -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)
 	var top := HBoxContainer.new()
-	var name_label := HotelTheme.hud_label(NAMES[step], 22, HotelTheme.TEXT)
+	var name_label := HotelTheme.hud_label(_text("names")[step], 22, HotelTheme.TEXT)
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(name_label)
 	var status := HotelTheme.hud_label("Waiting", 18, HotelTheme.DIM, false)
@@ -161,7 +205,7 @@ func _on_changed(step: String) -> void:
 	status.add_theme_color_override("font_color", color)
 	bar.add_theme_stylebox_override("fill", HotelTheme.box(HotelTheme.GREEN if str(s.status) == "ready" else HotelTheme.BRASS, Color(0, 0, 0, 0), 0, 2))
 	var parts := PackedStringArray()
-	parts.append(_pretty(str(s.model)) + ", " + ABOUT[step])
+	parts.append(_pretty(str(s.model)) + ", " + str(_text("about")[step]))
 	if str(s.detail) != "":
 		parts.append(str(s.detail))
 	detail.text = "  ·  ".join(parts)
@@ -183,9 +227,9 @@ func _on_finished() -> void:
 			get_tree().create_timer(READY_PAUSE).timeout.connect(_go_in)
 		return
 	if not brain_ok:
-		_note.text = "Marcus needs Lemonade, the local AI server. It comes with the game; when running from source, start one and choose it in Settings. You can still go in: he answers with scripted lines."
+		_note.text = _text("no_brain")
 	else:
-		_note.text = "His brain is ready, but he can't hear or speak. Go in and type your lines with %s." % LGInput.label_for_action("text")
+		_note.text = str(_text("no_voice")) % LGInput.label_for_action("text")
 	_note.add_theme_color_override("font_color", HotelTheme.WARN)
 	_add_button("Try again", _again)
 	_add_button("Go in anyway", _go_in)
@@ -194,7 +238,7 @@ func _on_finished() -> void:
 
 func _waiting_buttons() -> void:
 	_clear_buttons()
-	_note.text = "You can go in now: he answers with scripted lines until he's ready."
+	_note.text = _text("early")
 	_add_button("Go in now", _go_in)
 	_add_button("Back", _back)
 
@@ -226,13 +270,15 @@ func _go_in() -> void:
 	if _leaving:
 		return
 	_leaving = true
-	ProofScene.play()
+	_enter()
 
 
 func _back() -> void:
 	if _leaving:
 		return
 	_leaving = true
+	if target == "gala":
+		Session.leave()
 	LGScenes.change_scene(TITLE)
 
 

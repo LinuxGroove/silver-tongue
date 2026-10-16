@@ -3,6 +3,11 @@ extends RefCounted
 ## Game-wide constants: identity, version, input map and setting defaults.
 
 const GAME_ID := "silver-tongue"
+## Bump PROTOCOL whenever network messages change; mismatched builds are told
+## to update instead of joining.
+const PROTOCOL := 1
+## The crew on a job, on this many devices (one player each).
+const MAX_CREW := 2
 
 ## This round's own questions at the end of a play test (LGPlaytest), on top
 ## of the standard ones. M0 is one guard at one door, so they ask about him.
@@ -80,6 +85,8 @@ const ACTIONS := {
 	# Held with talk: a whisper carries a meter or two, a shout the whole room.
 	"whisper": ["key:Shift", "joy:lb"],
 	"shout": ["key:Alt", "joy:rb"],
+	# Hold to talk to the crew only, wherever they are.
+	"earpiece": ["key:Tab", "axis:lt+"],
 	# Type a line instead of saying it.
 	"text": ["key:T", "joy:y"],
 	# Cogito reads these; Silver Tongue has no inventory screen.

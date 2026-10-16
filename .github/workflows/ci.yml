@@ -36,3 +36,11 @@ jobs:
         run: |
           godot --headless --path . tests/run_tests.tscn 2>&1 | tee test.log
           ! grep -q "SCRIPT ERROR" test.log
+      - name: Two copies play the gala on LAN
+        timeout-minutes: 10
+        run: |
+          XDG_DATA_HOME=$RUNNER_TEMP/a godot --headless --path . tools/net_check.tscn -- host net.code > host.log 2>&1 &
+          sleep 1
+          XDG_DATA_HOME=$RUNNER_TEMP/b godot --headless --path . tools/net_check.tscn -- join net.code 2>&1 | tee join.log
+          wait $! && cat host.log
+          grep -q "NET OK host" host.log && grep -q "NET OK join" join.log

@@ -25,6 +25,9 @@ signal heard(text: String, final: bool)
 ## The server's own voice activity detection, in open mic mode.
 signal speech_started
 signal speech_stopped
+## The microphone's audio as 16 kHz mono PCM16, in chunks, while [member relay]
+## is on (for voice chat between players).
+signal mic_audio(pcm: PackedByteArray)
 
 const BUS := "Mic"
 const RATE := 16000
@@ -43,6 +46,8 @@ var speaking_model := "kokoro-v1"
 var transport := ""
 ## The microphone's loudness right now, 0 to 1.
 var mic_level := 0.0
+## Send the microphone's audio out as [signal mic_audio] (voice chat).
+var relay := false
 ## Timings of the last utterance, in seconds from letting go of the button:
 ## {"first_word": first partial after release (or before: negative),
 ## "final": the finished line, "spoken": how long the utterance was}.
@@ -240,6 +245,12 @@ func _close_socket() -> void:
 		_ws.close()
 	_ws = null
 	_ws_open = false
+
+
+## Starts the microphone without the hearing service (for voice chat with
+## no models).
+func start_mic() -> void:
+	_start_mic()
 
 
 func _start_mic() -> void:
@@ -451,6 +462,8 @@ func _pump_mic(delta: float) -> void:
 		i += step
 	_resample_t = i - frames.size()
 	mic_level = lerpf(mic_level, clampf(peak * 2.5, 0.0, 1.0), 0.5)
+	if relay:
+		mic_audio.emit(out)
 	if not (_listening or _open_mic):
 		return
 	_no_audio_for = 0.0
@@ -530,6 +543,11 @@ func _speak_async(line: LGVoiceLine, voice: String, player: Node, speed: float) 
 			return
 		var body := {"model": speaking_model, "input": s, "voice": voice, "speed": speed, "response_format": "wav"}
 		var res := await client.request_bytes(HTTPClient.METHOD_POST, "/audio/speech", PackedStringArray(["Content-Type: application/json"]), JSON.stringify(body).to_utf8_buffer(), 60.0)
+		if not is_instance_valid(player):
+			# Freed while the sentence was on its way (its scene closed).
+			_players.erase(player)
+			_lines.erase(line)
+			return
 		if line.state in ["hushed", "failed"] or not _players.has(player) or _players[player].line != line:
 			return
 		if not res.ok:

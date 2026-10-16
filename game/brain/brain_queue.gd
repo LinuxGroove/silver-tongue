@@ -13,21 +13,38 @@ static var _probes := {}
 
 var busy := false
 var _waiting := 0
+## First come, first served: each ask takes a ticket.
+var _next := 0
+var _serving := 0
+
+
+## How many asks are waiting their turn.
+func waiting() -> int:
+	return _waiting
 
 
 ## Asks the model. Returns {"ok", "text", "seconds", "timed_out",
 ## "prompt_tokens", "completion_tokens", "cached_tokens" (-1 when the server
-## doesn't say), "prompt_ms", "predicted_ms", "error"}.
+## doesn't say), "prompt_ms", "predicted_ms", "error"}. One at a time, in
+## the order asked.
 func ask(messages: Array, schema := {}, max_tokens := 220, temperature := 0.7) -> Dictionary:
+	var ticket := _next
+	_next += 1
 	_waiting += 1
-	while busy:
+	while busy or ticket != _serving:
 		await get_tree().process_frame
 	_waiting -= 1
 	busy = true
+	var out := await _ask(messages, schema, max_tokens, temperature)
+	busy = false
+	_serving += 1
+	return out
+
+
+func _ask(messages: Array, schema: Dictionary, max_tokens: int, temperature: float) -> Dictionary:
 	var out := {"ok": false, "text": "", "seconds": 0.0, "timed_out": false, "prompt_tokens": -1, "completion_tokens": -1, "cached_tokens": -1, "prompt_ms": -1.0, "predicted_ms": -1.0, "error": ""}
 	if not LGBrain.is_ready():
 		out.error = "brain not ready"
-		busy = false
 		return out
 	var client: LlmClient = LGBrain.client()
 	var old_timeout: float = client.timeout
@@ -56,7 +73,6 @@ func ask(messages: Array, schema := {}, max_tokens := 220, temperature := 0.7) -
 			out.prompt_tokens = int(timings.prompt_n)
 		if out.completion_tokens < 0 and timings.has("predicted_n"):
 			out.completion_tokens = int(timings.predicted_n)
-	busy = false
 	return out
 
 

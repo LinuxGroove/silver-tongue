@@ -7,7 +7,8 @@ run: enough of its API for Silver Tongue's hearing, brains and speaking.
 Serves, under /api/v1 (and /v1):
   GET  /health, /models, /downloads      what the game asks at start
   POST /load, /pull, /unload             always fine
-  POST /chat/completions                 canned replies by keyword (see REPLIES),
+  POST /chat/completions                 canned replies by keyword (see REPLIES,
+                                         and GALA and CAST for the gala's cast),
                                          with usage and llama.cpp-style timings;
                                          a json_schema whose only word is
                                          "pineapple" gets that word (the probe)
@@ -54,6 +55,50 @@ REPLIES = [
 ]
 DEFAULT = {"think": "No idea what they're on about.", "say": "Service entrance. You want the front.", "tone": "calm", "do": "none", "believes": [], "suspicion": 1}
 
+# The gala's cast, known by the name the system prompt gives ("You are Teo,
+# ..."). GALA comes first for everyone: a colleague's answer, a question on
+# the radio, an invitation; then the character's own rules; then Marcus's
+# (REPLIES) for him, or the cast's default. Only the last line of the last
+# user message is matched, since the game sends several lines at once.
+OPENS = {"marcus": "let_through", "teo": "let_through", "okafor": "escort_in", "dana": "add_to_list", "laurent": "put_to_work", "celeste": "plus_one", "hugo": "plus_one"}
+GALA = [
+    (["so it checks out"], {"think": "Checks out.", "say": "Right. That checks out. Go ahead.", "tone": "friendly", "do": "OPEN", "believes": ["checks out"], "suspicion": 1}),
+    (["so it doesn't check out"], {"think": "That's not what I'm told.", "say": "That's not what I'm hearing. Who are you, really?", "tone": "wary", "do": "none", "believes": ["story doesn't check out"], "suspicion": 3}),
+    (["asks about"], {"think": "Let me look.", "say": "ANSWER", "tone": "calm", "do": "none", "believes": [], "suspicion": 1}),
+    (["it's a copy"], {"think": "A fake.", "say": "This isn't real. Where did you get it?", "tone": "annoyed", "do": "none", "believes": ["has a forged invitation"], "suspicion": 4}),
+    (["it looks right"], {"think": "Looks fine.", "say": "Thank you. Enjoy the evening.", "tone": "friendly", "do": "OPEN", "believes": ["has an invitation"], "suspicion": 1}),
+    (["police", "gun", "weapon"], {"think": "That's a threat.", "say": "Right. That's enough.", "tone": "alarmed", "do": "radio_security", "believes": ["dangerous"], "suspicion": 5}),
+    (["forged", "the rose", "heist", "steal"], {"think": "What did they just say?", "say": "", "tone": "wary", "do": "none", "believes": ["talking about something they shouldn't"], "suspicion": 3}),
+]
+CAST = {
+    "teo": [
+        (["nephew", "halvorsen"], {"think": "The owner's nephew? I'd better check.", "say": "Mr Halvorsen? Of course. Let me just check with reception.", "tone": "calm", "do": "ask_reception", "believes": ["says he's Felix Halvorsen, the owner's nephew"], "suspicion": 1}),
+        (["invitation", "invited"], {"think": "Papers, then.", "say": "May I see your invitation?", "tone": "calm", "do": "ask_for_invitation", "believes": ["says they're a guest"], "suspicion": 1}),
+    ],
+    "dana": [
+        (["list", "add me", "put me down"], {"think": "Another one for the list.", "say": "Of course. I'll put you down.", "tone": "friendly", "do": "add_to_list", "believes": ["a guest whose name was missed"], "suspicion": 1}),
+        (["freezer", "facilities", "book"], {"think": "Finally, the freezer.", "say": "At last. I'll book you in so the door knows.", "tone": "friendly", "do": "book_visit", "believes": ["here about the freezer"], "suspicion": 1}),
+    ],
+    "laurent": [
+        (["agency", "staffing", "temp"], {"think": "The temps, at last.", "say": "You're late. Jacket, tray, out the pass. Go.", "tone": "annoyed", "do": "put_to_work", "believes": ["an agency temp"], "suspicion": 1}),
+    ],
+    "okafor": [
+        (["nephew", "halvorsen"], {"think": "Oh no. The nephew.", "say": "Mr Halvorsen! Please, come with me, I'll take you in myself.", "tone": "friendly", "do": "escort_in", "believes": ["the owner's nephew"], "suspicion": 0}),
+    ],
+    "celeste": [
+        (["plus-one", "plus one", "your arm", "take me in"], {"think": "Why not?", "say": "Oh, why not. Stay close at five past.", "tone": "friendly", "do": "plus_one", "believes": ["charming"], "suspicion": 1}),
+    ],
+    "hugo": [
+        (["plus-one", "plus one", "your arm", "take me in"], {"think": "Fine.", "say": "Fine, you can come in with us.", "tone": "friendly", "do": "plus_one", "believes": ["harmless"], "suspicion": 1}),
+    ],
+    "benny": [
+        (["code", "kitchen"], {"think": "Hm.", "say": "Couldn't tell you. Another drink?", "tone": "calm", "do": "none", "believes": [], "suspicion": 1}),
+    ],
+}
+CAST_DEFAULT = {"think": "Hm.", "say": "Sorry, can I help you?", "tone": "calm", "do": "none", "believes": [], "suspicion": 1}
+BAD_FACTS = ["isn't them", "not on the", "nobody", "never met", "don't know", "no press"]
+GOOD_FACTS = ["on the list", "added them", "booked their", "expecting temps", "sending temps", "let him in", "taking them in", "seemed fine"]
+
 # How long a fake download takes, and how big it says it is.
 DOWNLOAD_SECONDS = 2.5
 DOWNLOAD_BYTES = 2_684_354_560
@@ -98,12 +143,40 @@ def wav_hum(seconds, rate=24000):
     return header + bytes(data)
 
 
+def who(messages):
+    """The character the system prompt is for: "teo", "okafor", or ""."""
+    for m in messages:
+        if m.get("role") == "system":
+            head = str(m.get("content", "")).split(",", 1)[0]
+            if head.startswith("You are "):
+                return head[len("You are "):].split()[-1].lower()
+    return ""
+
+
+def gala_reply(name, last):
+    for words, reply in GALA:
+        if any(w in last for w in words):
+            r = dict(reply)
+            if r["do"] == "OPEN":
+                r["do"] = OPENS.get(name, "none")
+            if r["say"] == "ANSWER":
+                fact = last.split("what you know:", 1)[-1]
+                bad = any(b in fact for b in BAD_FACTS)
+                r["say"] = "Yes, that checks out." if not bad and any(f in fact for f in GOOD_FACTS) else "No. Nothing like that here."
+            return r
+    for words, reply in CAST.get(name, []):
+        if any(w in last for w in words):
+            return dict(reply)
+    return None
+
+
 def reply_for(messages, response_format):
-    last = ""
+    full = ""
     for m in reversed(messages):
         if m.get("role") == "user":
-            last = str(m.get("content", "")).lower()
+            full = str(m.get("content", "")).lower().strip()
             break
+    last = full.split("\n")[-1]
     schema = {}
     if isinstance(response_format, dict) and response_format.get("type") == "json_schema":
         schema = response_format.get("json_schema", {}).get("schema", {})
@@ -111,10 +184,17 @@ def reply_for(messages, response_format):
         return {"word": "pineapple"}
     if schema.get("properties", {}).get("word") and state["no_schema"]:
         return {"answer": "hello"}
+    name = who(messages)
+    if name in CAST or name == "marcus" and ("so it" in last or "asks about" in last):
+        r = gala_reply(name, last)
+        if r is not None:
+            return r
+        if name != "marcus":
+            return dict(CAST_DEFAULT)
     for words, reply in REPLIES:
         if reply is None:
             continue
-        if any(w in last for w in words):
+        if any(w in full for w in words):
             return dict(reply)
     return dict(DEFAULT)
 
@@ -221,7 +301,7 @@ class Handler(BaseHTTPRequestHandler):
             with lock:
                 slow = state["slow"]
                 state["slow"] = 0.0
-                state["log"]["chat"].append({"response_format": body.get("response_format"), "messages": len(body.get("messages", [])), "model": body.get("model"), "max_tokens": body.get("max_tokens")})
+                state["log"]["chat"].append({"response_format": body.get("response_format"), "messages": len(body.get("messages", [])), "model": body.get("model"), "max_tokens": body.get("max_tokens"), "who": who(body.get("messages", []))})
             if slow > 0:
                 time.sleep(slow)
             reply = reply_for(body.get("messages", []), body.get("response_format"))

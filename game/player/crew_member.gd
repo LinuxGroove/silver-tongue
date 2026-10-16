@@ -13,17 +13,24 @@ signal talk_started
 signal talk_ended
 ## The text line was asked for.
 signal text_requested
+## Interact was pressed (the scene works out what's in front of you).
+signal use_pressed
 
 ## Cogito player nodes Silver Tongue doesn't use.
 const UNUSED := ["CogtoTestCurrency", "StrengthAttribute", "LightMeterAttribute",
 	"SanityAttribute", "StaminaAttribute", "HealthAttribute", "HealthAutoConsume",
 	"StaminaAutoConsume", "AutoPickUpZone"]
+## How far the body's origin is above the floor (Cogito's standing box is
+## 1.7 m tall, centred 0.05 m above it).
+const FEET := 0.8
 const BOB_WALK := 0.03
 const BOB_CROUCH := 0.04
 
 ## The pause menu to use in place of Cogito's, set before entering the tree.
 var hotel_pause: Node
 var talking := false
+## The talk under way is on the earpiece, to the crew only.
+var on_earpiece := false
 var _tilt := false
 
 
@@ -121,9 +128,24 @@ func voice() -> String:
 	return "normal"
 
 
+## Where you're standing, on the floor.
+func feet_position() -> Vector3:
+	return global_position - Vector3(0, FEET, 0)
+
+
 ## Where your mouth is.
 func mouth_position() -> Vector3:
 	return camera.global_position
+
+
+## Which way you're looking.
+func look_dir() -> Vector3:
+	return -camera.global_transform.basis.z
+
+
+## Your view's pitch, for your body on other devices.
+func look_pitch() -> float:
+	return head.rotation.x
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -133,11 +155,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("talk") and not talking:
 		talking = true
+		on_earpiece = false
 		talk_started.emit()
-	elif event.is_action_released("talk") and talking:
+	elif event.is_action_pressed("earpiece") and not talking:
+		talking = true
+		on_earpiece = true
+		talk_started.emit()
+	elif (event.is_action_released("talk") and not on_earpiece or event.is_action_released("earpiece") and on_earpiece) and talking:
 		end_talk()
 	elif event.is_action_pressed("text"):
 		text_requested.emit()
+	elif event.is_action_pressed("interact"):
+		use_pressed.emit()
 
 
 func end_talk() -> void:

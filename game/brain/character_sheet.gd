@@ -16,6 +16,14 @@ const ACTIONS := {
 	"call_manager": "call the day manager",
 	"walk_away": "walk off to see to something else",
 	"escort_out": "walk them out of the building",
+	# The gala's.
+	"ask_for_invitation": "ask to see their invitation",
+	"add_to_list": "add the name they gave you to tonight's guest list",
+	"book_visit": "book a facilities visit for them tonight, so the service door knows to let them in",
+	"put_to_work": "take them on as one of tonight's agency waiters: a white jacket, and through the pass into the ballroom",
+	"escort_in": "walk them into the ballroom yourself",
+	"plus_one": "take them into the gala on your arm, as your plus-one",
+	"release": "let the person held in the security office go, because it was a mistake",
 }
 
 var id := ""
@@ -49,6 +57,33 @@ var start_suspicion := 1
 var arms_folded := true
 ## What reception says when this character checks: a line, or "" for no reception.
 var reception_line := ""
+
+# The gala's cast (see Cast): how they fit in the job.
+
+## "guard", "reception", "waiter", "bar", "manager" or "guest".
+var role := "guard"
+## Halberd Security: minds the security office, and locks down at Lockdown.
+var halberd := false
+## Staff notice strangers in the staff-only rooms.
+var staff := false
+## Has a radio: checks go over it, and colleagues can reach them.
+var radio := false
+## Where they stand (a Meridian spot).
+var spot := ""
+## Who they check with, by action: {"ask_reception": "dana"}.
+var checks_with := {}
+## Facts behind a trust lock, never in the prompt until they open:
+## [{"text", "suspicion" (at most), "turns" (at least)}].
+var secrets: Array = []
+## What the whole job is about, for the prompt's first lines.
+var situation := ""
+## Words for actions in their own prompt, where the general ones don't fit.
+var action_words := {}
+## Lines they say on their own now and then, for anyone near to overhear.
+var chatter: Array[String] = []
+## The scripted brain, for no model: [[words, reply]], the first match wins
+## (see ScriptedBrain). A reply's "do" can be "?check" for their usual check.
+var replies: Array = []
 
 
 ## Marcus Hale, the Halberd guard on the Meridian's service door: M0's one guard.

@@ -25,7 +25,7 @@ func _ready() -> void:
 	_panel.add_child(col)
 	col.add_child(LGUi.label("Say", "DimLabel"))
 	_edit = LineEdit.new()
-	_edit.placeholder_text = "What you say to him"
+	_edit.placeholder_text = "What you say"
 	_edit.max_length = 240
 	_edit.text_submitted.connect(_on_submitted)
 	LGUi.gamepad_text_entry(_edit)
