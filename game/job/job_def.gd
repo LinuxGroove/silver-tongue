@@ -85,6 +85,8 @@ var keypads := {}
 ## Where the crew's held: the office's door, the spot they're put at, and
 ## where the guard minding them stands.
 var office := {"door": "office", "held": "held", "guard": "office_guard", "name": "the security office"}
+## What the crew is told when every one of them is held.
+var held_text := "Security has called the police. Talk your way out before they come."
 
 ## Things to take, carry, show or leave: id -> {"name" (what it's called),
 ## "at" (the use id it lies at in the venue, "" for carried from the start),
