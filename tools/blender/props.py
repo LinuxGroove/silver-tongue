@@ -2021,6 +2021,297 @@ def bay_gate():
     return p
 
 
+# --- Mr Okafor's office, the wedding and the press call (jobs 2 and 3) ----------------------------
+
+MATERIALS.update({
+    "leather_green": ("#1e3626", 0.0, 0.46, {}),
+    "lacquer_black": ("#0c0c0d", 0.0, 0.16, {}),
+    "rose_pink": ("#f08aa8", 0.0, 0.02, {"emit": "#ff7aa0", "strength": 0.9}),
+    "icing": ("#f6f1e6", 0.0, 0.5, {}),
+    "blind": ("#d9cfba", 0.0, 0.8, {}),
+    "coffee": ("#2a170c", 0.0, 0.2, {}),
+    "pastry": ("#c88b45", 0.0, 0.7, {}),
+    "juice": ("#f0a030", 0.0, 0.1, {"alpha": 0.8}),
+})
+
+
+@prop
+def meridian_manager_desk():
+    """Mr Okafor's desk: walnut with a green leather top, a pedestal of drawers each side, a
+    telephone, a pen stand and his papers; 1.8 x 0.78 x 0.9. The front (the visitor's side)
+    faces +Z; the drawers are on the sitter's side."""
+    p = Prop("meridian_manager_desk")
+    w, d, h = 1.8, 0.9, 0.78
+    p.add(box((-w / 2, h - 0.04, -d / 2), (w / 2, h, d / 2), "walnut", 0.01))
+    p.add(box((-w / 2 + 0.07, h - 0.002, -d / 2 + 0.07), (w / 2 - 0.07, h + 0.002, d / 2 - 0.09), "leather_green", 0.0))
+    for side in (-1, 1):
+        lo, hi = (-w / 2 + 0.02, -w / 2 + 0.5) if side < 0 else (w / 2 - 0.5, w / 2 - 0.02)
+        p.add(box((lo, 0.0, -d / 2 + 0.03), (hi, h - 0.04, d / 2 - 0.02), "walnut", 0.006))
+        p.add(panel_moulding(lo + 0.05, 0.1, hi - 0.05, h - 0.12, d / 2 - 0.02, 0.025, 0.012, "walnut_dark"))
+        for k in range(3):
+            y0 = 0.05 + k * 0.225
+            p.add(box((lo + 0.02, y0, -d / 2 + 0.01), (hi - 0.02, y0 + 0.21, -d / 2 + 0.035), "walnut_dark", 0.004))
+            p.add(box(((lo + hi) / 2 - 0.06, y0 + 0.15, -d / 2 - 0.005), ((lo + hi) / 2 + 0.06, y0 + 0.165, -d / 2 + 0.01), "brass", 0.003))
+    p.add(box((-w / 2 + 0.5, 0.18, d / 2 - 0.07), (w / 2 - 0.5, h - 0.04, d / 2 - 0.04), "walnut", 0.004))
+    p.add(box((-0.35, h - 0.13, -d / 2 + 0.03), (0.35, h - 0.04, -d / 2 + 0.06), "walnut_dark", 0.003))
+    # The telephone, a pen stand, a stack of papers and a cup.
+    p.add(box((0.45, h, -0.3), (0.68, h + 0.06, -0.12), "plastic_black", 0.012))
+    p.add(box((0.46, h + 0.06, -0.29), (0.67, h + 0.09, -0.24), "plastic_black", 0.015))
+    p.add(box((-0.1, h, 0.05), (0.04, h + 0.05, 0.13), "walnut_dark", 0.004))
+    for k in range(2):
+        p.add(tube([(-0.06 + k * 0.06, h + 0.05, 0.09), (-0.07 + k * 0.08, h + 0.17, 0.07)], 0.004, "brass", 5))
+    p.add(box((-0.72, h, -0.3), (-0.48, h + 0.04, -0.02), "paper", 0.0))
+    p.add(lathe([(0.0, h), (0.035, h), (0.04, h + 0.08), (0.036, h + 0.08)], "porcelain", 12, cap=(True, False), m=move(0.3, 0, 0.1)))
+    return p
+
+
+@prop
+def meridian_list_folder():
+    """The auction's guest list: a green leather folder with gilt corners and a ribbon,
+    0.34 x 0.03 x 0.25, lying flat."""
+    p = Prop("meridian_list_folder")
+    p.add(box((-0.17, 0.0, -0.125), (0.17, 0.028, 0.125), "leather_green", 0.006))
+    for x in (-0.15, 0.15):
+        for z in (-0.105, 0.105):
+            p.add(box((x - 0.02, 0.027, z - 0.02), (x + 0.02, 0.031, z + 0.02), "gilt", 0.0))
+    p.add(box((-0.13, 0.012, 0.124), (0.13, 0.016, 0.128), "paper", 0.0))
+    p.add(box((0.05, 0.0, 0.12), (0.065, 0.03, 0.2), "rose_red", 0.0))
+    return p
+
+
+@prop
+def meridian_safe():
+    """An old floor safe in black steel with a brass dial and handle, 0.62 x 0.9 x 0.6; front
+    faces +Z."""
+    p = Prop("meridian_safe")
+    w, h, d = 0.62, 0.9, 0.6
+    p.add(box((-w / 2, 0.04, -d / 2), (w / 2, h, d / 2), "iron", 0.02))
+    p.add(box((-w / 2 + 0.02, 0.0, -d / 2 + 0.02), (w / 2 - 0.02, 0.04, d / 2 - 0.02), "rubber", 0.005))
+    p.add(box((-w / 2 + 0.05, 0.09, d / 2), (w / 2 - 0.05, h - 0.05, d / 2 + 0.02), "iron", 0.01))
+    p.add(panel_moulding(-w / 2 + 0.07, 0.11, w / 2 - 0.07, h - 0.07, d / 2 + 0.02, 0.012, 0.006, "brass_aged"))
+    p.add(cyl(0.06, 0.0, 0.03, "brass", 20, m=move(0.0, 0.58, d / 2 + 0.02) @ rot_x(90), bevel=0.004))
+    p.add(cyl(0.02, 0.03, 0.05, "brass", 10, m=move(0.0, 0.58, d / 2 + 0.02) @ rot_x(90), bevel=0.002))
+    p.add(tube([(0.0, 0.4, d / 2 + 0.02), (0.0, 0.4, d / 2 + 0.06), (0.1, 0.4, d / 2 + 0.06)], 0.012, "brass", 8))
+    p.add(box((-0.08, 0.76, d / 2 + 0.02), (0.08, 0.79, d / 2 + 0.024), "gilt", 0.0))
+    return p
+
+
+@prop
+def meridian_file_cabinet():
+    """A walnut filing cabinet, four drawers with brass pulls and card holders, 0.5 x 1.3 x
+    0.62; front faces +Z."""
+    p = Prop("meridian_file_cabinet")
+    w, h, d = 0.5, 1.3, 0.62
+    p.add(box((-w / 2, 0.0, -d / 2), (w / 2, h, d / 2 - 0.02), "walnut", 0.005))
+    p.add(box((-w / 2 - 0.01, h, -d / 2 - 0.01), (w / 2 + 0.01, h + 0.03, d / 2 + 0.01), "walnut_dark", 0.006))
+    for k in range(4):
+        y0 = 0.04 + k * 0.315
+        p.add(box((-w / 2 + 0.015, y0, d / 2 - 0.02), (w / 2 - 0.015, y0 + 0.3, d / 2), "walnut", 0.006))
+        p.add(box((-0.07, y0 + 0.2, d / 2), (0.07, y0 + 0.22, d / 2 + 0.025), "brass", 0.004))
+        p.add(box((-0.045, y0 + 0.235, d / 2), (0.045, y0 + 0.265, d / 2 + 0.004), "brass_aged", 0.0))
+        p.add(box((-0.038, y0 + 0.24, d / 2 + 0.004), (0.038, y0 + 0.26, d / 2 + 0.006), "paper", 0.0))
+    return p
+
+
+@prop
+def meridian_credenza():
+    """A low walnut sideboard with a silver tray, a crystal decanter and two glasses, 1.6 x
+    0.8 x 0.46; front faces +Z."""
+    p = Prop("meridian_credenza")
+    w, h, d = 1.6, 0.74, 0.46
+    for x in (-w / 2 + 0.06, w / 2 - 0.06):
+        for z in (-d / 2 + 0.06, d / 2 - 0.06):
+            p.add(turned_leg(x, z, 0.1, 0.022, "walnut_dark", foot="brass"))
+    p.add(box((-w / 2, 0.1, -d / 2), (w / 2, h, d / 2), "walnut", 0.008))
+    for i in range(3):
+        x0 = -w / 2 + 0.03 + i * (w - 0.06) / 3
+        x1 = x0 + (w - 0.06) / 3 - 0.02
+        p.add(panel_moulding(x0 + 0.03, 0.15, x1 - 0.03, h - 0.05, d / 2, 0.02, 0.01, "walnut_dark"))
+        p.add(sphere(0.015, "brass", 8, 6, m=move((x0 + x1) / 2, h - 0.16, d / 2 + 0.015)))
+    p.add(box((-w / 2 - 0.02, h, -d / 2 - 0.02), (w / 2 + 0.02, h + 0.03, d / 2 + 0.02), "walnut_dark", 0.006))
+    t = h + 0.03
+    p.add(box((0.05, t, -0.14), (0.55, t + 0.012, 0.14), "chrome", 0.004))
+    p.add(lathe([(0.05, t + 0.012), (0.06, t + 0.04), (0.055, t + 0.16), (0.02, t + 0.2), (0.014, t + 0.26), (0.03, t + 0.27), (0.0, t + 0.31)], "glass", 10, m=move(0.2, 0, 0.0)))
+    p.add(lathe([(0.045, t + 0.013), (0.045, t + 0.1)], "bottle_amber", 10, m=move(0.2, 0, 0.0)))
+    for x in (0.38, 0.48):
+        p.add(lathe([(0.03, t + 0.012), (0.034, t + 0.09)], "glass", 8, cap=(True, False), m=move(x, 0, 0.05)))
+    p.add(_folder_stack(-0.45, t, 0.0))
+    return p
+
+
+def _folder_stack(x, y, z):
+    return [box((x - 0.17, y + i * 0.03, z - 0.12), (x + 0.17, y + i * 0.03 + 0.028, z + 0.12), "leather_black" if i % 2 else "cardboard", 0.004) for i in range(3)]
+
+
+@prop
+def meridian_desk_chair():
+    """Mr Okafor's chair: a buttoned oxblood leather wing chair on a swivel, 0.7 x 1.2 x 0.7;
+    faces +Z."""
+    p = Prop("meridian_desk_chair")
+    for i in range(5):
+        a = 2 * math.pi * i / 5 + math.pi / 2
+        x, z = 0.3 * math.cos(a), 0.3 * math.sin(a)
+        p.add(tube([(0, 0.1, 0), (x, 0.06, z)], 0.022, "brass_aged", 6))
+        p.add(sphere(0.03, "rubber", 8, 6, m=move(x, 0.03, z)))
+    p.add(cyl(0.03, 0.1, 0.38, "brass_aged", 10, bevel=0))
+    p.add(cushion((-0.29, 0.38, -0.26), (0.29, 0.52, 0.3), "leather_oxblood", 0.05))
+    back = cushion((-0.28, 0.5, -0.36), (0.28, 1.2, -0.22), "leather_oxblood", 0.06)
+    p.add(back.xf(move(0, 0.5, -0.3) @ rot_x(-8) @ move(0, -0.5, 0.3)))
+    for side in (-1, 1):
+        p.add(cushion((side * 0.34 - 0.06, 0.45, -0.3), (side * 0.34 + 0.06, 0.72, 0.26), "leather_oxblood", 0.04))
+    for k in range(3):
+        for j in range(3):
+            p.add(sphere(0.012, "leather_oxblood", 6, 4, m=move(-0.14 + j * 0.14, 0.72 + k * 0.14, -0.2 - k * 0.018)))
+    return p
+
+
+@prop
+def meridian_side_chair():
+    """A visitor's chair: a walnut frame with an oxblood leather seat and back; the seat is
+    at 0.47 m, 0.54 x 0.92 x 0.56; faces +Z."""
+    p = Prop("meridian_side_chair")
+    w, d, sh = 0.54, 0.56, 0.47
+    for x in (-w / 2 + 0.04, w / 2 - 0.04):
+        p.add(turned_leg(x, d / 2 - 0.05, sh - 0.04, 0.024, "walnut"))
+        p.add(tube([(x, 0.0, -d / 2 + 0.05), (x, sh, -d / 2 + 0.04), (x * 0.96, 0.92, -d / 2 + 0.0)], 0.02, "walnut", 6))
+    p.add(box((-w / 2 + 0.02, sh - 0.06, -d / 2 + 0.03), (w / 2 - 0.02, sh - 0.02, d / 2 - 0.03), "walnut", 0.006))
+    p.add(cushion((-w / 2 + 0.03, sh - 0.02, -d / 2 + 0.05), (w / 2 - 0.03, sh + 0.05, d / 2 - 0.02), "leather_oxblood", 0.025))
+    p.add(cushion((-w / 2 + 0.06, 0.58, -d / 2 + 0.01), (w / 2 - 0.06, 0.86, -d / 2 + 0.07), "leather_oxblood", 0.025).xf(move(0, 0.58, -d / 2) @ rot_x(-6) @ move(0, -0.58, d / 2)))
+    p.add(tube([(-w / 2 + 0.04, 0.9, -d / 2 + 0.01), (w / 2 - 0.04, 0.9, -d / 2 + 0.01)], 0.018, "walnut", 6))
+    return p
+
+
+@prop
+def meridian_blinds():
+    """A window seen from inside at night with its blind down: a cream frame, a deep sill and
+    the slats, 1.4 x 1.5; back on z = 0, the sill at y = 0."""
+    p = Prop("meridian_blinds")
+    w, h = 1.4, 1.5
+    p.add(box((-w / 2 - 0.08, -0.04, 0.0), (w / 2 + 0.08, 0.0, 0.2), "paint_cream", 0.006))
+    for x in (-w / 2 - 0.06, w / 2 + 0.06):
+        p.add(box((x - 0.04, 0.0, 0.0), (x + 0.04, h, 0.07), "paint_cream", 0.005))
+    p.add(box((-w / 2 - 0.1, h, 0.0), (w / 2 + 0.1, h + 0.08, 0.08), "paint_cream", 0.005))
+    p.add(box((-w / 2, 0.0, 0.0), (w / 2, h, 0.01), "glass_dark", 0.0))
+    p.add(box((-w / 2 + 0.02, h - 0.12, 0.03), (w / 2 - 0.02, h - 0.02, 0.09), "paint_white", 0.008))
+    n = 28
+    for i in range(n):
+        y = 0.06 + i * (h - 0.2) / n
+        p.add(box((-w / 2 + 0.03, y, 0.04), (w / 2 - 0.03, y + 0.042, 0.06), "blind", 0.0).xf(move(0, y, 0.05) @ rot_x(-12) @ move(0, -y, -0.05)))
+    p.add(box((-w / 2 + 0.03, 0.02, 0.035), (w / 2 - 0.03, 0.05, 0.065), "brass_aged", 0.004))
+    p.add(tube([(w / 2 - 0.1, h - 0.12, 0.08), (w / 2 - 0.1, 0.5, 0.08)], 0.003, "linen", 4))
+    return p
+
+
+@prop
+def meridian_case_plinth():
+    """The press call's plinth: white, with a black marble top and base and a brass plaque,
+    0.8 x 1.06 x 0.8; the case stands on top."""
+    p = Prop("meridian_case_plinth")
+    p.add(box((-0.4, 0.0, -0.4), (0.4, 0.06, 0.4), "marble_black", 0.008))
+    p.add(box((-0.36, 0.06, -0.36), (0.36, 1.0, 0.36), "paint_white", 0.006))
+    p.add(box((-0.4, 1.0, -0.4), (0.4, 1.06, 0.4), "marble_black", 0.008))
+    p.add(box((-0.14, 0.7, 0.36), (0.14, 0.8, 0.366), "brass", 0.002))
+    return p
+
+
+@prop
+def meridian_display_case():
+    """The Rose in its travelling display case: a black lacquer base with a brass lock, a
+    glass box with brass edges, and the pink diamond on a black velvet cushion; 0.5 x 0.5 x
+    0.5, standing on y = 0."""
+    p = Prop("meridian_display_case")
+    w, b, h = 0.5, 0.12, 0.5
+    p.add(box((-w / 2, 0.0, -w / 2), (w / 2, b, w / 2), "lacquer_black", 0.008))
+    p.add(box((-0.04, 0.03, w / 2), (0.04, 0.09, w / 2 + 0.012), "brass", 0.003))
+    p.add(cyl(0.008, 0.0, 0.006, "iron", 8, m=move(0, 0.06, w / 2 + 0.012) @ rot_x(90), bevel=0))
+    g = 0.012
+    p.add(box((-w / 2 + g, b, -w / 2 + g), (w / 2 - g, h, w / 2 - g), "glass", 0.0))
+    for x in (-w / 2 + g / 2, w / 2 - g / 2):
+        for z in (-w / 2 + g / 2, w / 2 - g / 2):
+            p.add(box((x - g / 2, b, z - g / 2), (x + g / 2, h, z + g / 2), "brass", 0.0))
+    for y in (b, h - g):
+        for z in (-w / 2 + g / 2, w / 2 - g / 2):
+            p.add(box((-w / 2, y, z - g / 2), (w / 2, y + g, z + g / 2), "brass", 0.0))
+        for x in (-w / 2 + g / 2, w / 2 - g / 2):
+            p.add(box((x - g / 2, y, -w / 2), (x + g / 2, y + g, w / 2), "brass", 0.0))
+    p.add(cushion((-0.11, b, -0.11), (0.11, b + 0.07, 0.11), "velvet_navy", 0.03))
+    gem = octa(0.045, 0.09, "rose_pink", m=move(0, b + 0.13, 0) @ rot_y(20))
+    p.add(gem)
+    return p
+
+
+@prop
+def meridian_tripod():
+    """A press photographer's camera on a tripod, 1.55 m tall to the lens; faces +Z."""
+    p = Prop("meridian_tripod")
+    top = 1.38
+    for i in range(3):
+        a = 2 * math.pi * i / 3 + math.pi / 2
+        p.add(tube([(0, top, 0), (0.42 * math.cos(a), 0.0, 0.42 * math.sin(a))], 0.012, "plastic_black", 6, radii=[0.014, 0.01]))
+        p.add(sphere(0.016, "rubber", 6, 4, m=move(0.42 * math.cos(a), 0.012, 0.42 * math.sin(a))))
+    p.add(cyl(0.016, top - 0.5, top + 0.05, "steel_dark", 8, bevel=0))
+    p.add(cyl(0.04, top + 0.03, top + 0.06, "plastic_black", 12, bevel=0.003))
+    p.add(box((-0.07, top + 0.06, -0.05), (0.07, top + 0.16, 0.04), "plastic_black", 0.012))
+    p.add(box((-0.07, top + 0.16, -0.035), (-0.02, top + 0.19, 0.02), "plastic_black", 0.008))
+    p.add(cyl(0.035, 0.04, 0.16, "plastic_black", 14, m=move(0.0, top + 0.11, 0.0) @ rot_x(90), bevel=0.004))
+    p.add(cyl(0.03, 0.16, 0.165, "glass_dark", 14, m=move(0.0, top + 0.11, 0.0) @ rot_x(90), bevel=0.0))
+    p.add(tube([(0.0, top + 0.02, -0.02), (0.0, top - 0.02, -0.3)], 0.008, "plastic_black", 5))
+    return p
+
+
+@prop
+def meridian_buffet():
+    """The press breakfast: a long table under white linen with three chafing dishes, a coffee
+    urn, cups, a tray of pastries and jugs of juice; 2.4 x 0.95 x 0.8, the guests' side +Z."""
+    p = Prop("meridian_buffet")
+    rng = random.Random(41)
+    w, d, h = 2.4, 0.8, 0.76
+    p.add(box((-w / 2, h - 0.03, -d / 2), (w / 2, h, d / 2), "linen", 0.01))
+    for z in (-d / 2, d / 2):
+        p.add(box((-w / 2, 0.02, z - 0.01), (w / 2, h - 0.03, z + 0.01), "linen", 0.004))
+    for x in (-w / 2, w / 2):
+        p.add(box((x - 0.01, 0.02, -d / 2), (x + 0.01, h - 0.03, d / 2), "linen", 0.004))
+    for i in range(3):
+        x = -0.85 + i * 0.5
+        p.add(box((x - 0.2, h, -0.15), (x + 0.2, h + 0.08, 0.15), "chrome", 0.01))
+        p.add(lathe([(0.0, h + 0.17), (0.08, h + 0.165), (0.15, h + 0.13), (0.18, h + 0.09)], "chrome", 16, cap=(True, False), m=move(x, 0, 0) @ scale(1.1, 1, 0.85)))
+        p.add(sphere(0.015, "plastic_black", 8, 6, m=move(x, h + 0.18, 0)))
+    ux = 0.7
+    p.add(lathe([(0.0, h), (0.12, h), (0.12, h + 0.04), (0.11, h + 0.05), (0.11, h + 0.42), (0.08, h + 0.46), (0.0, h + 0.47)], "chrome", 16, m=move(ux, 0, -0.12)))
+    p.add(tube([(ux, h + 0.1, -0.01), (ux, h + 0.1, 0.03)], 0.012, "plastic_black", 6))
+    for k in range(6):
+        cx, cz = 0.9 + (k % 3) * 0.1, 0.1 + (k // 3) * 0.1
+        p.add(lathe([(0.0, h), (0.03, h), (0.04, h + 0.07), (0.037, h + 0.07)], "porcelain", 10, cap=(True, False), m=move(cx, 0, cz)))
+    p.add(box((0.35, h, 0.05), (0.62, h + 0.015, 0.3), "chrome", 0.004))
+    for k in range(9):
+        p.add(sphere(0.035, "pastry", 8, 5, squash=0.6, m=move(0.39 + (k % 3) * 0.08 + rng.random() * 0.01, h + 0.035, 0.09 + (k // 3) * 0.08)))
+    for x in (-1.05, -0.95):
+        p.add(lathe([(0.04, h), (0.045, h + 0.18), (0.03, h + 0.22)], "glass", 10, cap=(True, False), m=move(x, 0, 0.25)))
+        p.add(lathe([(0.0, h), (0.04, h + 0.002), (0.044, h + 0.15), (0.0, h + 0.15)], "juice", 10, m=move(x, 0, 0.25)))
+    return p
+
+
+@prop
+def meridian_cake_table():
+    """The wedding cake: three white tiers with sugar roses on a round table under linen,
+    0.9 across and 1.4 m tall."""
+    p = Prop("meridian_cake_table")
+    rng = random.Random(9)
+    r, h = 0.45, 0.76
+    p.add(lathe([(0.0, h + 0.01), (r, h + 0.01), (r + 0.02, h - 0.03), (r + 0.04, 0.0)], "linen", 32))
+    p.add(lathe([(0.0, h + 0.01), (0.2, h + 0.01), (0.2, h + 0.03), (0.0, h + 0.03)], "chrome", 24))
+    y = h + 0.03
+    for rad, th in ((0.17, 0.16), (0.125, 0.15), (0.08, 0.14)):
+        p.add(cyl(rad, y, y + th, "icing", 24, bevel=0.01))
+        p.add(tube([(rad * math.cos(2 * math.pi * k / 24), y + 0.012, rad * math.sin(2 * math.pi * k / 24)) for k in range(24)], 0.01, "icing", 5, closed=True))
+        y += th
+    p.add(flowers(0, y - 0.01, 0, 0.07, 0.06, rng, colours=("rose_white", "rose_blush"), count=10, leaves=6))
+    for k in range(7):
+        a = 2 * math.pi * k / 7
+        p.add(ico(0.03, "rose_blush" if k % 2 else "rose_white", 1, m=move(0.17 * math.cos(a), h + 0.12, 0.17 * math.sin(a))))
+    return p
+
+
 # --- Main ---------------------------------------------------------------------------------------
 
 def main():
