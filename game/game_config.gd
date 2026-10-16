@@ -46,6 +46,10 @@ const SETTING_DEFAULTS := {
 		"subtitles": true,
 		# Subtitles say which way the speaker is when they're not ahead of you.
 		"subtitle_where": true,
+		# "first" (through your eyes) or "third" (a calm camera over your shoulder).
+		"view": "first",
+		# Every job on Mae's board is open, not only the next one.
+		"all_jobs": false,
 	},
 	"voice": {
 		# How you talk: "push" (hold to talk), "open" (the mic is always on)

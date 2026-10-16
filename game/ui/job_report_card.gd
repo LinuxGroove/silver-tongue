@@ -3,7 +3,8 @@ extends Control
 ## The job report: how it went, who ended up held, how hot the venue got,
 ## the take, the three scores (Clean, Quiet, Silver), and the night's best
 ## and worst lines, each with the character's answer and a button that
-## plays it again in their voice.
+## plays it again in their voice. It saves as a picture and copies as text,
+## to share.
 
 signal again
 signal to_title
@@ -21,8 +22,14 @@ const SCORES := [
 	["silver", "Silver", "Every door opened by talk"],
 ]
 
+## Where saved pictures go.
+const PICTURES := "user://reports"
+
 var _col: VBoxContainer
 var _buttons: Array[Button] = []
+var _row: HBoxContainer
+var _note: Label
+var _report := {}
 
 
 func _ready() -> void:
@@ -55,6 +62,7 @@ func show_report(r: Dictionary, me := 1) -> void:
 		_col.remove_child(c)
 		c.queue_free()
 	_buttons.clear()
+	_report = r
 	var outcome := str(r.get("outcome", "late"))
 	var t: Array = [r.title, r.get("text", "")] if r.has("title") else TITLES.get(outcome, [outcome.to_upper(), ""])
 	var won := bool(r.get("win", outcome == "in"))
@@ -93,16 +101,17 @@ func show_report(r: Dictionary, me := 1) -> void:
 		var f := _text("Saved to " + str(r.file), true)
 		f.add_theme_font_size_override("font_size", 13)
 		_col.add_child(f)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	_col.add_child(row)
+	_note = _text("", true)
+	_note.visible = false
+	_col.add_child(_note)
+	_row = HBoxContainer.new()
+	_row.add_theme_constant_override("separation", 12)
+	_col.add_child(_row)
 	if not bool(r.get("lan", false)):
-		var a := LGUi.button("Again", _again, 200)
-		row.add_child(a)
-		_buttons.append(a)
-	var b := LGUi.button("Back to the title", _title, 260)
-	row.add_child(b)
-	_buttons.append(b)
+		_add_button("Again", _again, 120)
+	_add_button("Back to Mae's", _title, 190)
+	_add_button("Save a picture", save_picture, 170)
+	_add_button("Copy the text", copy_text, 160)
 	visible = true
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	_buttons[0].grab_focus.call_deferred()
@@ -124,6 +133,77 @@ func _add_line(heading: String, l: Dictionary) -> void:
 		row.add_child(b)
 		_buttons.append(b)
 		_col.add_child(row)
+
+
+func _add_button(text: String, call: Callable, w: int) -> void:
+	var b := LGUi.button(text, call, w)
+	_row.add_child(b)
+	_buttons.append(b)
+
+
+## The report as text, to paste anywhere.
+static func as_text(r: Dictionary) -> String:
+	var outcome := str(r.get("outcome", "late"))
+	var t: Array = [r.title, r.get("text", "")] if r.has("title") else TITLES.get(outcome, [outcome.to_upper(), ""])
+	var lines := PackedStringArray()
+	lines.append("Silver Tongue: %s, %s" % [r.get("job_title", "a job"), r.get("venue_name", "Caldera")])
+	var line := str(t[1]) % str(r.get("clock", "")) if "%s" in str(t[1]) else str(t[1])
+	var head := str(t[0]).to_lower()
+	lines.append("%s. %s" % [head.left(1).to_upper() + head.substr(1), line])
+	if bool(r.get("win", false)) and int(r.get("take", 0)) > 0:
+		lines.append("The take: %s" % money(int(r.take)))
+	var scores := PackedStringArray()
+	for sc in SCORES:
+		scores.append("%s: %s" % [sc[1], "yes" if bool(r.get(sc[0], false)) else "no"])
+	lines.append(", ".join(scores))
+	for c in r.get("crew", []):
+		lines.append("%s, as %s" % [c.get("name", ""), c.get("cover_name", "")])
+	for k in [["best", "The best line"], ["worst", "The worst line"]]:
+		var l: Dictionary = r.get(k[0], {})
+		if l.is_empty():
+			continue
+		lines.append("")
+		lines.append("%s%s:" % [k[1], (", at " + str(l.clock)) if str(l.get("clock", "")) != "" else ""])
+		lines.append("You: \"%s\"" % Language.clean(str(l.get("said", ""))))
+		if str(l.get("reply", "")) != "":
+			lines.append("%s: \"%s\"" % [l.get("name", ""), Language.clean(str(l.reply))])
+	return "\n".join(lines)
+
+
+## Copies the report as text.
+func copy_text() -> void:
+	DisplayServer.clipboard_set(as_text(_report))
+	_say("Copied. Paste it anywhere.")
+
+
+## Saves the card as a picture in user://reports, the buttons left out.
+## Returns where it went ("" when it couldn't).
+func save_picture() -> String:
+	_row.visible = false
+	_note.visible = false
+	# With no screen (headless) nothing is drawn and the frame never comes.
+	if DisplayServer.get_name() == "headless":
+		await get_tree().process_frame
+	else:
+		await RenderingServer.frame_post_draw
+	var tex := get_viewport().get_texture()
+	var img := tex.get_image() if tex else null
+	_row.visible = true
+	if img == null or img.is_empty():
+		_say("Couldn't take the picture.")
+		return ""
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(PICTURES))
+	var path := "%s/%s-%s.png" % [PICTURES, str(_report.get("job", "job")), Time.get_datetime_string_from_system(true).replace(":", "-")]
+	if img.save_png(path) != OK:
+		_say("Couldn't save the picture.")
+		return ""
+	_say("Saved to " + ProjectSettings.globalize_path(path))
+	return path
+
+
+func _say(text: String) -> void:
+	_note.text = text
+	_note.visible = true
 
 
 ## Dollars as the crew would write them: "$12,500".

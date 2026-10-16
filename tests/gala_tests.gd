@@ -352,7 +352,7 @@ func test_job_report(t) -> void:
 	var card := JobReportCard.new()
 	t.add_child(card)
 	card.show_report(r)
-	t.check(card.visible and "Play" in card.button_texts() and "Back to the title" in card.button_texts(), "the card shows them, with a way to hear them again")
+	t.check(card.visible and "Play" in card.button_texts() and "Back to Mae's" in card.button_texts(), "the card shows them, with a way to hear them again")
 	card.queue_free()
 	_done(job)
 	await t.frames(2)

@@ -318,6 +318,7 @@ func say(speaker: String, text: String, where := "") -> void:
 		return
 	if where != "" and bool(LGSettings.get_value("play", "subtitle_where", true)):
 		speaker += {"left": ", to your left", "right": ", to your right", "behind": ", behind you"}.get(where, "")
+	text = Language.clean(text)
 	_speaker.text = speaker
 	_subtitle.text = text
 	_sub_panel.visible = text != ""
@@ -326,7 +327,7 @@ func say(speaker: String, text: String, where := "") -> void:
 
 ## A crewmate's line (on the earpiece, or near enough to hear).
 func crew(who: String, text: String, earpiece: bool) -> void:
-	var l := HotelTheme.hud_label("%s%s: %s" % [who, " (earpiece)" if earpiece else "", text], 16, HotelTheme.BRASS if earpiece else HotelTheme.TEXT, false)
+	var l := HotelTheme.hud_label("%s%s: %s" % [who, " (earpiece)" if earpiece else "", Language.clean(text)], 16, HotelTheme.BRASS if earpiece else HotelTheme.TEXT, false)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.custom_minimum_size.x = 360
 	l.set_meta("t", CREW_TIME)
@@ -340,7 +341,7 @@ func crew(who: String, text: String, earpiece: bool) -> void:
 ## Your own words, as they're heard.
 func you(text: String, final: bool) -> void:
 	_you_panel.visible = true
-	_you.text = text if text != "" else ("..." if not final else "(nothing heard)")
+	_you.text = Language.clean(text) if text != "" else ("..." if not final else "(nothing heard)")
 	_you.add_theme_color_override("font_color", HotelTheme.TEXT if final else HotelTheme.DIM)
 	if final:
 		get_tree().create_timer(4.0).timeout.connect(_hide_you.bind(_you.text))

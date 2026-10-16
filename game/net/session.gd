@@ -27,6 +27,8 @@ var lan_address := ""
 var in_job := false
 ## The job the crew will play (see [Jobs]); the host picks it.
 var job_id := "meridian_gala"
+## Where the title opens next: "board" (Mae's back room) after a job.
+var back_to := ""
 ## This device's pick before it's in a crew, for the hello.
 var wanted := {"cover": "guest", "female": false}
 ## Host: guests whose job scene is up (it can load before the host's).
@@ -220,7 +222,7 @@ func _start(config: Dictionary) -> void:
 	job_id = str(config.get("job", job_id))
 	ensure_job()
 	JobScene.setup = config
-	SetupScreen.play_gala()
+	SetupScreen.play_job()
 
 #endregion
 

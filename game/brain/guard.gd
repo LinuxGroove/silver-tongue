@@ -233,7 +233,7 @@ func _say(text: String) -> float:
 	said.emit(sheet.name, text)
 	if not speak or not LGVoice.is_ready():
 		return -1.0
-	_line = LGVoice.say(text, sheet.voice, voice_player, sheet.voice_speed)
+	_line = LGVoice.say(Language.clean(text), sheet.voice, voice_player, sheet.voice_speed)
 	person.play("Idle_Talking")
 	var waited := 0.0
 	while _line.state == "asked" and waited < 20.0:

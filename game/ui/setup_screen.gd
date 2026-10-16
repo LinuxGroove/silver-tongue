@@ -1,6 +1,6 @@
 class_name SetupScreen
 extends Node
-## Before the door or the gala: the characters' brain, ears and voice
+## Before the door or a job: the characters' brain, ears and voice
 ## downloaded, loaded and warmed up, a bar for each, so the night starts
 ## with them ready to listen. Goes on by itself once everything is ready;
 ## the player can go in early (scripted lines until it's ready) or go back,
@@ -11,7 +11,8 @@ const TITLE := "res://game/ui/title.tscn"
 const WIDTH := 560
 ## How long "Ready" shows before the door.
 const READY_PAUSE := 0.8
-## The words for each place the screen leads to: M0's door, or the gala.
+## The words for each place the screen leads to: M0's door, or a job (%s is
+## the venue, "the Marlin").
 const TEXTS := {
 	"door": {
 		"title": "Getting Marcus ready",
@@ -22,18 +23,18 @@ const TEXTS := {
 		"no_brain": "Marcus needs Lemonade, the local AI server. It comes with the game; when running from source, start one and choose it in Settings. You can still go in: he answers with scripted lines.",
 		"no_voice": "His brain is ready, but he can't hear or speak. Go in and type your lines with %s.",
 	},
-	"gala": {
-		"title": "Getting the Meridian ready",
+	"job": {
+		"title": "Getting %s ready",
 		"intro": "The staff and guests think, hear and speak on this computer. The first time, their models download, which can take a few minutes. After that they're ready in seconds.",
 		"names": {"brain": "Their brains", "ears": "Their ears", "voice": "Their voices"},
 		"about": {"brain": "the language model they think with", "ears": "the speech model that hears you", "voice": "the voices they answer in"},
 		"early": "You can go in now: they answer with scripted lines until they're ready.",
-		"no_brain": "The Meridian needs Lemonade, the local AI server. It comes with the game; when running from source, start one and choose it in Settings. You can still go in: everyone answers with scripted lines.",
+		"no_brain": "%s needs Lemonade, the local AI server. It comes with the game; when running from source, start one and choose it in Settings. You can still go in: everyone answers with scripted lines.",
 		"no_voice": "Their brains are ready, but they can't hear or speak. Go in and type your lines with %s.",
 	},
 }
 
-## Where the screen leads: "door" or "gala".
+## Where the screen leads: "door" or "job".
 static var target := "door"
 
 ## Goes on to the door by itself once ready (tests turn it off).
@@ -55,9 +56,9 @@ static func play_door() -> void:
 	_through()
 
 
-## The gala (with [member JobScene.setup] already set), the same way.
-static func play_gala() -> void:
-	target = "gala"
+## The job (with [member JobScene.setup] already set), the same way.
+static func play_job() -> void:
+	target = "job"
 	_through()
 
 
@@ -69,14 +70,20 @@ static func _through() -> void:
 
 
 static func _enter() -> void:
-	if target == "gala":
+	if target == "job":
 		JobScene.play(JobScene.setup)
 	else:
 		ProofScene.play()
 
 
 func _text(key: String) -> Variant:
-	return TEXTS[target][key]
+	var text: Variant = TEXTS[target][key]
+	if text is String and target == "job" and key in ["title", "no_brain"]:
+		var venue := Jobs.current.venue_name if Jobs.current else "the venue"
+		if key == "title" and venue.begins_with("The "):
+			venue = "the" + venue.substr(3)
+		return text % venue
+	return text
 
 
 func _ready() -> void:
@@ -277,7 +284,7 @@ func _back() -> void:
 	if _leaving:
 		return
 	_leaving = true
-	if target == "gala":
+	if target == "job":
 		Session.leave()
 	LGScenes.change_scene(TITLE)
 

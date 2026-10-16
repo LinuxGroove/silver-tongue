@@ -221,6 +221,7 @@ func _add_people() -> void:
 			player.use_pressed.connect(_on_use_pressed)
 			player.phone_pressed.connect(_on_phone_pressed)
 			c.node = player
+			_dress_me()
 		else:
 			var a := CrewAvatar.make(c)
 			venue.add_child(a)
@@ -237,6 +238,18 @@ func _light_people() -> void:
 		ch.person.set_light_layers(venue.light_layers_at(ch.global_position))
 	for a in avatars.values():
 		a.person.set_light_layers(venue.light_layers_at(a.global_position))
+	if player and player.person:
+		player.person.set_light_layers(venue.light_layers_at(player.feet_position()))
+
+
+## Your own body in your cover's clothes, seen over your shoulder.
+func _dress_me() -> void:
+	if player.person and player.person.get_meta("outfit", "") == me.outfit:
+		return
+	var o: Dictionary = Covers.outfit(me.outfit)
+	var p := Person.make(str(o.job), me.female, 1000 + me.id, me.look)
+	p.set_meta("outfit", me.outfit)
+	player.set_person(p)
 
 
 ## A spot faces its +z, as people do; the player looks down their -z, and
@@ -489,7 +502,7 @@ func _on_line(char_id: String, text: String, tone: String, channel: String) -> v
 	if channel == "phone:%d" % me.id:
 		hud.say(ch.sheet.name + " (phone)", text)
 		if speaking:
-			LGVoice.say(text, ch.sheet.voice, _earpiece_player, ch.sheet.voice_speed)
+			LGVoice.say(Language.clean(text), ch.sheet.voice, _earpiece_player, ch.sheet.voice_speed)
 		return
 	var at := player.global_position
 	var near := ch.global_position.distance_to(at)
@@ -508,7 +521,7 @@ func _on_line(char_id: String, text: String, tone: String, channel: String) -> v
 	if not speaking:
 		return
 	if through:
-		LGVoice.say(text, ch.sheet.voice, through.radio_player, ch.sheet.voice_speed)
+		LGVoice.say(Language.clean(text), ch.sheet.voice, through.radio_player, ch.sheet.voice_speed)
 	else:
 		ch.speak_local(text, false, true)
 
@@ -843,6 +856,7 @@ func _apply_crew(c: CrewInfo, was_held := false) -> void:
 	if c != me:
 		return
 	hud.set_cover(me)
+	_dress_me()
 	if c.held and not hud.is_held():
 		hud.set_held(true, str(def.office.get("name", "the security office")))
 		var i := crew.find(c)
@@ -923,7 +937,7 @@ func _on_moved(at: Transform3D) -> void:
 func _on_mae(text: String) -> void:
 	hud.say("Auntie Mae (earpiece)", text)
 	if speaking:
-		LGVoice.say(text, GameConfig.MAE_VOICE, _earpiece_player, 0.95)
+		LGVoice.say(Language.clean(text), GameConfig.MAE_VOICE, _earpiece_player, 0.95)
 
 
 func _on_call(char_id: String, number_name: String) -> void:
@@ -1019,7 +1033,7 @@ func _on_replay(char_id: String, text: String) -> void:
 	if sheet == null or not LGVoice.is_ready():
 		return
 	LGVoice.hush(_replay_player)
-	LGVoice.say(text, sheet.voice, _replay_player, sheet.voice_speed)
+	LGVoice.say(Language.clean(text), sheet.voice, _replay_player, sheet.voice_speed)
 
 
 func _again() -> void:
@@ -1034,6 +1048,8 @@ func _again() -> void:
 func _on_quit() -> void:
 	get_tree().paused = false
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	if over:
+		Session.back_to = "board"
 	if net.lan:
 		multiplayer.multiplayer_peer.close()
 		multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()

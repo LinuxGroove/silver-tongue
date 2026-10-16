@@ -27,13 +27,27 @@ const UNUSED := ["CogtoTestCurrency", "StrengthAttribute", "LightMeterAttribute"
 const FEET := 0.8
 const BOB_WALK := 0.03
 const BOB_CROUCH := 0.04
+## The over-the-shoulder view: how far behind, to the right and above your
+## eyes the camera sits, how close a wall may bring it, and how gently it
+## follows (higher is quicker).
+const BEHIND := 2.4
+const SHOULDER := 0.45
+const ABOVE := 0.15
+const NEAREST := 0.35
+const FOLLOW := 9.0
 
 ## The pause menu to use in place of Cogito's, set before entering the tree.
 var hotel_pause: Node
 var talking := false
 ## The talk under way is on the earpiece, to the crew only.
 var on_earpiece := false
+## Seen over your shoulder rather than through your eyes (the View setting).
+var third_person := false
+## Your own body, for the over-the-shoulder view (the scene dresses it).
+var person: Person
 var _tilt := false
+var _view_cam: Camera3D
+var _view_at := Vector3.INF
 
 
 func _ready():
@@ -101,6 +115,66 @@ func _reload_options():
 	camera.fov = float(LGSettings.get_value("play", "fov", 75.0))
 	JOY_H_SENS = float(LGSettings.get_value("play", "stick_sensitivity", 2.0))
 	JOY_V_SENS = JOY_H_SENS
+	_set_view(str(LGSettings.get_value("play", "view", "first")) == "third")
+
+
+## Through your eyes, or over your shoulder. The eyes' camera stays where
+## it is either way (Interact aims from it); the shoulder camera only shows.
+func _set_view(third: bool) -> void:
+	var changed := third != third_person or (third and _view_cam == null)
+	third_person = third
+	if third and _view_cam == null:
+		_view_cam = Camera3D.new()
+		_view_cam.name = "ShoulderCamera"
+		_view_cam.top_level = true
+		_view_cam.near = 0.05
+		add_child(_view_cam)
+		_view_at = Vector3.INF
+	if _view_cam:
+		_view_cam.fov = camera.fov
+		if changed and third:
+			_view_cam.make_current()
+		elif changed:
+			camera.make_current()
+	if person:
+		person.visible = third
+
+
+## Dresses your body (the scene calls it again when your clothes change).
+func set_person(p: Person) -> void:
+	if person:
+		person.queue_free()
+	person = p
+	body.add_child(person)
+	person.position = Vector3(0, -FEET, 0)
+	person.rotation.y = PI
+	person.visible = third_person
+	person.play("Idle")
+
+
+## The shoulder camera follows gently, and comes in front of any wall
+## behind you rather than through it.
+func _process(delta: float) -> void:
+	if not third_person or _view_cam == null:
+		return
+	var look := camera.global_transform.basis
+	var pivot := camera.global_position + look.x * SHOULDER + Vector3.UP * ABOVE
+	var want := pivot + look.z * BEHIND
+	var q := PhysicsRayQueryParameters3D.create(pivot, want, Kit.LAYER_SOLID)
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	if hit:
+		want = pivot + (hit.position - pivot).normalized() * maxf(NEAREST, pivot.distance_to(hit.position) - 0.2)
+	if _view_at == Vector3.INF or _view_at.distance_to(want) > 4.0:
+		_view_at = want
+	else:
+		_view_at = _view_at.lerp(want, 1.0 - exp(-delta * FOLLOW))
+	_view_cam.global_transform = Transform3D(look, _view_at)
+	if person:
+		var moving := Vector2(velocity.x, velocity.z).length() > 0.3
+		if is_crouching:
+			person.play("Crouch_Fwd" if moving else "Crouch_Idle")
+		else:
+			person.play("Walk" if moving else "Idle")
 
 
 func _physics_process(delta):

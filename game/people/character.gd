@@ -294,7 +294,7 @@ func speak_local(text: String, on_radio := false, voice_on := true) -> LGVoiceLi
 		return null
 	var player := radio_player if on_radio else voice_player
 	var voice := sheet.voice
-	var line := LGVoice.say(text, voice, player, sheet.voice_speed)
+	var line := LGVoice.say(Language.clean(text), voice, player, sheet.voice_speed)
 	if not on_radio:
 		_lines.append(line)
 	return line

@@ -1,7 +1,8 @@
 extends Node
-## The title screen, over the service door: the gala (Auntie Mae's
-## briefing, your cover, and a crew on the local network), the door itself
-## (M0's proof), how to play, settings, about and quit.
+## The title screen, over the service door: Mae's back room (the season's
+## jobs, her briefings, the take and a new face), each job's briefing with
+## your cover and a crew on the local network, joining a crew, the door
+## itself (M0's proof), how to play, settings, about and quit.
 
 const WIDTH := 540
 const NAME := "SILVER\nTONGUE"
@@ -18,6 +19,9 @@ var _hosts: VBoxContainer
 var _code: LineEdit
 var _lobby_queued := false
 var _refocus := ""
+var _forget_asked := false
+## Mae, reading her briefing out.
+var _mae: AudioStreamPlayer
 
 
 func _ready() -> void:
@@ -50,11 +54,18 @@ func _ready() -> void:
 	Session.left.connect(_on_left)
 	Session.status.connect(_on_status)
 	Session.hosts_found.connect(_on_hosts_found)
+	_mae = AudioStreamPlayer.new()
+	_mae.bus = "Master"
+	add_child(_mae)
 	var me := Session.me()
 	_cover = str(me.get("cover", "guest"))
 	_female = bool(me.get("female", false))
+	var back := Session.back_to
+	Session.back_to = ""
 	if Session.is_lan():
 		show_lobby()
+	elif back == "board":
+		show_board()
 	else:
 		show_main()
 
@@ -98,7 +109,8 @@ func show_main() -> void:
 	_col.add_child(HotelTheme.title_label(NAME, 72, HotelTheme.BRASS))
 	_text("Say the right thing. Not too loud.", true)
 	_col.add_child(Control.new())
-	_col.add_child(LGUi.button("The gala", show_gala, WIDTH))
+	_col.add_child(LGUi.button("Mae's back room", show_board, WIDTH))
+	_col.add_child(LGUi.button("Join a crew", show_join, WIDTH))
 	_col.add_child(LGUi.button("The service door", _play, WIDTH))
 	_col.add_child(LGUi.button("How to play", show_how.bind(0), WIDTH))
 	_col.add_child(LGUi.button("Settings", show_settings, WIDTH))
@@ -113,27 +125,103 @@ func _play() -> void:
 	SetupScreen.play_door()
 
 
-#region The gala
+#region Mae's back room
 
-## Auntie Mae's briefing for the crew's job, your cover, and how you're
-## playing.
+## The season: every job built so far, venue by venue, open in order, with
+## how each one came off; the take; and a new face when Halberd has yours.
+func show_board() -> void:
+	LGVoice.hush(_mae)
+	_clear("board")
+	_heading("Mae's back room")
+	_text("The season's take: %s" % JobReportCard.money(Progress.take))
+	if Progress.burned:
+		_text("Halberd has your face on file: their people know it at every venue.", true)
+		var face := LGUi.button("Buy a new face (%s)" % JobReportCard.money(Progress.NEW_FACE), _buy_face, WIDTH)
+		face.disabled = Progress.take < Progress.NEW_FACE
+		_col.add_child(face)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(WIDTH + 20, 420)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
+	_col.add_child(scroll)
+	var list := VBoxContainer.new()
+	list.add_theme_constant_override("separation", 6)
+	scroll.add_child(list)
+	var titles := {}
+	for id in Jobs.CAMPAIGN:
+		if Jobs.exists(id):
+			titles[id] = Jobs.make(id).title
+	var before := ""
+	for v in Jobs.VENUES:
+		var jobs: Array = Jobs.at_venue(v).filter(func(j): return Jobs.exists(j))
+		if jobs.is_empty():
+			continue
+		list.add_child(HotelTheme.hud_label(str(Jobs.VENUES[v]), 18, HotelTheme.BRASS))
+		for j in jobs:
+			var b := LGUi.button(_job_line(j, titles, before), show_job.bind(j), WIDTH)
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.disabled = not Progress.is_open(j)
+			list.add_child(b)
+			before = j
+	_back(show_main)
+	LGUi.focus_first(_col)
+
+
+## A job on the board: its title, and how it came off or what opens it.
+func _job_line(id: String, titles: Dictionary, before: String) -> String:
+	var t := str(titles.get(id, id))
+	if Progress.is_done(id):
+		var d: Dictionary = Progress.done[id]
+		var marks := PackedStringArray()
+		for k in ["clean", "quiet", "silver"]:
+			if bool(d.get(k, false)):
+				marks.append(k.capitalize())
+		return "%s: done%s" % [t, (", " + ", ".join(marks)) if not marks.is_empty() else ""]
+	if not Progress.is_open(id):
+		return "%s: after %s" % [t, str(titles.get(Jobs.CAMPAIGN[Jobs.CAMPAIGN.find(id) - 1], before)).to_lower()]
+	return t
+
+
+func _buy_face() -> void:
+	if Progress.buy_face():
+		show_board()
+		_text("A new face. Halberd's photo is of somebody else now.", true)
+
+#endregion
+
+#region A job
+
+## The gala's page (the first job's).
 func show_gala() -> void:
+	show_job("meridian_gala")
+
+
+## A job's page: the briefing (read out in Mae's voice when it can be),
+## your cover, and how you're playing.
+func show_job(id := "") -> void:
+	if id != "" and id != Session.job_id:
+		Session.set_job(id)
 	Session.ensure_job()
 	var def := Jobs.current
 	if not Covers.has(_cover):
 		_cover = Covers.first()
-	_clear("gala")
+	var fresh := _page != "job"
+	_clear("job")
 	_heading(def.title)
-	_text("Auntie Mae: \"%s\"" % def.briefing)
+	_text("%s. The take: %s." % [def.venue_name, JobReportCard.money(def.take)], true)
+	_text("%s: \"%s\"" % [_briefer(def), def.briefing])
+	_text("The job: %s." % def.goal.trim_suffix("."), true)
+	if fresh:
+		_read_out(def)
 	_col.add_child(HotelTheme.hud_label("Your cover", 20, HotelTheme.BRASS))
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 8)
 	_col.add_child(grid)
-	for id in Covers.order():
-		var b := LGUi.button(str(Covers.of(id).title), _pick_cover.bind(id), (WIDTH - 8) / 2)
-		if id == _cover:
+	for c_id in Covers.order():
+		var b := LGUi.button(str(Covers.of(c_id).title), _pick_cover.bind(c_id), (WIDTH - 8) / 2)
+		if c_id == _cover:
 			b.add_theme_color_override("font_color", HotelTheme.BRASS)
 			b.add_theme_color_override("font_focus_color", HotelTheme.BRASS)
 			b.text = "> %s <" % b.text
@@ -145,8 +233,22 @@ func show_gala() -> void:
 	_col.add_child(LGUi.button("Play alone", _play_alone, WIDTH))
 	_col.add_child(LGUi.button("Host a crew on this network", _host, WIDTH))
 	_col.add_child(LGUi.button("Join a crew", show_join, WIDTH))
-	_back(show_main)
+	_back(show_board)
 	LGUi.focus_first(_col)
+
+
+## Who gives a job's briefing.
+static func _briefer(def: JobDef) -> String:
+	return def.briefer if def.briefer != "" else "Auntie Mae"
+
+
+## Reads the briefing out in its teller's voice, when the voices are up.
+func _read_out(def: JobDef) -> void:
+	LGVoice.hush(_mae)
+	if not LGVoice.is_ready() or not bool(LGSettings.get_value("voice", "speaking", true)):
+		return
+	var voice := def.briefer_voice if def.briefer_voice != "" else GameConfig.MAE_VOICE
+	LGVoice.say(Language.clean(def.briefing), voice, _mae, 0.95)
 
 
 func _pick_cover(id: String) -> void:
@@ -155,7 +257,7 @@ func _pick_cover(id: String) -> void:
 	if _page == "lobby":
 		_queue_lobby("> %s <" % Covers.of(id).title)
 		return
-	show_gala()
+	show_job()
 	_focus_text("> %s <" % Covers.of(id).title)
 
 
@@ -165,7 +267,7 @@ func _toggle_body() -> void:
 	if _page == "lobby":
 		_queue_lobby("You look like: %s" % ("a woman" if _female else "a man"))
 		return
-	show_gala()
+	show_job()
 	_focus_text("You look like: %s" % ("a woman" if _female else "a man"))
 
 
@@ -176,16 +278,23 @@ func _focus_text(text: String) -> void:
 
 
 func _play_alone() -> void:
+	LGVoice.hush(_mae)
 	Session.start_solo(_cover, _female)
 	Session.start_job()
 
 
 func _host() -> void:
+	LGVoice.hush(_mae)
 	Session.host_lan(_cover, _female)
+
+#endregion
+
+#region A crew
 
 
 ## Crews hosting on this network, and a code to type.
 func show_join() -> void:
+	LGVoice.hush(_mae)
 	_clear("join")
 	_heading("Join a crew")
 	_text("Crews hosting on this network show up here. Or type the code the host sees.", true)
@@ -240,16 +349,18 @@ func _join_code_pressed() -> void:
 func _leave_join() -> void:
 	Session.leave()
 	Session.stop_browsing()
-	show_gala()
+	show_main()
 
 
 ## The crew before the job: who's in, in what cover, and the code.
 func show_lobby() -> void:
 	_clear("lobby")
 	_heading("Your crew")
+	Session.ensure_job()
+	_text("%s, %s" % [Jobs.current.title, Jobs.current.venue_name], true)
 	if Session.join_code != "":
 		_text("Code: %s" % JoinCode.pretty(Session.join_code))
-		_text("On another computer on this network: The gala, Join a crew, then pick this crew or type the code.", true)
+		_text("On another computer on this network: Join a crew, then pick this crew or type the code.", true)
 	var ids := Session.crew.keys()
 	ids.sort()
 	for id in ids:
@@ -282,9 +393,11 @@ func _start() -> void:
 
 
 func _leave_lobby() -> void:
+	if _page != "lobby":
+		return
+	_page = "leaving"
 	Session.leave()
-	if _page == "lobby":
-		show_gala()
+	show_job()
 
 
 func _on_roster_changed() -> void:
@@ -322,7 +435,7 @@ func _on_joined() -> void:
 
 func _on_left(reason: String) -> void:
 	if _page in ["lobby", "join"]:
-		show_gala()
+		show_main()
 		if reason != "":
 			_status = _text(reason, true)
 
@@ -389,7 +502,7 @@ func _on_name_changed(text: String) -> void:
 func show_about() -> void:
 	_clear()
 	_heading("About Silver Tongue")
-	_text("A co-op con game where the guards, staff and guests hear what you say and answer in their own words. This is the first job: get into the Meridian's gala. The service door is M0's proof, kept for measuring.")
+	_text("A co-op con game where the guards, staff and guests hear what you say and answer in their own words. Auntie Mae finds the jobs: a season of them, after the Rose, across Caldera. The service door is M0's proof, kept for measuring.")
 	_text("Created by", true)
 	_text("Drew VanDine\nKaden VanDine\nKen VanDine")
 	_text("A LinuxGroove game, made with Godot and COGITO, Quaternius' characters and city kit, and Lemonade for the hearing, the brains and the voice.", true)
@@ -410,6 +523,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			if _page in ["join", "lobby"]:
 				Session.leave()
 				Session.stop_browsing()
-				show_gala()
+				show_main()
+			elif _page == "job":
+				LGVoice.hush(_mae)
+				show_board()
 			else:
 				show_main()

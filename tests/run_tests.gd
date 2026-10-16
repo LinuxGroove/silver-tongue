@@ -291,7 +291,7 @@ func _test_menus() -> void:
 	add_child(title)
 	await frames(3)
 	var texts: Array = title.button_texts()
-	for b in ["The service door", "How to play", "Settings", "About", "Quit"]:
+	for b in ["Mae's back room", "Join a crew", "The service door", "How to play", "Settings", "About", "Quit"]:
 		check(b in texts, "the title has " + b)
 	title.show_how(0)
 	await frames(1)
@@ -307,7 +307,7 @@ func _test_menus() -> void:
 	var labels := []
 	for c in cyclers:
 		labels.append(c.label_text)
-	for l in ["How you talk", "Hearing model", "He speaks out loud", "Head bob", "AI players"]:
+	for l in ["How you talk", "Hearing model", "They speak out loud", "Head bob", "View", "Subtitles say where", "Open every job", "AI players"]:
 		check(l in labels, "settings have " + l)
 	title.show_about()
 	await frames(1)
