@@ -135,7 +135,7 @@ func _init() -> void:
 	items = {
 		"count_sheet": {"name": "the count sheet", "at": "count_desk", "carry": "", "hot": true},
 		"letter": {
-			"name": "the Gaming Board letter", "at": "", "carry": "carrying a leather folder",
+			"name": "the Board letter", "at": "", "carry": "carrying a leather folder",
 			"papers": "a Caldera Gaming Board letter of inspection in the name of %s", "forged": true,
 			"copy": "the Board's seal is printed, not pressed, and the signature's a scan. It's a copy.",
 			"belief": "has a Gaming Board letter of inspection", "to": ["marcus", "gloria", "anton"],

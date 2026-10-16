@@ -108,7 +108,7 @@ func _init() -> void:
 	office = {"door": "office", "held": "held", "guard": "office_guard", "name": "Halberd's office"}
 	items = {
 		"card": {
-			"name": "the Gaming Board card", "at": "", "carry": "",
+			"name": "the Board card", "at": "", "carry": "",
 			"papers": "a Caldera Gaming Board inspector's card in the name of %s", "forged": true,
 			"copy": "the hologram's a sticker. It's a fake.",
 			"belief": "has a Gaming Board inspector's card", "to": ["tess", "augie", "anton"],
