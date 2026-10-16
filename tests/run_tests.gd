@@ -1,7 +1,9 @@
 extends Node
 ## Headless tests: run with
 ##   godot --headless --path . tests/run_tests.tscn
-## Add `-- --only=_test_rules` for one test. The whole door is played
+## Add `-- --only=_test_rules` for one test, `--only=marlin` for one set
+## (several with commas), or `--core` for everything but the venues' own
+## sets (CI runs each venue's side by side). The whole door is played
 ## through twice against `tools/fake_lemonade.py` (started here, so python3
 ## must be on the path). Exits non-zero on failure.
 
@@ -17,9 +19,12 @@ var _heard: Array = []
 
 func _ready() -> void:
 	var only := ""
+	var core := false
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--only="):
 			only = arg.trim_prefix("--only=")
+		elif arg == "--core":
+			core = true
 	LGSettings.register_defaults(GameConfig.SETTING_DEFAULTS)
 	HotelTheme.apply(get_tree().root, 22)
 	LGInput.register_actions(GameConfig.ACTIONS)
@@ -38,7 +43,7 @@ func _ready() -> void:
 				"_test_fake_door", "_test_fake_hearing", "_test_fake_caught_and_timeout", "_test_fake_setup"]:
 			printerr("- " + t)
 			await call(t)
-	await _run_sets(only)
+	await _run_sets(only, core)
 	_stop_fake()
 	print("\n%d checks, %d failed" % [checks, failures])
 	get_tree().quit(1 if failures > 0 else 0)
@@ -47,8 +52,10 @@ func _ready() -> void:
 ## Every `tests/*_tests.gd` is a set of tests: a RefCounted whose `test_*`
 ## methods take this runner as `t`, call `t.check(ok, "what")` and may await
 ## (`t.frames()`, `t.until()`; `t` is in the tree, so it can parent nodes).
-## `only` names one set (`hotel`) or one of its methods.
-func _run_sets(only: String) -> void:
+## `only` names sets (`hotel`, or `marlin,mae`) or one of their methods;
+## `core` leaves out the venues' own sets ([constant Jobs.VENUES]).
+func _run_sets(only: String, core := false) -> void:
+	var picks := only.split(",", false)
 	var files := []
 	for f in DirAccess.get_files_at("res://tests"):
 		var file := f.trim_suffix(".remap")
@@ -57,12 +64,14 @@ func _run_sets(only: String) -> void:
 	files.sort()
 	for f in files:
 		var set_name := str(f).trim_suffix("_tests.gd")
+		if core and Jobs.VENUES.has(set_name):
+			continue
 		var set: Object = load("res://tests/" + f).new()
 		for m in set.get_method_list():
 			var name := str(m.name)
 			if not name.begins_with("test_"):
 				continue
-			if only != "" and only != set_name and only != name:
+			if not picks.is_empty() and not (set_name in picks or name in picks):
 				continue
 			printerr("- %s.%s" % [set_name, name])
 			await set.call(name, self)

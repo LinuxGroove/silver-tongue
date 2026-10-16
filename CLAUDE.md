@@ -9,7 +9,8 @@ godot --headless --path . --import && godot --headless --path . --import   # twi
 godot --headless --path . tools/check_scripts.tscn                  # every script compiles
 godot --headless --path . tests/run_tests.tscn                      # unit tests, the menus, the door, every venue and job against a fake Lemonade
 godot --headless --path . tests/run_tests.tscn -- --only=_test_rules   # one test
-godot --headless --path . tests/run_tests.tscn -- --only=marlin     # one set of tests/*_tests.gd (or --only=test_job_check, one of its tests)
+godot --headless --path . tests/run_tests.tscn -- --only=marlin     # one set of tests/*_tests.gd (several with commas, or --only=test_job_check, one of its tests)
+godot --headless --path . tests/run_tests.tscn -- --core           # everything but the venues' own sets (CI runs each venue's side by side)
 godot --path . -- --job=marlin_safe [--cover=steward] [--female]    # straight into any job alone (ids in Jobs.CAMPAIGN; --gala is the first)
 godot --path . -- --circuit=482913                                  # straight into a Circuit night
 godot --path . -- --door                                            # straight to the service door
