@@ -569,7 +569,7 @@ class Suit:
         self.trouser_taper = 0.09 if self.female else 0.06
         self.collar_h = 0.034 if self.female else 0.045     # the shirt collar's height
         self.collar_dip = 0.026 if self.female else 0.032   # and how far its points dip
-        self.pin_t = 0.9 if self.female else 0.72           # how far up the lapel the pin is
+        self.pin_t = 0.97 if self.female else 0.72           # how far up the lapel the pin is
         self.shirt_x = 0.14 if self.female else 0.11        # the shirt's front reaches this far out
         c = b.co
         near = (np.abs(c[:, 2] - b.neck_z) < 0.02) & (np.abs(c[:, 0]) < 0.09)
