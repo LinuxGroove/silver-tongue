@@ -358,7 +358,7 @@ static func noor(night := "lift") -> CharacterSheet:
 	s.person_job = "vantage_office"
 	s.voice = "af_nicole"
 	s.voice_speed = 1.05
-	s.manner = "Quick, organised and polite in a way that tells you she's busy. You know everything that happens on twelve, and you keep it to yourself. You're loyal to Mr Holt, tired of him, and grateful to anyone who makes your evening easier."
+	s.manner = "Quick, organized and polite in a way that tells you she's busy. You know everything that happens on twelve, and you keep it to yourself. You're loyal to Mr Holt, tired of him, and grateful to anyone who makes your evening easier."
 	s.routine = ["You're at your desk until Mr Holt leaves, and he never leaves early."]
 	s.knows = [
 		"You keep Mr Holt's diary. When the front desk or Halberd rings about a visitor, you check the diary and what you've been told tonight.",

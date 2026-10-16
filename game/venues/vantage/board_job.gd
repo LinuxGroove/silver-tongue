@@ -76,7 +76,7 @@ func _init() -> void:
 	}
 	cover_order = ["temp", "server", "observer"]
 	outfits = {
-		"vantage_temp": {"job": "vantage_temp", "male": "a grey suit, with a notepad", "female": "a grey suit, with a notepad"},
+		"vantage_temp": {"job": "vantage_temp", "male": "a gray suit, with a notepad", "female": "a gray suit, with a notepad"},
 		"vantage_server": {"job": "vantage_server", "male": "a black server's suit", "female": "a black server's suit"},
 		"vantage_investor": {"job": "vantage_investor", "male": "a navy suit and a red tie, carrying a slim portfolio", "female": "a navy suit, carrying a slim portfolio"},
 	}

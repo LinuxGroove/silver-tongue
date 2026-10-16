@@ -12,7 +12,7 @@
                   offices still lit (one tile is 12 m square)
   terrazzo        the lobby's floor: pale grey terrazzo with stone chips
                   (one tile is 2 m), and its normal map
-  carpet_board    the board floor's charcoal carpet tiles (2 m)
+  carpet_board    the board floor's warm gray carpet tiles (2 m)
   limestone       the lobby's walls: pale limestone panels 1 m tall and 2 m
                   long with fine joints (one tile is 2 m), and its normal map
   oak_slats       an oak slat wall: 60 mm slats on a dark backing (one tile
@@ -144,7 +144,7 @@ def terrazzo():
 
 
 def carpet_board():
-    """Charcoal carpet tiles, 0.5 m, laid quarter-turned, with a fine loop pile."""
+    """Warm gray carpet tiles, 0.5 m, laid quarter-turned, with a fine loop pile."""
     rng = np.random.default_rng(97)
     size = 1024
     tiles = 4
@@ -157,7 +157,7 @@ def carpet_board():
     stripe = np.where(turn, np.sin(fu * np.pi * 48), np.sin(fv * np.pi * 48))
     pile = mt.smooth_noise(size, size, 64, rng, 2)
     shade = 0.85 + 0.08 * stripe + 0.12 * pile + 0.04 * np.where(turn, 1.0, -1.0)
-    rgb = mt.srgb("#34363b") * shade[..., None]
+    rgb = mt.srgb("#6b6862") * shade[..., None]
     seam = (fu < 0.004) | (fv < 0.004)
     rgb = np.where(seam[..., None], rgb * 0.7, rgb)
     save("carpet_board", rgb)

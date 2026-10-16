@@ -312,6 +312,11 @@ func _more_mat(name: String, m: StandardMaterial3D) -> bool:
 		"stone_dark":
 			m.albedo_color = Color(0.1, 0.1, 0.11)
 			m.roughness = 0.22
+		"core_stone":
+			# The lift lobbies' polished gray stone: dark, but not a hole.
+			_tex(m, "res://assets/textures/vantage/limestone", 2.0, true)
+			m.albedo_color = Color(0.46, 0.45, 0.44)
+			m.roughness = 0.28
 		"oak":
 			m.albedo_color = Color(0.6, 0.45, 0.29)
 			m.roughness = 0.5
@@ -385,11 +390,11 @@ func _more_mat(name: String, m: StandardMaterial3D) -> bool:
 
 ## Wall styles: "stone" (limestone panels over a dark plinth), "slats" (oak
 ## slats), "office" (white paint over an oak skirting), "lab" (white panels
-## over a steel skirting), "core" (dark stone, the lift lobbies), "service"
-## (grey paint, the plant room).
+## over a steel skirting), "core" (polished gray stone, the lift lobbies), "service"
+## (gray paint, the plant room).
 func _more_span(style: String, a: Vector2, u: Vector2, facing: Vector2, s0: float, s1: float, y0: float, y1: float, _h: float) -> void:
 	var skirt := {"stone": "stone_dark", "slats": "stone_dark", "office": "oak", "lab": "steel_brushed", "core": "steel_brushed", "service": "rubber"}.get(style, "stone_dark") as String
-	var face := {"stone": "limestone", "slats": "oak_slats", "office": "office_white", "lab": "lab_white", "core": "stone_dark", "service": "paint_grey"}.get(style, "office_white") as String
+	var face := {"stone": "limestone", "slats": "oak_slats", "office": "office_white", "lab": "lab_white", "core": "core_stone", "service": "paint_grey"}.get(style, "office_white") as String
 	if y0 < 0.12:
 		_face(a, u, facing, s0, s1, y0, minf(y1, 0.12), _mat(skirt), 0.035)
 	_face(a, u, facing, s0, s1, maxf(y0, 0.12), y1, _mat(face), 0.02)
@@ -737,7 +742,7 @@ func _break_room() -> void:
 func _checkpoint() -> void:
 	_in("checkpoint")
 	var r := Rect2(-4.0, -18.0, 10.0, 6.0)
-	_deck(r, "stone_dark")
+	_deck(r, "terrazzo")
 	_ceiling(r, R_H, "ceiling_white")
 	_wall("core", Vector2(-3.8, -18.0), Vector2(-3.8, -12.0), Vector2(1, 0), R_H)
 	_wall("core", Vector2(5.8, -12.0), Vector2(5.8, -18.0), Vector2(-1, 0), R_H)
@@ -753,9 +758,10 @@ func _checkpoint() -> void:
 	_sign("PHONES AND RADIOS", Vector3(-3.76, 2.2, -15.0), PI * 0.5, 22, Color(0.95, 0.75, 0.3))
 	_m("cctv_camera", Vector3(5.6, 3.6, -17.6), PI * 0.75)
 	_strips(-2.0, 4.0, -15.0, R_H)
-	_omni(Vector3(1.0, R_H - 0.4, -15.0), COOL, 1.0, 7.0)
+	_omni(Vector3(1.0, R_H - 0.4, -15.0), COOL, 1.6, 8.0)
+	_omni(Vector3(-2.4, R_H - 0.5, -15.0), COOL, 0.7, 5.0)
 	_omni(Vector3(1.0, 2.5, -13.3), Color(0.5, 1.0, 0.6), 0.25, 2.5)
-	_probe(r, R_H, Color(0.3, 0.32, 0.34), 0.3)
+	_probe(r, R_H, Color(0.3, 0.32, 0.34), 0.4)
 
 
 ## A glass wall between two rooms on the same line, with doorways: panes,
@@ -929,11 +935,13 @@ func _boardroom() -> void:
 	_box("vantage_plant", Vector3(-17.1, 0.0, -13.0))
 	for x in [-13.4, -8.6]:
 		_no_shadow(_m("vantage_ceiling_light", Vector3(x, B_H - 0.6, -7.0)))
-	var main := _omni(Vector3(-11.0, B_H - 0.9, -7.0), WARM, 2.0, 12.0, true)
+	var main := _omni(Vector3(-11.0, B_H - 0.9, -7.0), WARM, 3.0, 13.0, true)
 	main.shadow_bias = 0.08
-	_omni(Vector3(-6.0, B_H - 0.5, -12.0), WARM, 0.6, 6.0)
-	_omni(Vector3(-16.0, B_H - 0.5, -2.0), WARM, 0.5, 6.0)
-	_probe(r, B_H, Color(0.32, 0.29, 0.26), 0.3)
+	# Light over the table itself, and the corners.
+	_spot(Vector3(-11.0, B_H - 0.1, -7.0), Vector3(-11.0, 0.8, -7.0), WARM, 2.5, 6.0, 55.0)
+	_omni(Vector3(-6.0, B_H - 0.5, -12.0), WARM, 0.9, 7.0)
+	_omni(Vector3(-16.0, B_H - 0.5, -2.0), WARM, 0.8, 7.0)
+	_probe(r, B_H, Color(0.36, 0.33, 0.3), 0.4)
 
 
 ## A board chair, solid to its seat.
@@ -979,9 +987,10 @@ func _founder() -> void:
 		_box("vantage_shelves", Vector3(x, 0.0, -13.4))
 	_box("vantage_sculpture", Vector3(9.0, 0.0, -2.0), 0.6)
 	_box("vantage_plant", Vector3(17.1, 0.0, -13.0))
-	_omni(Vector3(12.0, B_H - 0.5, -7.0), WARM, 1.2, 10.0)
-	_omni(Vector3(14.2, 1.4, -7.5), CANDLE, 0.5, 3.0)
-	_probe(r, B_H, Color(0.32, 0.28, 0.24), 0.3)
+	_omni(Vector3(12.0, B_H - 0.5, -7.0), WARM, 2.0, 11.0)
+	_omni(Vector3(14.2, 1.4, -7.5), CANDLE, 0.8, 3.5)
+	_omni(Vector3(10.0, 2.2, -11.8), CANDLE, 0.6, 4.0)
+	_probe(r, B_H, Color(0.36, 0.32, 0.28), 0.4)
 
 
 # --- Outside ----------------------------------------------------------------------------------
@@ -1351,15 +1360,15 @@ func _views() -> void:
 		"research_lobby": [Vector3(4.8, R + 1.7, -27.0), Vector3(0.0, R + 1.4, -18.0)],
 		"checkpoint": [Vector3(-3.0, R + 1.7, -17.2), Vector3(3.4, R + 1.1, -12.4)],
 		"lab": [Vector3(-6.9, R + 1.8, -11.2), Vector3(6.0, R + 0.9, -3.0)],
-		"cutting_room": [Vector3(9.0, R + 1.8, -11.2), Vector3(16.0, R + 1.0, -5.0)],
+		"cutting_room": [Vector3(13.9, R + 1.55, -7.7), Vector3(15.6, R + 0.95, -10.2)],
 		"lab_office": [Vector3(-9.0, R + 1.7, -11.2), Vector3(-16.6, R + 1.0, -3.0)],
 		"break_room": [Vector3(-4.9, R + 1.7, -19.0), Vector3(-15.0, R + 0.9, -26.4)],
 		"board_lobby": [Vector3(4.8, B + 1.7, -27.0), Vector3(0.0, B + 1.4, -18.0)],
-		"assistants": [Vector3(-3.2, B + 1.7, -17.2), Vector3(4.0, B + 1.1, -4.0)],
+		"assistants": [Vector3(-1.4, B + 1.7, -16.6), Vector3(3.6, B + 1.0, -4.0)],
 		"boardroom": [Vector3(-5.0, B + 2.0, -13.0), Vector3(-15.0, B + 0.9, -5.0)],
 		"pantry": [Vector3(-4.9, B + 1.7, -15.0), Vector3(-11.0, B + 1.0, -21.0)],
 		"founder": [Vector3(7.0, B + 1.7, -13.2), Vector3(16.0, B + 1.0, -3.0)],
-		"city": [Vector3(-10.0, B + 1.7, -3.0), Vector3(-34.0, B - 22.0, 40.0)],
+		"city": [Vector3(-10.0, B + 1.7, -3.0), Vector3(-34.0, B - 9.0, 40.0)],
 	}
 	_set_views(v)
 	view_about = {
@@ -1375,7 +1384,7 @@ func _views() -> void:
 		"research_lobby": "Level 9's lift lobby and the way through to Halberd's checkpoint, with the scanner's warning",
 		"checkpoint": "The high-security checkpoint: Bram's desk, the scanner arch, the glass door to the lab",
 		"lab": "The research lab: the benches, the fume hood, the glass wall of the gem room",
-		"cutting_room": "The gem room: the cutter's wheel, the safe, and the Rose under glass on her plinth",
+		"cutting_room": "The gem room: the Rose under glass on her plinth, the safe behind her, the city through the glass",
 		"lab_office": "Dr Lind's office off the lab, her desk facing the door",
 		"break_room": "The research floor's break room: the kitchenette, the table, the sofa by the glass",
 		"board_lobby": "Level 12's lift lobby, the pantry door and the way through to the assistants",
