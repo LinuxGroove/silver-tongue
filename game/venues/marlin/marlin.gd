@@ -445,7 +445,7 @@ func _quay() -> void:
 		_use("stores", Vector3(5.6, 0.8, 5.4), Vector3(0.7, 0.62, 0.5), "marlin_crate")
 		uses.stores.set_meta("use", "item:crate")
 	_omni(Vector3(9.4, 2.6, 4.2), COOL, 0.5, 4.0)
-	# Neighbours in the marina, and the breakwater's lights far off.
+	# Neighbors in the marina, and the breakwater's lights far off.
 	for side in [-1.0, 1.0]:
 		_no_shadow(_m("marlin_neighbor", Vector3(side * 16.0, 0.0, -2.6)))
 		_no_shadow(_m("marlin_neighbor", Vector3(side * 30.0, 0.0, -3.0), 0.0, Vector3.ONE * 0.85))
@@ -604,6 +604,12 @@ func _lower_deck() -> void:
 	_box("kitchen_counter_wall", Vector3(2.0, 0.0, -22.15))
 	_box("pot_shelf", Vector3(2.0, 0.0, -15.7), PI)
 	_porthole(Vector2(4.5, -18.0), Vector2(-1, 0), 1.55)
+	if night == "aboard":
+		# Where the night's stores go, and the crate that turns up there.
+		_use("stores_drop", Vector3(2.0, 0.9, -22.05), Vector3(1.3, 0.3, 0.5))
+		var crate := _m("marlin_crate", Vector3(2.3, 0.92, -22.1), 0.2)
+		crate.name = "GalleyCrate"
+		crate.visible = false
 	for z in [-17.0, -19.8]:
 		_slab(Vector3(2.6, h - 0.01, z), Vector3(0.6, 0.02, 0.6), _mat("led_cool"))
 		_omni(Vector3(2.6, h - 0.35, z), COOL, 0.9, 5.0)
@@ -1209,17 +1215,17 @@ func _graph() -> void:
 				"crew_0": Vector3(-0.9, 0.0, 9.0), "crew_1": Vector3(0.9, 0.0, 9.0), "quay_c": Vector3(0.0, 0.0, 5.8),
 				"gate_out": Vector3(0.0, 0.0, 3.3), "gang_foot": Vector3(0.0, 0.0, 1.9), "kofi": Vector3(1.1, 0.0, 3.1),
 				"jun": Vector3(-4.6, 0.0, 3.0), "jun_back": Vector3(-3.2, 0.0, 3.0), "bianca_quay": Vector3(2.6, 0.0, 3.4),
-				"quay_e": Vector3(4.6, 0.0, 3.6), "sal": Vector3(9.4, 0.0, 3.9),
+				"quay_e": Vector3(4.6, 0.0, 3.6), "sal": Vector3(9.4, 0.0, 3.9), "rocco_quay": Vector3(7.3, 0.0, 3.1),
 				"saloon_c": Vector3(-0.2, MAIN, -16.0),
 			})
 			L.append_array([
 				["crew_0", "quay_c", ""], ["crew_1", "quay_c", ""], ["quay_c", "gate_out", ""], ["gate_out", "kofi", ""],
 				["gate_out", "gang_foot", "gangway"], ["gang_foot", "gang_top", ""], ["gate_out", "jun_back", ""],
 				["jun_back", "jun", ""], ["gate_out", "bianca_quay", ""], ["bianca_quay", "quay_e", ""], ["quay_c", "quay_e", ""],
-				["quay_e", "sal", ""], ["saloon_aisle", "saloon_c", ""], ["saloon_c", "saloon_fwd", ""],
+				["quay_e", "sal", ""], ["quay_e", "rocco_quay", ""], ["saloon_aisle", "saloon_c", ""], ["saloon_c", "saloon_fwd", ""],
 			])
 			face.merge({"crew_0": Vector2(0, -1), "crew_1": Vector2(0, -1), "kofi": Vector2(0, 1), "jun": Vector2(0, 1),
-				"bianca_quay": Vector2(-0.3, 1), "sal": Vector2(-1, -0.4), "saloon_c": Vector2(0, -1)})
+				"bianca_quay": Vector2(-0.3, 1), "sal": Vector2(-1, -0.4), "saloon_c": Vector2(0, -1), "rocco_quay": Vector2(1, 0.3)})
 		"safe":
 			P.merge({
 				"crew_0": Vector3(-0.6, MAIN, -4.6), "crew_1": Vector3(0.6, MAIN, -4.6), "saloon_c": Vector3(-0.2, MAIN, -16.0),
@@ -1238,18 +1244,18 @@ func _graph() -> void:
 				"saloon_c": Vector3(-0.05, MAIN, -17.8), "rostrum_side": Vector3(0.35, MAIN, -19.45), "rupert": Vector3(-0.6, MAIN, -19.62),
 				"phone_side": Vector3(4.15, MAIN, -18.8), "nina_phone": Vector3(4.15, MAIN, -17.2),
 				"margit": Vector3(3.3, MAIN, -12.3), "joost": Vector3(-1.9, MAIN, -12.0),
-				"celeste_side": Vector3(-2.3, MAIN, -11.6), "hugo_side": Vector3(3.4, MAIN, -14.6),
+				"celeste_side": Vector3(-2.3, MAIN, -11.6), "hugo_side": Vector3(3.4, MAIN, -14.6), "joost_margit": Vector3(2.3, MAIN, -12.4),
 			})
 			L.append_array([
 				["crew_0", "gang_top", ""], ["crew_1", "aft_c", ""], ["crew_0", "crew_1", ""], ["aft_port", "nina_side", ""],
 				["nina_side", "nina_desk", ""], ["saloon_aisle", "saloon_c", ""], ["saloon_c", "saloon_fwd", ""],
 				["saloon_c", "rostrum_side", ""], ["rostrum_side", "rupert", ""], ["saloon_fwd", "phone_side", ""],
 				["phone_side", "nina_phone", ""], ["saloon_in", "margit", ""], ["margit", "hugo_side", ""],
-				["saloon_aisle", "joost", ""], ["joost", "celeste_side", ""],
+				["saloon_aisle", "joost", ""], ["joost", "celeste_side", ""], ["margit", "joost_margit", ""],
 			])
 			face.merge({"crew_0": Vector2(0, -1), "crew_1": Vector2(0, -1), "nina_desk": Vector2(0, 1), "rupert": Vector2(0, 1),
 				"nina_phone": Vector2(-1, 0), "margit": Vector2(-0.3, -1), "joost": Vector2(0.2, -1), "celeste_side": Vector2(0.4, -1),
-				"hugo_side": Vector2(-0.6, -1), "saloon_c": Vector2(0, 1)})
+				"hugo_side": Vector2(-0.6, -1), "saloon_c": Vector2(0, 1), "joost_margit": Vector2(1, 0.1)})
 	points = P
 	links = L
 	for k in face:
@@ -1322,7 +1328,7 @@ func _views() -> void:
 	}
 	_set_views(v)
 	view_about = {
-		"marina": "The Marlin moored stern-to at Caldera's marina, her neighbours, the quay and the city behind",
+		"marina": "The Marlin moored stern-to at Caldera's marina, her neighbors, the quay and the city behind",
 		"quay": "The quay at the stern: the gangway and its gate, the purser's table, the chandler's van and stores",
 		"gangway": "The gangway's gate, where the bosun checks the crew list, from where the crew starts",
 		"aft_deck": "The aft deck: the bar to port, the lounge, the saloon's glass doors and the stair up",
