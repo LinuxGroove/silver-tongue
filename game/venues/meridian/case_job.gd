@@ -3,10 +3,10 @@ extends JobDef
 ## Job 3 at the Hotel Meridian: the morning the Rose leaves for the Marlin.
 ## Swap its display case on the ballroom stage for Mae's copy before
 ## Halberd's couriers take it, then get the real one out of the hotel or
-## hide it on the breakfast trolley. As the Courier's photographer who gets
+## hide it on the breakfast cart. As the Courier's photographer who gets
 ## the stage cleared for the light, the insurer's assessor whom Wren lets
 ## handle the case, or a temp waiter at the press breakfast while Wren signs
-## the handover in the lobby (docs/m1.md has the whole job).
+## the handover in the lobby. tests/meridian_tests.gd plays every way through.
 ##
 ## Who's on the stage when is the job's events, not a routine, so a Circuit
 ## morning never moves the signing or the couriers.
@@ -31,7 +31,7 @@ func _init() -> void:
 	number = 3
 	title = "The display case"
 	venue_name = "The Hotel Meridian"
-	briefing = "This is the one, love. This morning the Rose sits on the Meridian's stage in its case for the press, and at twenty-six past ten Halberd's couriers carry that case to the Marlin. I've had a copy made, down to the scratches, with a lock I can open. Swap them, and the Rose travels in my case. Then get the real one out of the building, or hide it on the breakfast trolley; my people collect that at eleven. Wren from the museum never leaves it, Priya's running the show, and Ingrid from Halberd is on the front door. One of you carries my copy in. Don't let anyone see you swap them."
+	briefing = "This is the one, love. This morning the Rose sits on the Meridian's stage in its case for the press, and at twenty-four past ten Halberd's couriers carry that case to the Marlin. I've had a copy made, down to the scratches, with a lock I can open. Swap them, and the Rose travels in my case. Then get the real one out of the building, or hide it on the breakfast cart; my people collect that at eleven. Wren from the museum never leaves it, Priya's running the show, and Ingrid from Halberd is on the front door. One of you carries my copy in. Don't let anyone see you swap them."
 	goal = "Swap the Rose's case for Mae's copy, then get the real one out or hide it"
 	situation = MeridianCast.PRESS
 	prize = "the Rose"
@@ -84,7 +84,7 @@ func _init() -> void:
 		},
 	}
 	cover_order = ["press", "catering", "assessor"]
-	outfits = {"business": {"job": "meridian_business", "male": "a grey business suit", "female": "a grey business suit"}}
+	outfits = {"business": {"job": "meridian_business", "male": "a gray business suit", "female": "a gray business suit"}}
 	looks = MeridianCast.LOOKS
 	staff_looking = Covers.STAFF_LOOKING.duplicate()
 	staff_rooms = Covers.STAFF_ROOMS.duplicate()
@@ -213,10 +213,10 @@ func use(job: Job, c: CrewInfo, what: String) -> Variant:
 			return "Mae's copy. It stays where it is."
 		"trolley":
 			if not "rose_case" in c.items:
-				return "The breakfast trolley. It goes back to the caterer's van at eleven."
+				return "The breakfast cart. It goes back to the caterer's van at eleven."
 			job.place_item(c.id, "rose_case", "")
 			job.flags["hidden"] = true
-			return "You tuck the Rose's case under the cloth on the breakfast trolley. Mae's people collect it at eleven."
+			return "You tuck the Rose's case under the cloth on the breakfast cart. Mae's people collect it at eleven."
 	var d = job.venue.doors.get(what.trim_prefix("door:")) if what.begins_with("door:") else null
 	if d == null or d.is_open:
 		return null
@@ -248,7 +248,7 @@ func prompt_for(c: CrewInfo, what: String) -> Variant:
 		"item:mae_case":
 			return ""
 		"trolley":
-			return "Hide the Rose's case on the trolley" if "rose_case" in c.items else "Look at the breakfast trolley"
+			return "Hide the Rose's case on the cart" if "rose_case" in c.items else "Look at the breakfast cart"
 	return null
 
 
@@ -264,7 +264,7 @@ func _swap(job: Job, c: CrewInfo) -> String:
 	job.place_item(c.id, "mae_case", "plinth_copy")
 	job.give_item(c.id, "rose_case")
 	job.flags["swapped"] = c.id
-	job.set_goal(0, "Get the Rose's case out of the hotel, or hide it on the breakfast trolley")
+	job.set_goal(0, "Get the Rose's case out of the hotel, or hide it on the breakfast cart")
 	return "You swap the cases. Mae's copy sits on the stand."
 
 

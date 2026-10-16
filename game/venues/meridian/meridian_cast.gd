@@ -505,7 +505,7 @@ const CHATTER := [
 #region The rest of the Meridian's people
 
 ## Looks the Meridian's later jobs add (see [method Person.add_looks]): a
-## grey business suit, and a crowd of photographers and reporters.
+## gray business suit, and a crowd of photographers and reporters.
 const LOOKS := {
 	"meridian_business": {"outfit": 2, "main": Color(0.26, 0.27, 0.29), "legs": Color(0.24, 0.25, 0.27), "accent": Color(0.6, 0.6, 0.62),
 		"shirt": Color(0.88, 0.9, 0.93), "tie": Color(0.1, 0.16, 0.32), "wardrobe": "halberd_suit", "hide": ["Pin", "Earpiece"]},
@@ -826,7 +826,7 @@ static func _wedding(s: CharacterSheet) -> void:
 			s.actions = ["none", "invite_in", "go_to_halvorsen", "ask_reception", "radio_security"]
 			s.checks_with = {"ask_reception": "dana"}
 			s.replies = [
-				{"words": ["lindqvist", "auction house", "catalogue", "copy of the list", "a copy"], "say": "The auction house? Dana sees to anything like that, at reception.", "tone": "calm"},
+				{"words": ["lindqvist", "auction house", "catalog", "copy of the list", "a copy"], "say": "The auction house? Dana sees to anything like that, at reception.", "tone": "calm"},
 				{"words": ["asking for you", "wants a word", "wants to see you", "waiting for you", "looking for you"], "first": "Mr Halvorsen? Here, tonight?", "say": "Then I'll go down at once. Please, excuse me.", "tone": "friendly", "do": "go_to_halvorsen", "believes": ["says Mr Halvorsen is at the bar asking for me"]},
 				{"words": ["auction", "bidding", "bidder", "foundation", "marlin", "collector"], "say": "The auction! Of course. Forgive me, let me just check with reception.", "tone": "friendly", "do": "?check", "believes": ["says they're bidding at the Halvorsens' auction on the Marlin"]},
 				{"words": ["air conditioning", "air con", "aircon", "engineer"], "say": "The air conditioning? At last. Gus has the key.", "tone": "friendly"},
@@ -854,7 +854,7 @@ static func _wedding(s: CharacterSheet) -> void:
 			s.actions = ["none", "print_copy", "call_manager", "radio_security"]
 			s.checks_with = {"call_manager": "okafor"}
 			s.replies = [
-				{"words": ["lindqvist", "auction house", "catalogue", "copy", "print"], "say": "Mr Okafor didn't say anything to me. I'll ring him.", "tone": "wary", "do": "?check", "believes": ["says they're from Lindqvist & Rowe, the auction house, to collect a copy of the guest list"]},
+				{"words": ["lindqvist", "auction house", "catalog", "copy", "print"], "say": "Mr Okafor didn't say anything to me. I'll ring him.", "tone": "wary", "do": "?check", "believes": ["says they're from Lindqvist & Rowe, the auction house, to collect a copy of the guest list"]},
 				{"words": ["foundation", "bidder", "bidding"], "say": "The Foundation? I'll let Mr Okafor know.", "tone": "calm", "believes": ["says the Halvorsen Foundation sent them, about a bidder"]},
 				{"words": ["air conditioning", "air con", "engineer", "facilities", "key"], "say": "Keys are Gus's department. Porter's desk, just there.", "tone": "calm"},
 				{"words": ["wedding", "achterberg", "lindgren", "bride", "groom"], "say": "The wedding's in the ballroom. Teo has the list at the doors.", "tone": "calm"},
@@ -1130,7 +1130,7 @@ static func _press(s: CharacterSheet) -> void:
 				"The press breakfast: coffee and pastries on the ballroom's two buffets, and the press eat like wolves.",
 				"You're short-handed again: you asked Caldera Staffing for one more pair of hands this morning.",
 				"Waiters wear the Meridian's white jacket. Spares are on the rack in the staff room.",
-				"The breakfast trolley goes back to the caterer's van at eleven.",
+				"The breakfast cart goes back to the caterer's van at eleven.",
 			]
 			s.checks_with = {"call_manager": "priya"}
 			s.action_words = {"call_manager": "call Priya, the day manager"}

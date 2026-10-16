@@ -5,7 +5,7 @@ extends JobDef
 ## it) out of the building. Dana prints a copy for the auction house once Mr
 ## Okafor says so; Okafor shows a bidder into his office and is called away;
 ## or Gus hands the air conditioning engineer the office key while Okafor's
-## at the speeches (docs/m1.md has the whole job).
+## at the speeches. tests/meridian_tests.gd plays every way through.
 ##
 ## Okafor's night is the job's events, not a routine, so a Circuit night that
 ## moves routines round never moves him: he goes to his office, gives the
@@ -19,7 +19,7 @@ const LOCK_UP := 22 * 60 + 8
 ## Game minutes Okafor stays at the bar when he's called down to it.
 const AWAY := 4.0
 ## What each story is about, as the people checking it would hear it.
-const AUCTION_HOUSE := ["lindqvist", "auction house", "catalogue"]
+const AUCTION_HOUSE := ["lindqvist", "auction house", "catalog"]
 const BIDDER := ["bidder", "bidding", "foundation", "collector"]
 const AIRCON := ["air conditioning", "air con", "aircon", "engineer", "building services", "cooling"]
 
@@ -45,12 +45,12 @@ func _init() -> void:
 			"title": "Auction house",
 			"names": ["Paul Ashby", "Pauline Ashby"],
 			"job": "an associate at Lindqvist & Rowe, the auction house running the Marlin sale",
-			"story": "Mr Okafor promised the auction house a copy of the guest list for the catalogue. You're here to collect it from reception.",
+			"story": "Mr Okafor promised the auction house a copy of the guest list for the catalog. You're here to collect it from reception.",
 			"outfit": "business",
 			"for": "Dana, on reception",
 			"lines": [
 				"Good evening. %s, from Lindqvist & Rowe, the auction house.",
-				"Mr Okafor promised us a copy of the guest list for the catalogue.",
+				"Mr Okafor promised us a copy of the guest list for the catalog.",
 				"Could you ring him? He'll tell you.",
 				"Just the one copy, and I'm out of your way.",
 			],
@@ -85,7 +85,7 @@ func _init() -> void:
 		},
 	}
 	cover_order = ["auction", "collector", "facilities"]
-	outfits = {"business": {"job": "meridian_business", "male": "a grey business suit", "female": "a grey business suit"}}
+	outfits = {"business": {"job": "meridian_business", "male": "a gray business suit", "female": "a gray business suit"}}
 	looks = MeridianCast.LOOKS
 	staff_looking = Covers.STAFF_LOOKING.duplicate()
 	staff_rooms = Covers.STAFF_ROOMS.duplicate()
@@ -145,7 +145,7 @@ func _init() -> void:
 	caller_ids = ["Withheld", "Lindqvist & Rowe", "Halvorsen Foundation", "Caldera Building Services", "Halvorsen Hotels"]
 	mae_calls = [
 		{"id": "auction", "label": "Ring Okafor as the auction house", "who": "okafor", "as": "Lindqvist & Rowe",
-			"line": "Good evening, Lindqvist and Rowe. Our associate is calling at your reception tonight for the copy of the guest list you promised us, for the catalogue. Could you let your desk know?",
+			"line": "Good evening, Lindqvist and Rowe. Our associate is calling at your reception tonight for the copy of the guest list you promised us, for the catalog. Could you let your desk know?",
 			"answer": "Ah. Yes, of course. Reception can print it. Good evening.",
 			"mae": "I'll ring Okafor as the auction house, love. When Dana asks him, he'll say yes."},
 		{"id": "vip", "label": "Tell Dana a bidder's coming", "who": "dana", "as": "Halvorsen Foundation",
@@ -243,7 +243,7 @@ func lookup(job: Job, who: String, crew_id: int, said: String, _asker: Character
 				return Job.fact("good", "You invited them into your office yourself tonight.", "Yes, they're with me. Look after them.")
 			if Job.any(said, AUCTION_HOUSE):
 				if _backed(job, "auction", "okafor", "Lindqvist & Rowe", AUCTION_HOUSE + ["copy", "list", "collect"]):
-					return Job.fact("good", "Lindqvist & Rowe rang you tonight: their associate is collecting a copy of the guest list from reception, for the catalogue. You said yes.", "Yes, the auction house. Print them a copy, Dana. Just the one.")
+					return Job.fact("good", "Lindqvist & Rowe rang you tonight: their associate is collecting a copy of the guest list from reception, for the catalog. You said yes.", "Yes, the auction house. Print them a copy, Dana. Just the one.")
 				return Job.fact("bad", "Nobody from the auction house has said a word to you about a copy of the list.", "The auction house? Nobody's asked me for anything. Don't give them a thing.")
 			if Job.any(said, AIRCON):
 				if _backed(job, "ac", "okafor", "Caldera Building Services", AIRCON):
@@ -290,7 +290,7 @@ func on_mae(job: Job, call_id: String, ch: Character) -> void:
 	job.flags["called:" + call_id] = true
 	match call_id:
 		"auction":
-			ch.note("Lindqvist & Rowe, the auction house, rang: their associate is collecting a copy of the guest list from reception tonight, for the catalogue. You'd promised them one.")
+			ch.note("Lindqvist & Rowe, the auction house, rang: their associate is collecting a copy of the guest list from reception tonight, for the catalog. You'd promised them one.")
 		"vip":
 			ch.note("The Halvorsen Foundation rang: one of the auction's bidders is calling on Mr Okafor tonight, about the arrangements on the Marlin. They're expected.")
 			var ok: Character = job.cast.get("okafor")
