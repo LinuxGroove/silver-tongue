@@ -7,6 +7,10 @@ extends Node
 ## Seconds before a slow reply is given up on and a scripted line used.
 const TIMEOUT := 9.0
 
+## The probe's answer per server and model, so the door needn't ask again
+## after the setup screen did.
+static var _probes := {}
+
 var busy := false
 var _waiting := 0
 
@@ -67,4 +71,21 @@ func probe_schema() -> String:
 	if not res.ok:
 		return "failed"
 	var d := LlmClient.extract_json(res.text)
-	return "enforced" if str(d.get("word", "")) == "pineapple" else "not enforced"
+	var result := "enforced" if str(d.get("word", "")) == "pineapple" else "not enforced"
+	_probes[_probe_key()] = result
+	return result
+
+
+## What the last probe of the server and model in use found ("" when it
+## hasn't been probed).
+static func cached_probe() -> String:
+	return str(_probes.get(_probe_key(), ""))
+
+
+## Forgets every probe (for tests, and after the server changes).
+static func forget_probes() -> void:
+	_probes.clear()
+
+
+static func _probe_key() -> String:
+	return LGBrain.base_url() + "|" + LGBrain.model

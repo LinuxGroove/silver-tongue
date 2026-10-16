@@ -114,9 +114,11 @@ func _start_services() -> void:
 	guard.brains = ok
 	hud.set_brain(LGBrain.state, LGBrain.detail)
 	if ok:
-		var probe: String = await guard.queue.probe_schema()
-		if not is_inside_tree():
-			return
+		var probe: String = BrainQueue.cached_probe()
+		if probe == "":
+			probe = await guard.queue.probe_schema()
+			if not is_inside_tree():
+				return
 		hud.set_schema(probe)
 		LGPlaytest.event("schema_probe", {"result": probe})
 	else:
@@ -132,6 +134,8 @@ func _start_services() -> void:
 	var v: bool = await LGVoice.setup_async()
 	if not is_inside_tree():
 		return
+	# Already ready (the setup screen did it) sends no state change.
+	hud.set_voice(LGVoice.state, LGVoice.detail)
 	guard.speak = v and bool(LGSettings.get_value("voice", "speaking", true))
 	if v and talk == "open":
 		LGVoice.set_open_mic(true)

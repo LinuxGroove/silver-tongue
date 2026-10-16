@@ -11,8 +11,12 @@ const DIM := Color(0.66, 0.6, 0.52)
 const BRASS := Color(0.9, 0.72, 0.36)
 const BURGUNDY := Color(0.72, 0.2, 0.24)
 const GREEN := Color(0.55, 0.85, 0.5)
+## A warning that has to read on the dark panels (burgundy is too dark there).
+const WARN := Color(1.0, 0.6, 0.52)
 const PANEL := Color(0.08, 0.06, 0.06, 0.9)
 const EDGE := Color(0.9, 0.72, 0.36, 0.45)
+## Where a menu's shade ends across the screen (0..1).
+const SHADE_RIGHT := 0.5
 const MONTSERRAT := "res://addons/cogito/Assets/Fonts/Montserrat/"
 
 static var text_font: Font
@@ -129,7 +133,8 @@ static func box(bg: Color, edge: Color, width: int, radius: int) -> StyleBoxFlat
 ## A small panel for the HUD: dark lacquer with a thin brass edge.
 static func hud_panel(edge := EDGE) -> PanelContainer:
 	var p := PanelContainer.new()
-	var b := box(Color(0.04, 0.03, 0.03, 0.66), edge, 1, 4)
+	# Dark enough that light text reads over the pale marble behind it.
+	var b := box(Color(0.04, 0.03, 0.03, 0.85), edge, 1, 4)
 	b.content_margin_left = 16
 	b.content_margin_right = 16
 	b.content_margin_top = 10
@@ -145,7 +150,8 @@ static func hud_label(text: String, size := 18, color := TEXT, heading := true) 
 	l.text = text
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", color)
-	l.add_theme_constant_override("outline_size", 2)
+	l.add_theme_constant_override("outline_size", 4)
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
 	if heading and heading_font:
 		l.add_theme_font_override("font", heading_font)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -171,3 +177,19 @@ static func bar(color: Color, width := 160.0, height := 8.0) -> ProgressBar:
 	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	return b
+
+
+## Dark on the left, fading to clear, so the corridor shows on the right of
+## a menu (stretch it over the left `SHADE_RIGHT` of the screen).
+static func shade_texture() -> GradientTexture2D:
+	var g := Gradient.new()
+	g.set_color(0, Color(0.03, 0.02, 0.02, 0.94))
+	g.set_color(1, Color(0.03, 0.02, 0.02, 0.0))
+	g.add_point(0.7, Color(0.03, 0.02, 0.02, 0.85))
+	var t := GradientTexture2D.new()
+	t.gradient = g
+	t.fill_from = Vector2(0, 0)
+	t.fill_to = Vector2(1, 0)
+	t.width = 256
+	t.height = 4
+	return t

@@ -48,7 +48,9 @@ godot --path . -- --door --text    # typing your lines
 ```
 
 The game starts Lemonade itself when the embedded one is there (the snap
-bundles it) and downloads the guard's model on first use. From source,
+bundles it). The first time you play, a setup screen downloads Marcus's
+three models (his brain, his ears and his voice) with a progress bar for
+each, before you reach the door; after that he's ready in seconds. From source,
 point it at a Lemonade you run yourself:
 
 ```sh

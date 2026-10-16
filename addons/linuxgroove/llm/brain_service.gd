@@ -15,12 +15,20 @@ extends Node
 ## ($SNAP_USER_COMMON), so they are not copied on every update.
 
 signal state_changed(state: String, detail: String)
+## A download's progress (0 to 1), for the model being pulled.
+signal download_progress(model_name: String, fraction: float)
 
 const READY_TIMEOUT := 60.0
+## Seconds to keep looking for an external server before giving up.
+const EXTERNAL_WAIT := 6.0
 
 var state := "off"
 var detail := ""
+## The download in progress, 0 to 1, over all of its files.
 var progress := 0.0
+## Its bytes so far and in all (0 when the server doesn't say).
+var download_bytes := 0.0
+var download_total := 0.0
 var model := ""
 var source := ""
 
@@ -138,8 +146,7 @@ func _start() -> bool:
 		_client.api_key = str(settings.get_value("ai", "external_key", ""))
 		source = "external"
 		_set_state("starting", "Looking for Lemonade at %s" % _client.base_url)
-		var health := await _client.get_json("/health", 3.0)
-		if not health.ok:
+		if not await _find_external():
 			_set_state("unavailable", "No local AI server found")
 			return false
 	else:
@@ -149,6 +156,21 @@ func _start() -> bool:
 		return false
 	_set_state("ready", "%s via %s Lemonade" % [model, source])
 	return true
+
+
+## Asks the external server's /health until it answers or EXTERNAL_WAIT
+## seconds of real time pass: a slow first frame (shaders compiling, a scene
+## loading) can outlast one request's timeout on its own.
+func _find_external() -> bool:
+	var deadline := Time.get_ticks_msec() + int(EXTERNAL_WAIT * 1000.0)
+	while true:
+		var health := await _client.get_json("/health", 3.0)
+		if health.ok:
+			return true
+		if Time.get_ticks_msec() >= deadline:
+			return false
+		await get_tree().create_timer(0.5).timeout
+	return false
 
 
 func _start_embedded(binary: String) -> bool:
@@ -193,15 +215,20 @@ func _start_embedded(binary: String) -> bool:
 	return false
 
 
-func _ensure_model() -> bool:
+## Whether the server has `name` on disk. A model the server doesn't list
+## counts as downloaded: it's not one the server can pull by name.
+func is_downloaded_async(name: String) -> bool:
 	var models := await _client.get_json("/models", 10.0)
-	var downloaded := false
 	if models.ok and typeof(models.data) == TYPE_DICTIONARY:
 		for m in models.data.get("data", []):
-			if str(m.get("id", "")) == model:
-				downloaded = bool(m.get("downloaded", true))
-	if not downloaded:
-		if not await _pull_model():
+			if str(m.get("id", "")) == name:
+				return bool(m.get("downloaded", true))
+	return true
+
+
+func _ensure_model() -> bool:
+	if not await is_downloaded_async(model):
+		if not await pull_async(model):
 			return false
 	_set_state("loading", "Loading %s" % model)
 	var load_res := await _client.post_json("/load", {"model_name": model, "ctx_size": 4096}, 300.0)
@@ -211,13 +238,26 @@ func _ensure_model() -> bool:
 	return true
 
 
-func _pull_model() -> bool:
-	_set_state("downloading", "Downloading %s" % model)
-	var start := await _client.post_json("/pull", {"model_name": model, "stream": true, "subscribe": false}, 30.0)
+## Downloads `name` through the server, reporting [signal download_progress]
+## (and `progress`) as it goes. With `announce`, this service's own state
+## follows the download (for its own model); without, only the signal does
+## (for another service's models, like LGVoice's). Returns true once the
+## server has the model, or at once on a server that can't pull by name.
+func pull_async(name: String, announce := true) -> bool:
+	progress = 0.0
+	download_bytes = 0.0
+	download_total = 0.0
+	if announce:
+		_set_state("downloading", "Downloading %s" % name)
+	download_progress.emit(name, 0.0)
+	var start := await _client.post_json("/pull", {"model_name": name, "stream": true, "subscribe": false}, 30.0)
 	if start.code == 404:
 		return true  # Not Lemonade (plain OpenAI server): assume the model exists.
-	if not start.ok:
-		_set_state("error", "Could not download %s: %s" % [model, start.error])
+	var refused := typeof(start.data) == TYPE_DICTIONARY and str(start.data.get("status", "")) == "error"
+	if not start.ok or refused:
+		var why := str(start.data.get("message", start.error)) if typeof(start.data) == TYPE_DICTIONARY else str(start.error)
+		if announce:
+			_set_state("error", "Could not download %s: %s" % [name, why])
 		return false
 	var missing_for := 0
 	while missing_for < 30:
@@ -228,29 +268,52 @@ func _pull_model() -> bool:
 			continue
 		var found := false
 		for job in jobs.data:
-			if str(job.get("model_name", "")) == model:
+			if str(job.get("model_name", "")) == name:
 				found = true
 		missing_for = 0 if found else missing_for + 1
 		for job in jobs.data:
-			if str(job.get("model_name", "")) != model:
+			if str(job.get("model_name", "")) != name:
 				continue
-			progress = float(job.get("percent", 0)) / 100.0
+			_read_job(job)
 			var status := str(job.get("status", ""))
 			if bool(job.get("complete", false)) or status == "completed":
 				progress = 1.0
+				download_progress.emit(name, 1.0)
 				return true
 			if status in ["error", "cancelled"]:
-				_set_state("error", "Download failed: %s" % str(job.get("error", status)))
+				if announce:
+					_set_state("error", "Download failed: %s" % str(job.get("error", status)))
 				return false
-			_set_state("downloading", "Downloading %s (%d%%)" % [model, int(progress * 100.0)])
+			download_progress.emit(name, progress)
+			if announce:
+				_set_state("downloading", "Downloading %s (%d%%)" % [name, int(progress * 100.0)])
 	# The job finished and was cleared before we saw it complete; check the list.
-	var models := await _client.get_json("/models", 10.0)
-	if models.ok and typeof(models.data) == TYPE_DICTIONARY:
-		for m in models.data.get("data", []):
-			if str(m.get("id", "")) == model:
-				return true
-	_set_state("error", "Download of %s did not finish" % model)
+	if await is_downloaded_async(name):
+		progress = 1.0
+		download_progress.emit(name, 1.0)
+		return true
+	if announce:
+		_set_state("error", "Download of %s did not finish" % name)
 	return false
+
+
+## Progress over the whole download from a /downloads job: its overall
+## bytes when the server gives them, otherwise the file it's on and how far
+## through that file it is (`percent` is per file).
+func _read_job(job: Dictionary) -> void:
+	var total := float(job.get("total_download_size", 0.0))
+	var got := float(job.get("overall_bytes_downloaded", -1.0))
+	var files := maxi(int(job.get("total_files", 1)), 1)
+	var file := clampi(int(job.get("file_index", 1)), 1, files)
+	var percent := clampf(float(job.get("percent", 0.0)) / 100.0, 0.0, 1.0)
+	if total > 0.0 and got >= 0.0:
+		progress = clampf(got / total, 0.0, 1.0)
+		download_bytes = got
+		download_total = total
+	else:
+		progress = (float(file - 1) + percent) / float(files)
+		download_bytes = 0.0
+		download_total = 0.0
 
 
 func _set_state(s: String, d: String) -> void:

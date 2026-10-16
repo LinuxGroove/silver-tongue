@@ -30,9 +30,9 @@ func _ready() -> void:
 		await call(only)
 	else:
 		for t in ["_test_schema", "_test_rules", "_test_earshot", "_test_prompt", "_test_voice_helpers",
-				"_test_launch_ping", "_test_person", "_test_room", "_test_menus", "_test_pause",
+				"_test_launch_ping", "_test_person", "_test_room", "_test_menus", "_test_hud_edges", "_test_pause",
 				"_test_text_entry_pad_enter", "_test_playtest", "_test_scripted_door",
-				"_test_fake_door", "_test_fake_hearing", "_test_fake_caught_and_timeout"]:
+				"_test_fake_door", "_test_fake_hearing", "_test_fake_caught_and_timeout", "_test_fake_setup"]:
 			printerr("- " + t)
 			await call(t)
 	_stop_fake()
@@ -191,6 +191,7 @@ func _test_launch_ping() -> void:
 	check(GameConfig.GAME_ID == "silver-tongue", "the game id is silver-tongue")
 	check(OnlineServer.SERVER_KEY == "defaultkey", "the server key in git is the default")
 
+
 #endregion
 
 #region The room and the people
@@ -246,6 +247,11 @@ func _test_menus() -> void:
 	title.show_how(0)
 	await frames(1)
 	check("Next" in title.button_texts(), "how to play has pages")
+	var spelled := true
+	for page in HowToPlay.PAGES:
+		for line in page[1]:
+			spelled = spelled and not str(line).to_lower().contains("metre")
+	check(spelled, "how to play says meters")
 	title.show_settings()
 	await frames(1)
 	var cyclers := title.find_children("", "LGCycler", true, false)
@@ -261,6 +267,32 @@ func _test_menus() -> void:
 		about = about or (l as Label).text.contains("Ken VanDine")
 	check(about, "about credits the VanDines")
 	title.queue_free()
+	await frames(1)
+
+
+## The panels against the right and bottom edges grow inwards, so long text
+## stays on screen.
+func _test_hud_edges() -> void:
+	var layer := CanvasLayer.new()
+	add_child(layer)
+	var hud := ProofHud.new()
+	layer.add_child(hud)
+	hud.set_guard_name("Marcus")
+	hud.set_suspicion(3)
+	hud.set_hint("Hold V to talk  ·  Shift whisper, Alt shout  ·  T: type a line")
+	hud.set_timing({"kind": "line", "heard": "Evening", "scripted": true, "timed_out": true, "thought": 9.2, "spoke": 0.31, "vetoed": "radio_security", "hearing": {"final": 0.8, "first_word": 0.2}})
+	await frames(3)
+	hud.say("Marcus", "Facilities? Nobody told me about facilities. Hang on, I'll check with reception, and then we'll see what's what.")
+	await frames(2)
+	var screen := hud.get_viewport_rect()
+	var subs := hud.subtitle_rect()
+	for c in hud.edge_controls():
+		if c != hud.edge_controls()[0]:
+			check(not subs.intersects(c.get_global_rect()), "the subtitles clear the %s along the bottom" % c.name)
+		var r := c.get_global_rect()
+		check(r.size.x > 0.0 and r.position.x >= -0.5 and r.end.x <= screen.size.x + 0.5 and r.position.y >= -0.5 and r.end.y <= screen.size.y + 0.5,
+			"%s stays on screen (%s in %s)" % [c.get_class(), str(r), str(screen.size)])
+	layer.queue_free()
 	await frames(1)
 
 
@@ -330,6 +362,7 @@ func _test_playtest() -> void:
 	for q in GameConfig.PLAYTEST.questions:
 		ids.append(q.id)
 	check("heard" in ids and "fair" in ids, "the survey asks about the guard")
+
 
 #endregion
 
@@ -430,6 +463,8 @@ func _test_fake_door() -> void:
 	LGSettings.set_value("voice", "talk", "text")
 	LGSettings.set_value("voice", "speaking", true)
 	LGBrain.stop()
+	LGVoice.stop()
+	BrainQueue.forget_probes()
 	var s := ProofScene.new()
 	add_child(s)
 	await frames(3)
@@ -553,5 +588,63 @@ func _test_fake_caught_and_timeout() -> void:
 	check(t.scripted and t.timed_out and t.reply.say != "", "the line was scripted after the timeout (%.1f s)" % float(t.thought))
 	s.queue_free()
 	await frames(2)
+
+
+
+## The setup screen downloads the brain, then the ears, then the voice, with
+## a bar for each, runs the probe, and leaves nothing for the door to do.
+func _test_fake_setup() -> void:
+	if not await _start_fake():
+		return
+	await _fake_post("/fake/reset", {})
+	LGSettings.set_value("voice", "talk", "push")
+	LGSettings.set_value("voice", "speaking", true)
+	LGSettings.set_value("voice", "hearing_model", "Whisper-Small")
+	LGBrain.stop()
+	LGVoice.stop()
+	BrainQueue.forget_probes()
+	check(ModelSetup.needed(), "with nothing started, the door goes through the setup screen")
+	await _fake_post("/fake/fresh", {"models": ["Qwen3-4B-Instruct-2507-GGUF", "Whisper-Small", "kokoro-v1"]})
+	var screen := SetupScreen.new()
+	screen.go_on = false
+	add_child(screen)
+	await frames(2)
+	check("Go in now" in screen.button_texts() and "Back" in screen.button_texts(), "you can go in early or go back")
+	var seen := {}
+	var watch := func() -> bool:
+		for step in ModelSetup.STEPS:
+			var v := screen.bar_value(step)
+			if screen.row_status(step).begins_with("Downloading") and v > 0.05 and v < 0.95:
+				seen[step] = true
+		return screen.finished
+	check(await until(watch, 45.0), "setup finishes")
+	check(seen.has("brain") and seen.has("ears") and seen.has("voice"), "each bar fills as its model downloads (%s)" % str(seen.keys()))
+	for step in ModelSetup.STEPS:
+		check(screen.row_status(step) == "Ready" and is_equal_approx(screen.bar_value(step), 1.0), "%s ends ready and full (%s)" % [step, screen.row_status(step)])
+	check(BrainQueue.cached_probe() == "enforced", "the schema probe ran during setup")
+	check(LGVoice.is_ready_for("Whisper-Small"), "his ears and voice are warm")
+	check(not ModelSetup.needed(), "so the door has nothing left to get ready")
+	check("Go in" in screen.button_texts(), "then you go in")
+	var log := await _fake_log()
+	check(log.get("pulls", []) == ["Qwen3-4B-Instruct-2507-GGUF", "Whisper-Small", "kokoro-v1"], "the brain, ears and voice were pulled in that order (%s)" % str(log.get("pulls")))
+	screen.queue_free()
+	await frames(2)
+	# No Lemonade at all.
+	LGSettings.set_value("ai", "external_url", "http://127.0.0.1:9/api/v1")
+	LGBrain.stop()
+	LGVoice.stop()
+	screen = SetupScreen.new()
+	screen.go_on = false
+	add_child(screen)
+	check(await until(func(): return screen.finished, 15.0), "with no Lemonade, setup still finishes")
+	check(screen.row_status("brain") == "Failed" and screen.row_status("ears") == "Not needed", "the brain failed and nothing else was tried")
+	var texts := screen.button_texts()
+	check("Try again" in texts and "Go in anyway" in texts and "Back" in texts, "you can try again, go in anyway or go back (%s)" % str(texts))
+	screen.queue_free()
+	await frames(2)
+	LGSettings.set_value("ai", "external_url", _fake_url)
+	LGSettings.set_value("ai", "mode", "off")
+	check(not ModelSetup.needed(), "with AI off the door needs no setup")
+	LGSettings.set_value("ai", "mode", "external")
 
 #endregion

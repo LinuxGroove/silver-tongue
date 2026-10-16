@@ -18,6 +18,9 @@ And for the tests:
   POST /fake/transcript {"text": ...}    what the next utterance is heard as
   POST /fake/slow {"seconds": ...}       delay the next chat reply
   GET  /fake/log                         what was asked (response_format and all)
+  POST /fake/fresh {"models": [...]}     those models aren't downloaded yet: /pull
+                                         starts a job that /downloads reports
+                                         for DOWNLOAD_SECONDS, in two files
   POST /fake/reset
 With --no-schema the chat ignores response_format (a server that doesn't pass
 it through), so the game's probe reports "not enforced".
@@ -51,7 +54,33 @@ REPLIES = [
 ]
 DEFAULT = {"think": "No idea what they're on about.", "say": "Service entrance. You want the front.", "tone": "calm", "do": "none", "believes": [], "suspicion": 1}
 
-state = {"transcripts": [], "slow": 0.0, "log": {"chat": [], "transcriptions": 0, "speech": [], "ws": {"connections": 0, "appends": 0, "bytes": 0, "commits": 0}}, "no_schema": False}
+# How long a fake download takes, and how big it says it is.
+DOWNLOAD_SECONDS = 2.5
+DOWNLOAD_BYTES = 2_684_354_560
+
+state = {"transcripts": [], "slow": 0.0, "missing": set(), "jobs": {}, "log": {"chat": [], "transcriptions": 0, "speech": [], "pulls": [], "ws": {"connections": 0, "appends": 0, "bytes": 0, "commits": 0}}, "no_schema": False}
+
+
+def job_now(job):
+    """A download job as /downloads reports it, DOWNLOAD_SECONDS after it
+    started: two files, the first nine tenths of the bytes."""
+    f = min(1.0, (time.time() - job["started"]) / DOWNLOAD_SECONDS)
+    got = int(DOWNLOAD_BYTES * f)
+    first = int(DOWNLOAD_BYTES * 0.9)
+    if got < first:
+        index, done, size = 1, got, first
+    else:
+        index, done, size = 2, got - first, DOWNLOAD_BYTES - first
+    out = {
+        "id": "model:" + job["model_name"], "type": "model", "model_name": job["model_name"],
+        "status": "completed" if f >= 1.0 else "downloading", "running": f < 1.0,
+        "file": "model.gguf" if index == 1 else "config.json", "file_index": index, "total_files": 2,
+        "bytes_downloaded": done, "bytes_total": size, "percent": int(100 * done / size) if size else 100,
+        "total_download_size": DOWNLOAD_BYTES, "overall_bytes_downloaded": got, "complete": f >= 1.0,
+    }
+    if f >= 1.0:
+        state["missing"].discard(job["model_name"])
+    return out
 lock = threading.Lock()
 
 
@@ -131,9 +160,14 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/health":
             return self._send(200, {"status": "ok", "version": "fake-0.1", "model_loaded": MODEL, "all_models_loaded": [MODEL, "Whisper-Small", "kokoro-v1"], "max_models": 3})
         if p == "/models":
-            return self._send(200, {"object": "list", "data": [{"id": m, "object": "model", "downloaded": True} for m in [MODEL, "LFM2.5-1.2B-Instruct-GGUF", "Whisper-Tiny", "Whisper-Small", "kokoro-v1"]]})
+            with lock:
+                for job in list(state["jobs"].values()):
+                    job_now(job)
+                missing = set(state["missing"])
+            return self._send(200, {"object": "list", "data": [{"id": m, "object": "model", "downloaded": m not in missing} for m in [MODEL, "LFM2.5-1.2B-Instruct-GGUF", "Whisper-Tiny", "Whisper-Base", "Whisper-Small", "kokoro-v1"]]})
         if p == "/downloads":
-            return self._send(200, [])
+            with lock:
+                return self._send(200, [job_now(j) for j in state["jobs"].values()])
         if p == "/fake/log":
             with lock:
                 return self._send(200, state["log"])
@@ -142,8 +176,30 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         p = self._path()
         raw = self._body()
-        if p in ("/load", "/pull", "/unload"):
+        if p == "/pull":
+            name = json.loads(raw or b"{}").get("model_name", "")
+            with lock:
+                state["log"]["pulls"].append(name)
+                if name in state["missing"]:
+                    job = state["jobs"].get(name)
+                    if job is None or job_now(job)["complete"]:
+                        job = {"model_name": name, "started": time.time()}
+                        state["jobs"][name] = job
+                    return self._send(200, job_now(job))
+            return self._send(200, {"status": "success", "message": "Installed model: " + name})
+        if p == "/load":
+            with lock:
+                # Lemonade installs a model it hasn't got when asked to load it.
+                state["missing"].discard(json.loads(raw or b"{}").get("model_name", ""))
+            return self._send(200, {"status": "success"})
+        if p == "/unload":
             return self._send(200, {"status": "ok"})
+        if p == "/fake/fresh":
+            with lock:
+                for m in json.loads(raw or b"{}").get("models", []):
+                    state["missing"].add(m)
+                    state["jobs"].pop(m, None)
+            return self._send(200, {"ok": True})
         if p == "/fake/transcript":
             with lock:
                 state["transcripts"].append(json.loads(raw or b"{}").get("text", ""))
@@ -156,7 +212,9 @@ class Handler(BaseHTTPRequestHandler):
             with lock:
                 state["transcripts"] = []
                 state["slow"] = 0.0
-                state["log"] = {"chat": [], "transcriptions": 0, "speech": [], "ws": {"connections": 0, "appends": 0, "bytes": 0, "commits": 0}}
+                state["missing"] = set()
+                state["jobs"] = {}
+                state["log"] = {"chat": [], "transcriptions": 0, "speech": [], "pulls": [], "ws": {"connections": 0, "appends": 0, "bytes": 0, "commits": 0}}
             return self._send(200, {"ok": True})
         if p == "/chat/completions":
             body = json.loads(raw or b"{}")

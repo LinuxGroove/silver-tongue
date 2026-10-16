@@ -4,7 +4,7 @@ extends Node3D
 ## the eyes, riding the head bone, that opens with the voice's loudness.
 ## The body's own eyes and brows stay as they are.
 
-## How far the mouth opens at full loudness, in metres.
+## How far the mouth opens at full loudness, in meters.
 const OPEN := 0.028
 const REST := 0.005
 

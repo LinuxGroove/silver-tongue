@@ -11,7 +11,7 @@ const PAGES := [
 	]],
 	["Talking", [
 		"Hold {talk} and talk. Let go when you're done; he hears you a moment later. Your words show up as he heard them.",
-		"Hold {whisper} as well to whisper (it carries a metre or two) or {shout} to shout (the whole corridor hears).",
+		"Hold {whisper} as well to whisper (it carries a meter or two) or {shout} to shout (the whole corridor hears).",
 		"{text} types a line instead. Stand close: from down the corridor he only catches some of it.",
 	]],
 	["Getting about", [

@@ -25,16 +25,16 @@ Run the script check and the tests before every commit. The tests start `tools/f
 | Path | What |
 |---|---|
 | `game/game_config.gd` | `GAME_ID`, setting defaults (play, voice), the play test survey, input map (Cogito's action names plus talk, whisper, shout, text) |
-| `game/brain/` | `CharacterSheet` (Marcus: who he is, his voice, his actions, his scripted lines), `GuardPrompt` (the system prompt and the history's lines), `ReplySchema` (the reply's JSON schema and the probe), `GuardRules` (what a reply may do), `Earshot` (distance and voice to clarity), `BrainQueue` (one request at a time, with a timeout and the token counts), `Guard` (hears, thinks, speaks, acts) |
+| `game/brain/` | `CharacterSheet` (Marcus: who he is, his voice, his actions, his scripted lines), `GuardPrompt` (the system prompt and the history's lines), `ReplySchema` (the reply's JSON schema and the probe), `GuardRules` (what a reply may do), `Earshot` (distance and voice to clarity), `BrainQueue` (one request at a time, with a timeout and the token counts), `Guard` (hears, thinks, speaks, acts), `ModelSetup` (starts the AI server and downloads and warms the three models before the door, with progress per model) |
 | `game/world/` | `Kit` (MegaKit pieces by name, layers), `ServiceDoorRoom` (the corridor, in code), `GuardDoor` |
 | `game/people/` | `Person` (Universal Base Characters in job colours, clips), `Face` (the mouth), `person.gdshader` |
 | `game/player/` | `CrewMember` (extends `CogitoPlayer`: the talk controls, the pause menu, comfort) |
 | `game/proof/` | `ProofScene`: the door, from the services starting to the result card and the `user://m0/` record |
-| `game/ui/` | Title and About, how to play, settings, the HUD and its readout, the typed line, the result card, the pause menu, `HotelTheme`, the menu backdrop |
+| `game/ui/` | Title and About, the setup screen (`SetupScreen`: a progress bar per model before the door), how to play, settings, the HUD and its readout, the typed line, the result card, the pause menu, `HotelTheme`, the menu backdrop |
 | `game/main.gd` | Startup: defaults, the launch ping, play tests, `--door` and `--text` (`--set=` is the shared add-on's) |
 | `game/net/online_server.gd` | Default game server; `SERVER_KEY` stays `defaultkey` in git |
-| `addons/linuxgroove/voice/` | `LGVoice` autoload (hearing over Lemonade's realtime socket or one request a turn, speaking through Kokoro sentence by sentence, `LGVoiceLine`): new in this game, to port to the shared add-on |
-| `addons/linuxgroove/llm/` | `LGBrain` and `LlmClient`, with `chat_full` (usage, timings) and `json_schema` response formats added here |
+| `addons/linuxgroove/voice/` | `LGVoice` autoload (hearing over Lemonade's realtime socket or one request a turn, speaking through Kokoro sentence by sentence, `LGVoiceLine`, downloading its models with progress): new in this game, to port to the shared add-on |
+| `addons/linuxgroove/llm/` | `LGBrain` and `LlmClient`, with `chat_full` (usage, timings), `json_schema` response formats, and `pull_async` with `download_progress` (Lemonade's `/pull` and `/downloads`) added here |
 | `addons/cogito/` | Vendored COGITO 1.1.5 with local changes (see its `VENDORED.md`) |
 | `addons/quaternius/downtowncity/` | The MegaKit pieces the game uses (CC0), from LinuxGroove/quaternius-assets by `tools/vendor_megakit.py` |
 | `addons/com.heroiclabs.nakama/` | Vendored Nakama client with a local patch (see its `VENDORED.md`) |
@@ -46,6 +46,7 @@ Run the script check and the tests before every commit. The tests start `tools/f
 ## How the game is built
 
 - **Hearing, brains and speaking all go through Lemonade** on the player's machine, started by `LGBrain` (embedded in the snap, or an external one from the settings) and never a cloud. `LGVoice` streams the microphone to the realtime transcription socket while the talk button is held, shows partials, and commits the turn on release; replies go to Kokoro one sentence at a time so the first sound comes quickly, and the sound's envelope drives the mouth. No model at all still plays: the guard falls back to scripted lines.
+- **Models download before the door, not during it.** Play and `--door` go through `SetupScreen.play_door()`: when anything is missing, `ModelSetup` starts the server, pulls and warms the brain, the hearing model and Kokoro in turn, and the screen shows a bar for each; when everything is ready it goes straight to the door. The run lives on the tree root, so going in early or backing out leaves the downloads going.
 - **The model only talks.** A turn is one chat request with the stable system prompt first (so the server's cache reuses it) and the history after, forced into `ReplySchema` by a `json_schema` response format. `GuardRules` applies the rules before anything happens: suspicion moves at most two steps a turn, `let_through` needs trust and at least two turns, `radio_security` needs suspicion 4, and 5 ends it. Facts behind a trust lock (the kitchen code) are never in the prompt.
 - **Earshot is the game's.** `Earshot` decides what reached the guard from where and in what voice, and tells the model how well it heard. Typed lines go through the same path.
 - **Every turn is measured.** `Guard.turns` keeps what was said and heard, the hearing timings, the round trip, the prompt and cached token counts, whether the reply was strict, whether it timed out, and the time to the first sound; the HUD shows the last one and `ProofScene` writes them all to `user://m0/`. Keep that record complete: M0 is the measurements.

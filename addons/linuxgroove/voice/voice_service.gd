@@ -49,8 +49,15 @@ var mic_level := 0.0
 var last_hearing := {}
 ## How many utterances came back empty.
 var misheard := 0
+## While starting: "hearing" or "speaking", the model being fetched or warmed.
+var phase := ""
+## The download in progress, 0 to 1.
+var progress := 0.0
 
 var _ready_flag := false
+var _ready_model := ""
+var _ready_base := ""
+var _starting := false
 var _mic: AudioStreamPlayer
 var _capture: AudioEffectCapture
 var _ws: WebSocketPeer
@@ -80,9 +87,55 @@ func is_ready() -> bool:
 	return _ready_flag
 
 
-## Connects to the server LGBrain uses and warms the hearing and speaking
-## models up (downloads on first use). Returns true when both answer.
+## Connects to the server LGBrain uses, downloads the hearing and speaking
+## models if the server hasn't got them (with [member progress]), and warms
+## them up. Returns true when both answer. Safe to call again: it returns at
+## once while ready with the same hearing model, and joins a start under way.
 func setup_async() -> bool:
+	if _ready_flag:
+		if is_ready_for(hearing_model):
+			return true
+		stop()
+	if _starting:
+		while _starting:
+			await get_tree().create_timer(0.25).timeout
+		return _ready_flag
+	_starting = true
+	var ok := await _setup()
+	_starting = false
+	return ok
+
+
+## Whether hearing with `model` and speaking are ready, on the server LGBrain
+## is using now.
+func is_ready_for(model: String) -> bool:
+	var brain := get_node_or_null("/root/LGBrain")
+	return _ready_flag and _ready_model == model and brain != null and brain.is_ready() and brain.base_url() == _ready_base
+
+
+## Forgets the server: closes the socket, stops the microphone. The next
+## [method setup_async] starts over.
+func stop() -> void:
+	_close_socket()
+	for player in _players.keys():
+		if is_instance_valid(player):
+			hush(player)
+	_players.clear()
+	_lines.clear()
+	_ready_flag = false
+	_listening = false
+	_waiting = false
+	_open_mic = false
+	phase = ""
+	transport = ""
+	if _mic:
+		_mic.queue_free()
+		_mic = null
+	if state != "off":
+		_set_state("off", "")
+
+
+func _setup() -> bool:
 	var brain := get_node_or_null("/root/LGBrain")
 	if brain == null:
 		_set_state("error", "No LGBrain autoload")
@@ -91,23 +144,49 @@ func setup_async() -> bool:
 		_set_state("error", brain.detail)
 		return false
 	var client: LlmClient = brain.client()
+	phase = "hearing"
+	await _fetch(brain, hearing_model)
 	_set_state("starting", "Warming up %s" % hearing_model)
 	var wav := _wav(_silence(0.6))
 	var heard_res := await client.request_bytes(HTTPClient.METHOD_POST, "/audio/transcriptions", _multipart_headers(), _multipart(wav), WARM_TIMEOUT)
 	if not heard_res.ok:
 		_set_state("error", "Hearing (%s) failed: %s" % [hearing_model, heard_res.error])
 		return false
+	phase = "speaking"
+	await _fetch(brain, speaking_model)
 	_set_state("starting", "Warming up %s" % speaking_model)
 	var spoke := await client.request_bytes(HTTPClient.METHOD_POST, "/audio/speech", PackedStringArray(["Content-Type: application/json"]),
 		JSON.stringify({"model": speaking_model, "input": "Ready.", "response_format": "wav"}).to_utf8_buffer(), WARM_TIMEOUT)
 	if not spoke.ok:
 		_set_state("error", "Speaking (%s) failed: %s" % [speaking_model, spoke.error])
 		return false
+	phase = ""
 	await _connect_realtime(brain)
 	_start_mic()
 	_ready_flag = true
+	_ready_model = hearing_model
+	_ready_base = brain.base_url()
 	_set_state("ready", "Hearing with %s (%s), speaking with %s" % [hearing_model, transport, speaking_model])
 	return true
+
+
+## Downloads a model the server hasn't got, with progress. A server that
+## can't pull it by name fetches it on the first request instead, so a
+## failure here isn't one.
+func _fetch(brain: Node, model_name: String) -> void:
+	if await brain.is_downloaded_async(model_name):
+		return
+	progress = 0.0
+	_set_state("downloading", "Downloading %s" % model_name)
+	brain.download_progress.connect(_on_pull_progress)
+	await brain.pull_async(model_name, false)
+	brain.download_progress.disconnect(_on_pull_progress)
+	progress = 1.0
+
+
+func _on_pull_progress(model_name: String, fraction: float) -> void:
+	progress = fraction
+	_set_state("downloading", "Downloading %s (%d%%)" % [model_name, int(fraction * 100.0)])
 
 
 ## Tries the realtime socket on the main port, then the port /health names;

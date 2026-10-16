@@ -2,7 +2,7 @@ extends Node
 ## Boots the game: settings, input map, theme and window, then the title.
 ##
 ## Developer shortcuts (after `--`):
-##   --door            straight to the service door (the M0 proof)
+##   --door            straight to the service door (the M0 proof), through the setup screen
 ##   --text            with --door: type your lines instead of talking
 ##   --playtest        record a play test (see LGPlaytest)
 ##   --set=section/key=value   any setting, for one run (LGSettings reads it)
@@ -20,6 +20,6 @@ func _ready() -> void:
 	if "--text" in args:
 		LGSettings.set_value("voice", "talk", "text")
 	if "--door" in args:
-		ProofScene.play()
+		SetupScreen.play_door()
 		return
 	LGScenes.change_scene("res://game/ui/title.tscn")

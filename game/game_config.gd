@@ -77,7 +77,7 @@ const ACTIONS := {
 	"reload": [],
 	# Hold to talk; the guard hears what you say while it's held.
 	"talk": ["key:V", "joy:a", "axis:rt+"],
-	# Held with talk: a whisper carries a metre or two, a shout the whole room.
+	# Held with talk: a whisper carries a meter or two, a shout the whole room.
 	"whisper": ["key:Shift", "joy:lb"],
 	"shout": ["key:Alt", "joy:rb"],
 	# Type a line instead of saying it.

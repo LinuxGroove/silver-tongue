@@ -10,6 +10,11 @@ var _brain: Label
 var _voice: Label
 var _schema: Label
 var _name: Label
+var _who: PanelContainer
+var _hint_panel: PanelContainer
+var _timing_panel: PanelContainer
+var _sub_panel: PanelContainer
+var _toast_panel: PanelContainer
 var _pips: Array[ColorRect] = []
 var _speaker: Label
 var _subtitle: Label
@@ -40,7 +45,10 @@ func _ready() -> void:
 	add_child(state)
 	# Top right: the guard and his suspicion.
 	var who := HotelTheme.hud_panel()
+	_who = who
 	who.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 16)
+	# Grows to the left as its contents come in, so it stays on screen.
+	who.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	who.add_child(row)
@@ -60,8 +68,9 @@ func _ready() -> void:
 	bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	bottom.offset_left = 160
 	bottom.offset_right = -160
-	bottom.offset_top = -190
-	bottom.offset_bottom = -40
+	# Above the hint and the readout along the bottom edge.
+	bottom.offset_top = -280
+	bottom.offset_bottom = -84
 	bottom.alignment = BoxContainer.ALIGNMENT_END
 	bottom.add_theme_constant_override("separation", 10)
 	bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -79,6 +88,10 @@ func _ready() -> void:
 	you_row.add_child(_you)
 	_you_panel.visible = false
 	bottom.add_child(_you_panel)
+	# Subtitles on a dark panel, so they read over the marble.
+	_sub_panel = HotelTheme.hud_panel(Color(0, 0, 0, 0))
+	_sub_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_sub_panel.visible = false
 	var sub := VBoxContainer.new()
 	sub.alignment = BoxContainer.ALIGNMENT_CENTER
 	sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -87,25 +100,39 @@ func _ready() -> void:
 	_subtitle = HotelTheme.hud_label("", 24, HotelTheme.TEXT, false)
 	_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_subtitle.custom_minimum_size.x = 640
 	sub.add_child(_speaker)
 	sub.add_child(_subtitle)
-	bottom.add_child(sub)
+	_sub_panel.add_child(sub)
+	bottom.add_child(_sub_panel)
 	# Bottom left: what to press.
-	_hint = HotelTheme.hud_label("", 15, HotelTheme.DIM)
-	_hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 16)
-	add_child(_hint)
-	# Bottom right: the timings.
-	_timing = HotelTheme.hud_label("", 15, HotelTheme.DIM)
-	_timing.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 16)
+	_hint_panel = HotelTheme.hud_panel()
+	_hint_panel.name = "Hint"
+	_hint_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 16)
+	_hint_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_hint = HotelTheme.hud_label("", 16, HotelTheme.TEXT)
+	_hint_panel.add_child(_hint)
+	add_child(_hint_panel)
+	# Bottom right: the timings. Both grow inwards from their corners.
+	_timing_panel = HotelTheme.hud_panel()
+	_timing_panel.name = "Readout"
+	_timing_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 16)
+	_timing_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_timing_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_timing_panel.visible = false
+	_timing = HotelTheme.hud_label("", 16, HotelTheme.TEXT)
 	_timing.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	add_child(_timing)
+	_timing_panel.add_child(_timing)
+	add_child(_timing_panel)
 	# Toasts, under the top panels.
+	_toast_panel = HotelTheme.hud_panel()
+	_toast_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_toast_panel.offset_top = 116
+	_toast_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_toast_panel.modulate.a = 0.0
 	_toast = HotelTheme.hud_label("", 18, HotelTheme.BRASS)
-	_toast.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_toast.offset_top = 90
-	_toast.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_toast.modulate.a = 0.0
-	add_child(_toast)
+	_toast_panel.add_child(_toast)
+	add_child(_toast_panel)
 
 
 func _process(delta: float) -> void:
@@ -114,9 +141,10 @@ func _process(delta: float) -> void:
 		if _sub_t <= 0.0:
 			_speaker.text = ""
 			_subtitle.text = ""
+			_sub_panel.visible = false
 	if _toast_t > 0.0:
 		_toast_t -= delta
-		_toast.modulate.a = clampf(_toast_t, 0.0, 1.0)
+		_toast_panel.modulate.a = clampf(_toast_t, 0.0, 1.0)
 	if _you_panel.visible:
 		_mic.value = LGVoice.mic_level
 
@@ -159,6 +187,7 @@ func say(speaker: String, text: String) -> void:
 		return
 	_speaker.text = speaker
 	_subtitle.text = text
+	_sub_panel.visible = text != ""
 	_sub_t = SUBTITLE_TIME + text.length() * 0.03
 
 
@@ -185,6 +214,7 @@ func listening(on: bool) -> void:
 
 func set_hint(text: String) -> void:
 	_hint.text = text
+	_hint_panel.visible = text != ""
 
 
 ## The timings of the last turn: heard (end of your words to the last
@@ -193,6 +223,7 @@ func set_hint(text: String) -> void:
 func set_timing(turn: Dictionary) -> void:
 	if not bool(LGSettings.get_value("voice", "timing", true)):
 		_timing.text = ""
+		_timing_panel.visible = false
 		return
 	var parts := PackedStringArray()
 	var hearing: Dictionary = turn.get("hearing", {})
@@ -217,9 +248,20 @@ func set_timing(turn: Dictionary) -> void:
 	if str(turn.get("vetoed", "")) != "":
 		parts.append("vetoed " + str(turn.vetoed))
 	_timing.text = "  ·  ".join(parts)
+	_timing_panel.visible = _timing.text != ""
 
 
 func toast(text: String) -> void:
 	_toast.text = text
 	_toast_t = 3.0
-	_toast.modulate.a = 1.0
+	_toast_panel.modulate.a = 1.0
+
+
+## The panels that sit against the screen's edges (for tests).
+func edge_controls() -> Array[Control]:
+	return [_who, _hint_panel, _timing_panel]
+
+
+## Where the subtitles are on screen (for tests).
+func subtitle_rect() -> Rect2:
+	return _sub_panel.get_global_rect()

@@ -4,8 +4,7 @@ extends Node
 
 const WIDTH := 540
 const NAME := "SILVER\nTONGUE"
-## Where the menu's shade ends across the screen (0..1).
-const SHADE_RIGHT := 0.5
+const SHADE_RIGHT := HotelTheme.SHADE_RIGHT
 
 var backdrop: MenuBackdrop
 var _ui: Control
@@ -23,7 +22,7 @@ func _ready() -> void:
 	_ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	layer.add_child(_ui)
 	var shade := TextureRect.new()
-	shade.texture = _shade_texture()
+	shade.texture = HotelTheme.shade_texture()
 	shade.stretch_mode = TextureRect.STRETCH_SCALE
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	shade.anchor_right = SHADE_RIGHT
@@ -32,25 +31,12 @@ func _ready() -> void:
 	var version := LGUi.label("v%s" % GameConfig.version(), "DimLabel")
 	_ui.add_child(version)
 	version.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 12)
+	version.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	version.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_col = LGUi.centered_column(_ui, WIDTH)
 	_col.get_parent().anchor_right = SHADE_RIGHT
 	LGScreenFit.center(_col)
 	show_main()
-
-
-## Dark on the left, fading to clear, so the corridor shows on the right.
-func _shade_texture() -> GradientTexture2D:
-	var g := Gradient.new()
-	g.set_color(0, Color(0.03, 0.02, 0.02, 0.94))
-	g.set_color(1, Color(0.03, 0.02, 0.02, 0.0))
-	g.add_point(0.7, Color(0.03, 0.02, 0.02, 0.85))
-	var t := GradientTexture2D.new()
-	t.gradient = g
-	t.fill_from = Vector2(0, 0)
-	t.fill_to = Vector2(1, 0)
-	t.width = 256
-	t.height = 4
-	return t
 
 
 func _clear() -> void:
@@ -100,7 +86,7 @@ func show_main() -> void:
 
 
 func _play() -> void:
-	ProofScene.play()
+	SetupScreen.play_door()
 
 
 func show_how(page: int) -> void:

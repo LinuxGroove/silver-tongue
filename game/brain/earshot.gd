@@ -1,11 +1,11 @@
 class_name Earshot
 extends RefCounted
 ## What a character makes of a line said from some way off: a whisper
-## carries a metre or two, a normal voice a few steps, a shout the whole
+## carries a meter or two, a normal voice a few steps, a shout the whole
 ## corridor. Past full clarity words drop out (marked with "..."), and past
 ## the edge nothing is heard at all.
 
-## Metres at which every word still arrives, and at which nothing does.
+## Meters at which every word still arrives, and at which nothing does.
 const RANGES := {
 	"whisper": [1.6, 3.2],
 	"normal": [3.5, 9.0],

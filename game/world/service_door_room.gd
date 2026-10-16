@@ -106,7 +106,7 @@ func _door() -> void:
 	add_child(sign)
 
 
-## A few metres of kitchen corridor past the door, so an open door shows
+## A few meters of kitchen corridor past the door, so an open door shows
 ## somewhere to go, and the area that counts you as through.
 func _beyond() -> void:
 	var z := Z0 - 2.0
