@@ -24,7 +24,7 @@ const CHECK_SECONDS := 35.0
 
 ## The outfits the Tideline's covers wear.
 const OUTFITS := {
-	"auditor": {"job": "auditor", "male": "a grey suit with a Gaming Board lanyard", "female": "a grey suit with a Gaming Board lanyard"},
+	"auditor": {"job": "auditor", "male": "a gray suit with a Gaming Board lanyard", "female": "a gray suit with a Gaming Board lanyard"},
 	"cleaner": {"job": "cleaner", "male": "a teal cleaner's tunic", "female": "a teal cleaner's tunic"},
 	"halberd_temp": {"job": "guard", "male": "Halberd's black suit and an earpiece", "female": "Halberd's black suit and an earpiece"},
 	"croupier_temp": {"job": "croupier", "male": "a croupier's burgundy suit", "female": "a croupier's burgundy suit"},

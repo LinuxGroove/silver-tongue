@@ -404,7 +404,7 @@ static func okafor() -> CharacterSheet:
 	s.start_suspicion = 1
 	s.arms_folded = false
 	s.replies = [
-		{"words": ["felix", "nephew", "my uncle", "halvorsen"], "first": "Mr Halvorsen? Oh! Forgive me, I didn't recognise you.", "say": "Please, let me take you in myself.", "tone": "friendly", "do": "escort_in", "up": -1, "believes": ["says he's Felix Halvorsen, the owner's nephew"]},
+		{"words": ["felix", "nephew", "my uncle", "halvorsen"], "first": "Mr Halvorsen? Oh! Forgive me, I didn't recognize you.", "say": "Please, let me take you in myself.", "tone": "friendly", "do": "escort_in", "up": -1, "believes": ["says he's Felix Halvorsen, the owner's nephew"]},
 		{"words": ["press", "courier", "column", "journalist", "magazine"], "say": "The press is always welcome, of course, with an invitation.", "tone": "calm", "believes": ["press"]},
 		{"words": ["beautiful hotel", "lovely hotel", "wonderful"], "say": "You're very kind.", "tone": "friendly", "up": -1},
 		{"words": ["hello", "evening", "hi "], "say": "Good evening. Is everything to your liking?", "tone": "calm"},
