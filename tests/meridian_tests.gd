@@ -148,6 +148,22 @@ func test_scripted(t) -> void:
 	t.check(ScriptedBrain._hot(" it's a fake case. ", wren), "and fake still is")
 	t.check(ScriptedBrain.reply(wren, face, {"kind": "overheard", "heard": "The Rose is a beautiful diamond."}).suspicion == 1, "overhearing it, Wren doesn't stir")
 
+## Every cover starts the night with nobody wary of them: a fresh crew is
+## no news to anyone.
+func test_calm_start(t) -> void:
+	for def in [MeridianListJob.new(), MeridianCaseJob.new()]:
+		for cover in def.cover_order:
+			var job := JobHarness.start(t, def, [cover])
+			await t.get_tree().create_timer(2.0).timeout
+			var who := []
+			for ch in job.cast.values():
+				if ch.faces.has(1):
+					who.append("%s %d" % [ch.sheet.id, ch.suspicion_of(1)])
+			t.check(job.heat.level == Heat.CALM, "%s as %s starts Calm (%s, %.1f: %s)" % [def.id, cover, Heat.name_of(job.heat.level), job.heat.value, ", ".join(who)])
+			JobHarness.done(job)
+			await t.frames(2)
+
+
 #endregion
 
 #region The guest list

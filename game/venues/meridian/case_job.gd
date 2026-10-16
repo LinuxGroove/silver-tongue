@@ -118,7 +118,7 @@ func _init() -> void:
 	keypads = {"keypad": {"door": "service", "code": KITCHEN_CODE, "label": "Kitchen door"}}
 	items = {
 		"rose_case": {"name": "the Rose's case", "at": "plinth", "carry": "carrying a black hard case", "hot": true},
-		"mae_case": {"name": "Mae's copy of the case", "at": "", "carry": "carrying a black hard case"},
+		"mae_case": {"name": "Mae's copy", "at": "", "carry": "carrying a black hard case"},
 		"press_pass": {
 			"name": "the press pass", "at": "", "carry": "",
 			"papers": "a Caldera Courier press pass in the name of %s", "forged": true,
@@ -126,7 +126,7 @@ func _init() -> void:
 			"belief": "has a Courier press pass", "to": ["teo", "priya"],
 		},
 		"insurer_letter": {
-			"name": "the letter from Brightwater", "at": "", "carry": "",
+			"name": "the policy letter", "at": "", "carry": "",
 			"papers": "a letter from Brightwater Mutual sending %s to look over the Rose's case", "forged": true,
 			"copy": "the letterhead's a scan and the signature's printed. It's a copy.",
 			"belief": "has a letter from Brightwater Mutual", "to": ["teo", "wren", "ingrid"],

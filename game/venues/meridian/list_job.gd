@@ -118,9 +118,9 @@ func _init() -> void:
 	}
 	keypads = {"keypad": {"door": "service", "code": KITCHEN_CODE, "label": "Kitchen door"}}
 	items = {
-		"guest_list": {"name": "the auction's guest list", "at": "okafor_desk", "carry": "carrying a green leather folder", "hot": true},
-		"list_copy": {"name": "a copy of the guest list", "at": "", "carry": ""},
-		"office_key": {"name": "the key to Mr Okafor's office", "at": "", "carry": ""},
+		"guest_list": {"name": "the guest list", "at": "okafor_desk", "carry": "carrying a green leather folder", "hot": true},
+		"list_copy": {"name": "a copy of the list", "at": "", "carry": ""},
+		"office_key": {"name": "Okafor's key", "at": "", "carry": ""},
 	}
 	actions = {
 		"print_copy": {"text": "print them a copy of the Marlin auction's guest list from your computer", "kind": "opening", "lockdown": true},
