@@ -27,6 +27,8 @@ var lan_address := ""
 var in_job := false
 ## The job the crew will play (see [Jobs]); the host picks it.
 var job_id := "meridian_gala"
+## The Circuit night's number when the job is one (see [Circuit]), else 0.
+var circuit := 0
 ## Where the title opens next: "board" (Mae's back room) after a job.
 var back_to := ""
 ## This device's pick before it's in a crew, for the hello.
@@ -142,12 +144,15 @@ func leave(reason := "") -> void:
 
 #region The crew
 
-## Host (or alone): picks the job, and makes every cover one it has.
-func set_job(p_job: String) -> void:
+## Host (or alone): picks the job (a Circuit night's when `night` isn't 0),
+## and makes every cover one it has.
+func set_job(p_job: String, night := 0) -> void:
 	if not is_host() or not Jobs.exists(p_job):
 		return
 	job_id = p_job
-	Jobs.current = Jobs.make(p_job)
+	circuit = night
+	Jobs.current = null
+	ensure_job()
 	if not Covers.has(str(wanted.cover)):
 		wanted["cover"] = Covers.first()
 	for id in crew:
@@ -158,8 +163,10 @@ func set_job(p_job: String) -> void:
 
 ## Makes sure [member Jobs.current] is the crew's job.
 func ensure_job() -> void:
-	if Jobs.current == null or Jobs.current.id != job_id:
+	if Jobs.current == null or Jobs.current.id != job_id or int(Jobs.current.circuit.get("seed", 0)) != circuit:
 		Jobs.current = Jobs.make(job_id if Jobs.exists(job_id) else "meridian_gala")
+		if circuit != 0:
+			Circuit.remix(Jobs.current, circuit)
 
 
 ## Picks this device's cover and body.
@@ -200,7 +207,7 @@ func job_crew() -> Array:
 func start_job() -> void:
 	if not can_start():
 		return
-	var config := {"job": job_id, "crew": job_crew(), "seed": randi()}
+	var config := {"job": job_id, "circuit": circuit, "crew": job_crew(), "seed": randi()}
 	in_job = true
 	ready_peers.clear()
 	_beacon.update_info({"state": "playing"})
@@ -220,6 +227,7 @@ func job_ready() -> void:
 func _start(config: Dictionary) -> void:
 	config["me"] = local_id()
 	job_id = str(config.get("job", job_id))
+	circuit = int(config.get("circuit", 0))
 	ensure_job()
 	JobScene.setup = config
 	SetupScreen.play_job()
@@ -320,12 +328,13 @@ func _c_job_ready() -> void:
 
 
 @rpc("authority", "reliable")
-func _h_roster(p_crew: Dictionary, p_code: String, p_job: String) -> void:
+func _h_roster(p_crew: Dictionary, p_code: String, p_job: String, p_circuit: int) -> void:
 	var first := crew.is_empty()
 	crew = p_crew
 	join_code = p_code
 	if Jobs.exists(p_job):
 		job_id = p_job
+		circuit = p_circuit
 		ensure_job()
 	if first:
 		joined.emit()
@@ -347,7 +356,7 @@ func _broadcast_roster() -> void:
 	if mode == Mode.LAN_HOST:
 		for p in multiplayer.get_peers():
 			if not _pending_hello.has(p):
-				_h_roster.rpc_id(p, crew, join_code, job_id)
+				_h_roster.rpc_id(p, crew, join_code, job_id, circuit)
 		_beacon.update_info({"players": crew.size()})
 	roster_changed.emit()
 

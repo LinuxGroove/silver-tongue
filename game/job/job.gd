@@ -110,6 +110,7 @@ func setup(p_def: JobDef, p_venue: Node3D, p_crew: Array[CrewInfo], seed := 0) -
 	crew = p_crew
 	Jobs.current = def
 	Person.add_looks(def.looks)
+	Circuit.on_setup(self)
 	minutes = float(def.start)
 	_minute = int(minutes)
 	rng.seed = seed if seed != 0 else randi()
@@ -1060,6 +1061,7 @@ func report(outcome: String) -> Dictionary:
 		"memories": _memories(),
 	}
 	def.report(self, outcome, r)
+	Circuit.on_report(def, r)
 	return r
 
 

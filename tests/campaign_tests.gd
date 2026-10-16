@@ -200,3 +200,125 @@ func test_setup_words(t) -> void:
 	t.check(str(screen._text("no_brain")).begins_with("The Hotel Meridian needs Lemonade"), "and says what needs Lemonade")
 	screen.free()
 	SetupScreen.target = was
+
+
+## The first night number (from 100000) whose remix of the gala has `rule`.
+func _gala_night(rule: String) -> int:
+	for seed in range(100000, 101000):
+		var d := MeridianGalaJob.new()
+		Circuit.remix(d, seed)
+		if rule in d.circuit.rules:
+			return seed
+	return 0
+
+
+## A character's rounds, in order: the spots they walk to.
+func _rounds(def: JobDef, char_id: String) -> Array:
+	return def.routine.filter(func(r): return str(r[1]) == char_id).map(func(r): return str(r[2]))
+
+
+func test_circuit(t) -> void:
+	var a := Circuit.make(482913)
+	var b := Circuit.make(482913)
+	t.check(a.id == b.id and a.circuit.rules == b.circuit.rules and a.take == b.take and a.routine == b.routine, "the same number is the same night")
+	var rules := {}
+	var moved := 0
+	var good := true
+	for seed in range(100000, 100080):
+		var base := MeridianGalaJob.new()
+		var d := MeridianGalaJob.new()
+		Circuit.remix(d, seed)
+		for r in d.circuit.rules:
+			rules[r] = true
+		good = good and d.circuit.rules.size() in [1, 2] and d.take >= 500 and d.take % 500 == 0
+		for id in d.circuit.shifts:
+			moved += 1
+			good = good and _rounds(d, id) == _rounds(base, id)
+		for r in d.routine:
+			if float(r[0]) > d.start:
+				good = good and float(r[0]) <= d.end - Circuit.CLEAR + 0.01 or not d.circuit.shifts.has(str(r[1]))
+		good = good and ("fast_clock" in d.circuit.rules) == (d.seconds_per_minute < base.seconds_per_minute)
+	t.check(good, "every night has a rule or two, a take in fives of hundreds, and people's rounds in their order, clear of the end")
+	t.check(rules.size() == Circuit.RULES.size(), "every rule turns up (%s)" % ", ".join(PackedStringArray(rules.keys())))
+	t.check(moved > 20, "and people's rounds move (%d)" % moved)
+	var edge := MeridianGalaJob.new()
+	Circuit.remix(edge, _gala_night("halberd_edge"))
+	var plain := MeridianGalaJob.new()
+	t.check(edge.sheet("marcus").start_suspicion == mini(3, plain.sheet("marcus").start_suspicion + 1), "Halberd's on edge: their guards start warier")
+	var talk := MeridianGalaJob.new()
+	Circuit.remix(talk, _gala_night("talk_only"))
+	var r := {"win": true, "silver": false, "clean": true, "take": talk.take}
+	Circuit.on_report(talk, r)
+	t.check(r.take == 0 and r.unpaid == "Talk only" and r.circuit == talk.circuit.seed, "talk only: a door opened another way pays nothing")
+	var faces := MeridianGalaJob.new()
+	Circuit.remix(faces, _gala_night("known_faces"))
+	var job := JobHarness.start(t, faces)
+	await t.frames(2)
+	t.check(job.crew[0].burned, "Halberd has your faces: the crew starts burned")
+	var rep := job.report("in")
+	t.check(int(rep.get("circuit", 0)) == faces.circuit.seed and not rep.get("rules", []).is_empty(), "the night's report says which night, and its rules")
+	t.check(JobReportCard.as_text(rep).contains("Circuit night %d" % faces.circuit.seed), "and so does its text")
+	JobHarness.done(job)
+	await t.frames(2)
+	t.check(JobScene.def_for({"job": "meridian_gala", "circuit": 482913}).circuit.get("seed") == 482913, "a crew's devices all remix the same night")
+	Session.set_job("meridian_gala", 482913)
+	t.check(int(Jobs.current.circuit.get("seed", 0)) == 482913, "the host picks a night")
+	Session.set_job("meridian_gala")
+	t.check(Jobs.current.circuit.is_empty() and Session.circuit == 0, "and the season's own job after it")
+	var unix := func(s: String) -> int: return Time.get_unix_time_from_datetime_string(s)
+	t.check(Circuit.week_of(unix.call("2026-10-16T12:00:00")) == [2026, 42], "a Friday is in its ISO week (%s)" % str(Circuit.week_of(unix.call("2026-10-16T12:00:00"))))
+	t.check(Circuit.week_of(unix.call("2026-10-17T23:59:00")) == [2026, 42], "so is the Saturday")
+	t.check(Circuit.week_of(unix.call("2026-10-18T00:00:00")) == [2026, 43], "a Sunday starts the next week")
+	t.check(Circuit.week_of(unix.call("2027-01-02T12:00:00")) == [2026, 53] and Circuit.week_of(unix.call("2027-01-03T12:00:00")) == [2027, 1], "across the new year too")
+	t.check(Circuit.week(unix.call("2026-10-16T12:00:00")) == 202642, "this week's contract is one number for everyone")
+
+
+func test_circuit_page(t) -> void:
+	Progress.reset()
+	LGSettings.set_value("play", "all_jobs", false)
+	var title: Node = load("res://game/ui/title.tscn").instantiate()
+	t.add_child(title)
+	await t.frames(3)
+	var shut := false
+	for b in title.find_children("", "Button", true, false):
+		shut = shut or (b.text == "The Circuit" and b.disabled)
+	t.check(shut, "the Circuit waits for the season to end")
+	LGSettings.set_value("play", "all_jobs", true)
+	title.show_circuit()
+	await t.frames(1)
+	var texts: PackedStringArray = title.button_texts()
+	for b in ["Take the contract", "Roll a night", "Play that night", "Back"]:
+		t.check(b in texts, "the Circuit has " + b)
+	title._night_entered("12")
+	t.check(title._status.text == "A night's number is six digits.", "a number that isn't a night says so")
+	title._night_entered("482913")
+	await t.frames(1)
+	var labels := PackedStringArray()
+	for l in title.find_children("", "Label", true, false):
+		labels.append((l as Label).text)
+	t.check("Circuit night 482913" in labels, "a night's page says which night (%s)" % ", ".join(labels.slice(0, 3)))
+	var said_rule := false
+	for r in Jobs.current.circuit.rules:
+		said_rule = said_rule or labels.has("%s: %s" % [Circuit.RULES[r].name, Circuit.RULES[r].text])
+	t.check(said_rule, "and its rules")
+	t.check("Play alone" in title.button_texts(), "and plays like any job")
+	title.queue_free()
+	await t.frames(1)
+	Session.set_job("meridian_gala")
+	LGSettings.set_value("play", "all_jobs", false)
+	Progress.reset()
+
+
+func test_circuit_every_job(t) -> void:
+	for id in Jobs.available():
+		var good := true
+		for seed in range(200000, 200040):
+			var base := Jobs.make(id)
+			var d := Jobs.make(id)
+			Circuit.remix(d, seed)
+			for ch in d.circuit.shifts:
+				good = good and _rounds(d, ch) == _rounds(base, ch)
+			for r in d.routine:
+				good = good and (float(r[0]) <= d.start or float(r[0]) < d.end)
+			good = good and d.events == base.events and d.take >= 500
+		t.check(good, "%s's Circuit nights keep its people's rounds in order and inside the night" % id)

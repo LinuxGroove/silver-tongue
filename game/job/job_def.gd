@@ -126,6 +126,9 @@ var wins: Array = ["done"]
 ## zone. "" for jobs with no inside.
 var inside_zone := ""
 var inside_text := ""
+## A Circuit night's remix ({} for the campaign's own): its number, rules,
+## who's rounds moved and the take before (see [Circuit]).
+var circuit := {}
 
 
 ## The venue, unbuilt (the scene adds it to the tree, which builds it).
@@ -148,6 +151,7 @@ func sheets() -> Array[CharacterSheet]:
 				s.hot_words.append(w)
 		if s.situation == "":
 			s.situation = situation
+	Circuit.on_sheets(self, out)
 	return out
 
 

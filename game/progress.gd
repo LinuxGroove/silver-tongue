@@ -91,6 +91,16 @@ func is_open(job_id: String) -> bool:
 	return is_done(str(Jobs.CAMPAIGN[i - 1]))
 
 
+## The Circuit opens once Mae's party has come off (or with every job open).
+func circuit_open() -> bool:
+	return is_done("mae_party") or bool(LGSettings.get_value("play", "all_jobs", false))
+
+
+## The best go at a Circuit night ({} if none came off).
+func circuit_best(seed: int) -> Dictionary:
+	return circuit.get(str(seed), {})
+
+
 ## The next job to play: the first open one not done.
 func next_job() -> String:
 	for j in Jobs.available():

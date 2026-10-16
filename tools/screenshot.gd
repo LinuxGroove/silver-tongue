@@ -18,6 +18,8 @@ const SETTLE := 150
 const FRAMES := 6
 ## The gala's shots, in order, for the README.
 const GALA := {
+	"board": "Mae's back room: the season's jobs venue by venue, how each came off, the take and Halberd's file",
+	"circuit": "The Circuit: this week's contract, rolling a night, or playing one a friend shared",
 	"briefing": "The title's gala page: Auntie Mae's briefing, the four covers and how to play",
 	"crew": "Hosting a crew on the network: the code, who's in and in what cover",
 	"start": "8:45 pm, just inside the front doors: the clock, the heat, your cover",
@@ -229,6 +231,25 @@ func _gala_shots(dir: String, only: Array) -> void:
 	var title: Node = load("res://game/ui/title.tscn").instantiate()
 	add_child(title)
 	await _frames(SETTLE)
+	if want.call("board") or want.call("circuit"):
+		# A season a job in, on its own file so a real one is never touched.
+		Progress.load_from("user://shot_progress.cfg")
+		Progress.reset()
+		Progress.record({"job": "meridian_gala", "venue": "meridian", "outcome": "in", "win": true, "take": 2000,
+			"clean": true, "quiet": false, "silver": true, "crew": [{"id": 1, "was_held": false}]}, 1)
+		Progress.record({"job": "meridian_list", "venue": "meridian", "outcome": "held", "win": false,
+			"crew": [{"id": 1, "was_held": true}]}, 1)
+		if want.call("board"):
+			title.show_board()
+			await _frames(FRAMES)
+			_save(dir.path_join("board.png"))
+		if want.call("circuit"):
+			LGSettings.set_value("play", "all_jobs", true, false)
+			title.show_circuit()
+			await _frames(FRAMES)
+			_save(dir.path_join("circuit.png"))
+			LGSettings.set_value("play", "all_jobs", false, false)
+		Progress.reset()
 	if want.call("briefing"):
 		title.show_gala()
 		await _frames(FRAMES)

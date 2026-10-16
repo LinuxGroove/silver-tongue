@@ -5,7 +5,7 @@ extends RefCounted
 const GAME_ID := "silver-tongue"
 ## Bump PROTOCOL whenever network messages change; mismatched builds are told
 ## to update instead of joining.
-const PROTOCOL := 2
+const PROTOCOL := 3
 ## The crew on a job, on this many devices (one player each).
 const MAX_CREW := 2
 

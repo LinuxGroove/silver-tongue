@@ -67,11 +67,13 @@ func show_report(r: Dictionary, me := 1) -> void:
 	var t: Array = [r.title, r.get("text", "")] if r.has("title") else TITLES.get(outcome, [outcome.to_upper(), ""])
 	var won := bool(r.get("win", outcome == "in"))
 	if str(r.get("job_title", "")) != "":
-		_col.add_child(HotelTheme.hud_label("%s, %s" % [r.job_title, str(r.get("venue_name", ""))], 16, HotelTheme.DIM))
+		_col.add_child(HotelTheme.hud_label("%s, %s%s" % [r.job_title, str(r.get("venue_name", "")), night(r)], 16, HotelTheme.DIM))
 	_col.add_child(HotelTheme.title_label(str(t[0]), 40, HotelTheme.BRASS if won else HotelTheme.WARN))
 	_col.add_child(_text(str(t[1]) % str(r.get("clock", "")) if "%s" in str(t[1]) else str(t[1])))
 	if won and int(r.get("take", 0)) > 0:
 		_col.add_child(HotelTheme.hud_label("The take: %s" % money(int(r.take)), 20, HotelTheme.BRASS))
+	elif won and str(r.get("unpaid", "")) != "":
+		_col.add_child(HotelTheme.hud_label("No take: the rule was %s." % str(r.unpaid).to_lower(), 18, HotelTheme.WARN))
 	for c in r.get("crew", []):
 		var bits := PackedStringArray()
 		if bool(c.get("inside", false)):
@@ -146,12 +148,16 @@ static func as_text(r: Dictionary) -> String:
 	var outcome := str(r.get("outcome", "late"))
 	var t: Array = [r.title, r.get("text", "")] if r.has("title") else TITLES.get(outcome, [outcome.to_upper(), ""])
 	var lines := PackedStringArray()
-	lines.append("Silver Tongue: %s, %s" % [r.get("job_title", "a job"), r.get("venue_name", "Caldera")])
+	lines.append("Silver Tongue: %s, %s%s" % [r.get("job_title", "a job"), r.get("venue_name", "Caldera"), night(r)])
 	var line := str(t[1]) % str(r.get("clock", "")) if "%s" in str(t[1]) else str(t[1])
 	var head := str(t[0]).to_lower()
 	lines.append("%s. %s" % [head.left(1).to_upper() + head.substr(1), line])
 	if bool(r.get("win", false)) and int(r.get("take", 0)) > 0:
 		lines.append("The take: %s" % money(int(r.take)))
+	elif bool(r.get("win", false)) and str(r.get("unpaid", "")) != "":
+		lines.append("No take: the rule was %s." % str(r.unpaid).to_lower())
+	if not r.get("rules", []).is_empty():
+		lines.append("Rules: %s." % ", ".join(PackedStringArray(r.rules)))
 	var scores := PackedStringArray()
 	for sc in SCORES:
 		scores.append("%s: %s" % [sc[1], "yes" if bool(r.get(sc[0], false)) else "no"])
@@ -204,6 +210,12 @@ func save_picture() -> String:
 func _say(text: String) -> void:
 	_note.text = text
 	_note.visible = true
+
+
+## ", Circuit night 482913" for a Circuit night's report, else "".
+static func night(r: Dictionary) -> String:
+	var n := int(r.get("circuit", 0))
+	return ", Circuit night %d" % n if n != 0 else ""
 
 
 ## Dollars as the crew would write them: "$12,500".

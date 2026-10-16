@@ -5,6 +5,7 @@ extends Node
 ##   --door            straight to the service door (the M0 proof), through the setup screen
 ##   --gala            straight into the gala, alone, through the setup screen
 ##   --job=marlin_safe straight into any job, alone
+##   --circuit=482913  straight into a Circuit night, alone
 ##   --cover=press     with --gala or --job: your cover (the gala's: facilities, guest, press, agency)
 ##   --female          with --gala or --job: a woman's body
 ##   --text            with --door or --gala: type your lines instead of talking
@@ -27,16 +28,20 @@ func _ready() -> void:
 		SetupScreen.play_door()
 		return
 	var job := ""
+	var night := 0
 	for a in args:
 		if a.begins_with("--job="):
 			job = a.trim_prefix("--job=")
+		elif a.begins_with("--circuit="):
+			night = int(a.trim_prefix("--circuit="))
+			job = Circuit.job_for(night)
 	if "--gala" in args or job != "":
 		var cover := ""
 		for a in args:
 			if a.begins_with("--cover="):
 				cover = a.trim_prefix("--cover=")
 		Session.start_solo(cover if cover != "" else "guest", "--female" in args)
-		Session.set_job(job if job != "" else "meridian_gala")
+		Session.set_job(job if job != "" else "meridian_gala", night)
 		if cover != "":
 			Session.set_cover(cover, "--female" in args)
 		Session.start_job()

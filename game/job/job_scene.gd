@@ -26,7 +26,8 @@ const REACH := 2.4
 
 static var current: JobScene
 ## Set before the scene starts (see [method play]): "job" (an id from
-## [Jobs]), "crew" (CrewInfo dicts), "me" (this device's crew id) and "seed".
+## [Jobs]), "circuit" (a Circuit night's number, or 0), "crew" (CrewInfo
+## dicts), "me" (this device's crew id) and "seed".
 static var setup := {}
 
 var def: JobDef
@@ -85,13 +86,21 @@ static func solo(cover := "", female := false, player_name := "", job_id := "mer
 	return {"job": job_id, "crew": [c.to_dict()], "me": 1, "seed": randi()}
 
 
+## The job a setup plays: its job, remixed when it's a Circuit night.
+static func def_for(config: Dictionary) -> JobDef:
+	var job_id := str(config.get("job", "meridian_gala"))
+	var out := Jobs.make(job_id if Jobs.exists(job_id) else "meridian_gala")
+	if int(config.get("circuit", 0)) != 0:
+		Circuit.remix(out, int(config.circuit))
+	return out
+
+
 func _ready() -> void:
 	current = self
 	started_at = Time.get_ticks_msec()
 	if setup.is_empty():
 		setup = solo()
-	var job_id := str(setup.get("job", "meridian_gala"))
-	def = Jobs.make(job_id if Jobs.exists(job_id) else "meridian_gala")
+	def = def_for(setup)
 	Jobs.current = def
 	Person.add_looks(def.looks)
 	venue = def.venue()
@@ -137,7 +146,7 @@ func _ready() -> void:
 		net.ready_for_state()
 	hud.set_clock(job.clock_text() if job else JobDef.clock_text(def.start))
 	hud.set_cover(me)
-	hud.set_goal(def.goal)
+	hud.set_goal(def.goal if def.circuit.is_empty() else "%s\nTonight: %s" % [def.goal, Circuit.rules_text(def)])
 	hud.set_hint(_hint())
 	for it in def.items:
 		_on_item(it, int(job.items[it].holder) if job else 0, str(job.items[it].at) if job else str(def.items[it].get("at", "")))

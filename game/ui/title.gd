@@ -1,8 +1,9 @@
 extends Node
 ## The title screen, over the service door: Mae's back room (the season's
-## jobs, her briefings, the take and a new face), each job's briefing with
-## your cover and a crew on the local network, joining a crew, the door
-## itself (M0's proof), how to play, settings, about and quit.
+## jobs, her briefings, the take and a new face), the Circuit (remixed
+## nights and the weekly contract), each job's briefing with your cover and
+## a crew on the local network, joining a crew, the door itself (M0's
+## proof), how to play, settings, about and quit.
 
 const WIDTH := 540
 const NAME := "SILVER\nTONGUE"
@@ -17,6 +18,7 @@ var _female := false
 var _status: Label
 var _hosts: VBoxContainer
 var _code: LineEdit
+var _night: LineEdit
 var _lobby_queued := false
 var _refocus := ""
 var _forget_asked := false
@@ -110,6 +112,10 @@ func show_main() -> void:
 	_text("Say the right thing. Not too loud.", true)
 	_col.add_child(Control.new())
 	_col.add_child(LGUi.button("Mae's back room", show_board, WIDTH))
+	var circuit := LGUi.button("The Circuit", show_circuit, WIDTH)
+	circuit.disabled = not Progress.circuit_open()
+	circuit.tooltip_text = "" if Progress.circuit_open() else "Opens after Mae's party"
+	_col.add_child(circuit)
 	_col.add_child(LGUi.button("Join a crew", show_join, WIDTH))
 	_col.add_child(LGUi.button("The service door", _play, WIDTH))
 	_col.add_child(LGUi.button("How to play", show_how.bind(0), WIDTH))
@@ -189,6 +195,72 @@ func _buy_face() -> void:
 
 #endregion
 
+#region The Circuit
+
+## The Circuit: this week's contract, a night rolled at random, or one
+## whose number a friend shared.
+func show_circuit() -> void:
+	LGVoice.hush(_mae)
+	_clear("circuit")
+	_heading("The Circuit")
+	_text("Every job again, remixed by a night's number: people's rounds moved, new rules, a new take. The same number is the same night for everyone, so share it.", true)
+	var week := Circuit.week()
+	_col.add_child(HotelTheme.hud_label("This week's contract", 20, HotelTheme.BRASS))
+	_text(_night_text(week))
+	_col.add_child(LGUi.button("Take the contract", show_night.bind(week), WIDTH))
+	_col.add_child(HotelTheme.hud_label("Any night", 20, HotelTheme.BRASS))
+	_col.add_child(LGUi.button("Roll a night", _roll_night, WIDTH))
+	_night = LineEdit.new()
+	_night.placeholder_text = "A night's number"
+	_night.max_length = 7
+	_night.custom_minimum_size.x = WIDTH
+	_night.text_submitted.connect(_night_entered)
+	LGUi.gamepad_text_entry(_night)
+	_col.add_child(_night)
+	_col.add_child(LGUi.button("Play that night", _night_pressed, WIDTH))
+	_status = _text("", true)
+	_back(show_main)
+	LGUi.focus_first(_col)
+
+
+## A night in a line: which job, its rules, the take, and your best.
+func _night_text(seed: int) -> String:
+	var def := Circuit.make(seed)
+	if def == null:
+		return ""
+	var best := Progress.circuit_best(seed)
+	return "%s at %s. %s The take: %s.%s" % [def.title, _the(def.venue_name), Circuit.rules_text(def), JobReportCard.money(def.take),
+		(" Your best: %s." % JobReportCard.money(int(best.take))) if not best.is_empty() else ""]
+
+
+## "The Hotel Meridian" as "the Hotel Meridian", mid-sentence.
+static func _the(venue: String) -> String:
+	return "the" + venue.substr(3) if venue.begins_with("The ") else venue
+
+
+## A Circuit night's page: the job's, remixed.
+func show_night(seed: int) -> void:
+	Session.set_job(Circuit.job_for(seed), seed)
+	show_job()
+
+
+func _roll_night() -> void:
+	show_night(Circuit.roll())
+
+
+func _night_entered(text: String) -> void:
+	var digits := text.strip_edges().replace(" ", "")
+	if digits.is_valid_int() and int(digits) >= Circuit.LOWEST and int(digits) <= Circuit.HIGHEST:
+		show_night(int(digits))
+	elif _status:
+		_status.text = "A night's number is six digits."
+
+
+func _night_pressed() -> void:
+	_night_entered(_night.text)
+
+#endregion
+
 #region A job
 
 ## The gala's page (the first job's).
@@ -197,9 +269,10 @@ func show_gala() -> void:
 
 
 ## A job's page: the briefing (read out in Mae's voice when it can be),
-## your cover, and how you're playing.
+## your cover, and how you're playing. On a Circuit night it says so, with
+## the night's rules and take.
 func show_job(id := "") -> void:
-	if id != "" and id != Session.job_id:
+	if id != "" and (id != Session.job_id or Session.circuit != 0):
 		Session.set_job(id)
 	Session.ensure_job()
 	var def := Jobs.current
@@ -207,8 +280,15 @@ func show_job(id := "") -> void:
 		_cover = Covers.first()
 	var fresh := _page != "job"
 	_clear("job")
-	_heading(def.title)
-	_text("%s. The take: %s." % [def.venue_name, JobReportCard.money(def.take)], true)
+	var night := int(def.circuit.get("seed", 0))
+	if night != 0:
+		_heading("This week's contract" if night == Circuit.week() else "Circuit night %d" % night)
+		_text("%s at %s. The take: %s." % [def.title, _the(def.venue_name), JobReportCard.money(def.take)], true)
+		for r in def.circuit.rules:
+			_text("%s: %s" % [Circuit.RULES[r].name, Circuit.RULES[r].text])
+	else:
+		_heading(def.title)
+		_text("%s. The take: %s." % [def.venue_name, JobReportCard.money(def.take)], true)
 	_text("%s: \"%s\"" % [_briefer(def), def.briefing])
 	_text("The job: %s." % def.goal.trim_suffix("."), true)
 	if fresh:
@@ -233,7 +313,7 @@ func show_job(id := "") -> void:
 	_col.add_child(LGUi.button("Play alone", _play_alone, WIDTH))
 	_col.add_child(LGUi.button("Host a crew on this network", _host, WIDTH))
 	_col.add_child(LGUi.button("Join a crew", show_join, WIDTH))
-	_back(show_board)
+	_back(show_circuit if night != 0 else show_board)
 	LGUi.focus_first(_col)
 
 
@@ -357,7 +437,7 @@ func show_lobby() -> void:
 	_clear("lobby")
 	_heading("Your crew")
 	Session.ensure_job()
-	_text("%s, %s" % [Jobs.current.title, Jobs.current.venue_name], true)
+	_text("%s, %s%s" % [Jobs.current.title, Jobs.current.venue_name, JobReportCard.night({"circuit": Session.circuit})], true)
 	if Session.join_code != "":
 		_text("Code: %s" % JoinCode.pretty(Session.join_code))
 		_text("On another computer on this network: Join a crew, then pick this crew or type the code.", true)
@@ -526,6 +606,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				show_main()
 			elif _page == "job":
 				LGVoice.hush(_mae)
-				show_board()
+				if Session.circuit != 0:
+					show_circuit()
+				else:
+					show_board()
 			else:
 				show_main()
