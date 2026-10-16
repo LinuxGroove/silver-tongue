@@ -1,8 +1,8 @@
 class_name TidelineRules
 extends RefCounted
-## What the Tideline's three jobs share: the cameras Wes watches from the eye
+## What the Tideline's three jobs share: the cameras Dmitri watches from the eye
 ## (and the three ways to blind them: loop them at the junction box in the
-## alley, keep Wes on the phone, or have him pull footage for the Gaming
+## alley, keep Dmitri on the phone, or have him pull footage for the Gaming
 ## Board), the push bars on the back of the house's doors, the rooms with
 ## money in them, the crew's outfits and the numbers on the phone.
 ##
@@ -14,12 +14,12 @@ const CAMERA_ZONES := ["cage", "vault", "count_room", "corridor"]
 const MONEY_ROOMS := {"cage": "the cage", "vault": "the vault", "count_room": "the count room"}
 ## Rooms the crew can be in without anyone minding.
 const PUBLIC := ["floor", "pit", "lounge", "high_limit", "hl_table", "outside", "doorway"]
-## Game minutes a loop at the junction box blinds the cameras, and that Wes
+## Game minutes a loop at the junction box blinds the cameras, and that Dmitri
 ## spends pulling footage for the Board.
 const LOOP_MINUTES := 10.0
 const BUSY_MINUTES := 8.0
 ## Real seconds Marcus spends at the end of the corridor looking for whoever
-## Wes saw on camera.
+## Dmitri saw on camera.
 const CHECK_SECONDS := 35.0
 
 ## The outfits the Tideline's covers wear.
@@ -41,18 +41,18 @@ const EXTRAS := {"floor": "guest", "pit": "croupier", "lounge": "guest", "high_l
 ## Numbers on the phone, by who answers.
 const PHONE := {
 	"anton": {"id": "manager", "name": "Anton Varga, night manager", "who": "anton"},
-	"wes": {"id": "eye", "name": "Tideline surveillance", "who": "wes"},
+	"dmitri": {"id": "eye", "name": "Tideline surveillance", "who": "dmitri"},
 	"pilar": {"id": "housekeeping", "name": "Tideline housekeeping", "who": "pilar"},
 	"gloria": {"id": "count", "name": "The count room", "who": "gloria"},
 	"augie": {"id": "pit", "name": "The pit", "who": "augie"},
 	"marcus": {"id": "halberd", "name": "Halberd, the staff door", "who": "marcus"},
-	"noor": {"id": "cage", "name": "The cage", "who": "noor"},
+	"imani": {"id": "cage", "name": "The cage", "who": "imani"},
 }
-## Mae keeps Wes busy for the Gaming Board.
-const FOOTAGE := {"id": "footage", "label": "Keep Wes busy pulling footage", "who": "wes", "as": "Caldera Gaming Board",
+## Mae keeps Dmitri busy for the Gaming Board.
+const FOOTAGE := {"id": "footage", "label": "Keep Dmitri busy pulling footage", "who": "dmitri", "as": "Caldera Gaming Board",
 	"line": "Caldera Gaming Board. We need last Tuesday's footage from the cage pulled now, while I hold. All of it, please.",
 	"answer": "Now? Fine. Give me a few minutes.",
-	"mae": "I'll ring Wes as the Gaming Board and have him pull old tapes. He won't look at a live screen for a while."}
+	"mae": "I'll ring Dmitri as the Gaming Board and have him pull old tapes. He won't look at a live screen for a while."}
 ## The suggested lines that suit any cover at the Tideline.
 const PLAYER_LINES := [
 	"Evening. %s. I'm just here to play.",
@@ -71,17 +71,17 @@ static func phone_for(ids: Array) -> Array:
 
 #region The cameras
 
-## Wes is looking at his screens: in the eye, not on a call, not pulling
+## Dmitri is looking at his screens: in the eye, not on a call, not pulling
 ## footage, and the cameras aren't looped.
 static func watching(job: Job) -> bool:
-	var wes: Character = job.cast.get("wes")
-	if wes == null:
+	var dmitri: Character = job.cast.get("dmitri")
+	if dmitri == null:
 		return false
 	if job.minutes < float(job.flags.get("cams_looped_until", -1.0)):
 		return false
-	if job.minutes < float(job.flags.get("wes_busy_until", -1.0)):
+	if job.minutes < float(job.flags.get("dmitri_busy_until", -1.0)):
 		return false
-	return not (wes.walking or wes.minding or wes.on_call != 0)
+	return not (dmitri.walking or dmitri.minding or dmitri.on_call != 0)
 
 
 ## Every half second: crew on camera somewhere they shouldn't be are seen
@@ -117,26 +117,26 @@ static func tick(job: Job, def: JobDef, delta: float) -> void:
 		spotted(job, c, zone)
 
 
-## Wes sees a crew member on camera where they shouldn't be.
+## Dmitri sees a crew member on camera where they shouldn't be.
 static func spotted(job: Job, c: CrewInfo, zone: String) -> void:
-	var wes: Character = job.cast.get("wes")
-	if wes == null:
+	var dmitri: Character = job.cast.get("dmitri")
+	if dmitri == null:
 		return
-	var f := wes.face_of(c.id)
+	var f := dmitri.face_of(c.id)
 	f["met"] = true
 	if zone == "corridor":
 		JobRules.nudge(f, 2)
 		job.heat.bump(Heat.KEYPAD_SEEN)
-		wes.event("On the back corridor's camera: %s, a face you don't know, where only staff should be." % job.describe(c.id), c.id, "event")
+		dmitri.event("On the back corridor's camera: %s, a face you don't know, where only staff should be." % job.describe(c.id), c.id, "event")
 		var m: Character = job.cast.get("marcus")
 		if m and not m.minding and not m.walking:
-			wes.say_scripted("Marcus, it's Wes. Someone I don't know in the back corridor: %s." % job.describe(c.id), m)
+			dmitri.say_scripted("Marcus, it's Dmitri. Someone I don't know in the back corridor: %s." % job.describe(c.id), m)
 			m.walk_to("corridor_check")
 			job.flags["marcus_back_at"] = job.elapsed + CHECK_SECONDS
-		job.toast_for.emit(c.id, "The corridor's camera has you. Wes is radioing Marcus.")
+		job.toast_for.emit(c.id, "The corridor's camera has you. Dmitri is radioing Marcus.")
 		return
 	JobRules.nudge(f, JobRules.CAUGHT)
-	wes.event("On the camera in %s: %s, where nobody should be. That's a call to security." % [MONEY_ROOMS.get(zone, zone), job.describe(c.id)], c.id, "event")
+	dmitri.event("On the camera in %s: %s, where nobody should be. That's a call to security." % [MONEY_ROOMS.get(zone, zone), job.describe(c.id)], c.id, "event")
 
 
 ## The Rose (or anything) taken where a camera can see it.
@@ -144,11 +144,11 @@ static func seen_taking(job: Job, c: CrewInfo, what: String) -> bool:
 	var zone: String = job.venue.zone_at(c.position())
 	if not zone in CAMERA_ZONES or not watching(job):
 		return false
-	var wes: Character = job.cast.get("wes")
-	var f := wes.face_of(c.id)
+	var dmitri: Character = job.cast.get("dmitri")
+	var f := dmitri.face_of(c.id)
 	f["met"] = true
 	JobRules.nudge(f, JobRules.CAUGHT)
-	wes.event("On the camera in %s: %s just took %s." % [MONEY_ROOMS.get(zone, zone), job.describe(c.id), what], c.id, "event")
+	dmitri.event("On the camera in %s: %s just took %s." % [MONEY_ROOMS.get(zone, zone), job.describe(c.id), what], c.id, "event")
 	return true
 
 #endregion
@@ -256,9 +256,9 @@ static func at(job: Job, ch: Character, spot_name: String, within := 0.4) -> boo
 	return ch != null and not ch.walking and ch.global_position.distance_to(job.spot(spot_name).origin) < within
 
 
-## Wes is busy with old footage for a while.
+## Dmitri is busy with old footage for a while.
 static func keep_busy(job: Job, ch: Character) -> void:
-	job.flags["wes_busy_until"] = job.minutes + BUSY_MINUTES
+	job.flags["dmitri_busy_until"] = job.minutes + BUSY_MINUTES
 	ch.note("The Gaming Board rang: you're pulling last Tuesday's cage footage for them now, and you're not watching the live screens till it's done.")
 
 #endregion

@@ -14,9 +14,9 @@ const SPOT_ZONES := {
 	"augie": "pit", "tess": "pit", "horace": "lounge", "marisol": "lounge", "anton": "high_limit",
 	"hugo": "high_limit", "hl_in": "high_limit", "corridor_check": "corridor", "office_guard": "corridor",
 	"count_out": "corridor", "staff_in": "corridor", "count_in": "count_room", "marcus_count": "count_room",
-	"gloria": "count_room", "count_look": "count_room", "wes": "eye", "eye_in": "eye", "held": "office",
-	"office_in": "office", "lockers": "staff_room", "staff_room_in": "staff_room", "bea": "cage", "noor": "cage",
-	"horace_window": "cage", "horace_listen": "cage", "noor_vault": "cage", "horace_vault": "cage", "vault_out": "cage",
+	"gloria": "count_room", "count_look": "count_room", "dmitri": "eye", "eye_in": "eye", "held": "office",
+	"office_in": "office", "lockers": "staff_room", "staff_room_in": "staff_room", "bea": "cage", "imani": "cage",
+	"horace_window": "cage", "horace_listen": "cage", "imani_vault": "cage", "horace_vault": "cage", "vault_out": "cage",
 	"cage_in": "cage", "vault_in": "vault", "rose_table": "vault",
 }
 ## Places in each room, for the zones.
@@ -285,7 +285,7 @@ func test_count_cleaner_two(t) -> void:
 	await _count_cleaner(t, true)
 
 
-## Halberd's relief for the drop: Wes has them on his log (Mae rang as
+## Halberd's relief for the drop: Dmitri has them on his log (Mae rang as
 ## Dispatch, or a crewmate did), so Marcus takes them on and walks the
 ## drop into the count room with them at eleven.
 func _count_relief(t, two: bool) -> void:
@@ -293,13 +293,13 @@ func _count_relief(t, two: bool) -> void:
 	var job: Job = await _start(t, TidelineCountJob.new(), ["halberd_temp", "player"] if two else ["halberd_temp"])
 	var c := job.crew_by_id(1)
 	if two:
-		t.check(await _ring(t, job, 2, "eye", "Halberd Dispatch", "Halberd Dispatch. We're sending a relief guard for tonight's drop. Put them on your log.") == "log_relief", "%s: Wes takes Dispatch's call" % label)
+		t.check(await _ring(t, job, 2, "eye", "Halberd Dispatch", "Halberd Dispatch. We're sending a relief guard for tonight's drop. Put them on your log.") == "log_relief", "%s: Dmitri takes Dispatch's call" % label)
 		job.hang_up(2)
 	else:
-		t.check(await _mae(t, job, 1, "dispatch"), "%s: Mae rings Wes as Dispatch" % label)
-	t.check(job.flags.has("relief_logged"), "%s: the relief's on Wes's log" % label)
-	t.check(await _say(t, job, 1, "marcus", "Evening. Dispatch sent me as relief for the drop.") == "ask_surveillance", "%s: Marcus asks Wes" % label)
-	t.check(await t.until(func() -> bool: return c.flags.has("drop_temp"), 10.0), "%s: Wes has them on the log, and Marcus takes them on for the drop" % label)
+		t.check(await _mae(t, job, 1, "dispatch"), "%s: Mae rings Dmitri as Dispatch" % label)
+	t.check(job.flags.has("relief_logged"), "%s: the relief's on Dmitri's log" % label)
+	t.check(await _say(t, job, 1, "marcus", "Evening. Dispatch sent me as relief for the drop.") == "ask_surveillance", "%s: Marcus asks Dmitri" % label)
+	t.check(await t.until(func() -> bool: return c.flags.has("drop_temp"), 10.0), "%s: Dmitri has them on the log, and Marcus takes them on for the drop" % label)
 	t.check(job.venue.doors.staff.is_open, "%s: through the staff door" % label)
 	JobHarness.stand_at(job, 1, "count_out")
 	await JobHarness.clock_to(t, job, TidelineCountJob.DROP + 0.5)
@@ -323,7 +323,7 @@ func test_count_relief_two(t) -> void:
 
 ## Bea's codes: off shift at the bar she talks, and at twenty past the
 ## count room sits empty. In by the back door, with the cameras blind (the
-## loop at the junction box, or a crewmate keeping Wes on the phone).
+## loop at the junction box, or a crewmate keeping Dmitri on the phone).
 func _count_bea(t, two: bool) -> void:
 	var label := "count, Bea's codes%s" % (" with two" if two else "")
 	var job: Job = await _start(t, TidelineCountJob.new(), ["player", "player"] if two else ["player"])
@@ -342,11 +342,11 @@ func _count_bea(t, two: bool) -> void:
 	t.check(str(bea.turns.back().reply.say).contains("twenty past"), "%s: and when the count room's empty (%s)" % [label, bea.turns.back().reply.say])
 	await JobHarness.clock_to(t, job, TidelineCountJob.RUN - 1)
 	if two:
-		t.check(await _ring(t, job, 2, "eye", "Withheld", "Hi Wes. Seen any good westerns lately?") == "none" and job.cast.wes.on_call == 2, "%s: a crewmate keeps Wes talking films" % label)
+		t.check(await _ring(t, job, 2, "eye", "Withheld", "Hi Dmitri. Seen any good westerns lately?") == "none" and job.cast.dmitri.on_call == 2, "%s: a crewmate keeps Dmitri talking films" % label)
 	else:
 		JobHarness.stand_at(job, 1, "panel")
 		t.check(job.use(1, "cam_panel").contains("loop") and job.tools_used == 1, "%s: a loop at the junction box blinds the eye" % label)
-	t.check(not TidelineRules.watching(job), "%s: Wes isn't watching" % label)
+	t.check(not TidelineRules.watching(job), "%s: Dmitri isn't watching" % label)
 	JobHarness.stand_at(job, 1, "back_out")
 	t.check(job.keypad(1, TidelineCast.BACK_CODE, "back_pad") == "The lock clicks." and job.venue.doors.back.is_open, "%s: Bea's code opens the back door" % label)
 	await JobHarness.clock_to(t, job, TidelineCountJob.RUN + 0.5)
@@ -374,8 +374,8 @@ func test_count_wrong(t) -> void:
 	t.check(await t.until(func() -> bool: return marcus.face_of(1).checks.get("call_manager", "") == "bad" and not marcus.busy, 10.0), "count, wrong: nobody told Anton, so it doesn't check out")
 	t.check(not job.crew_by_id(1).flags.has("cleared") and not job.venue.doors.staff.is_open and marcus.face_of(1).suspicion >= 2, "count, wrong: Marcus keeps the door shut, and he's wary")
 	JobHarness.stand(job, 1, Vector3(5, 0, -6), Vector3(5, 0, -10))
-	t.check(await _say(t, job, 2, "marcus", "Evening. Dispatch sent me as relief for the drop.") == "ask_surveillance", "count, wrong: Marcus asks Wes about the relief")
-	t.check(await t.until(func() -> bool: return marcus.face_of(2).checks.get("ask_surveillance", "") == "bad" and not marcus.busy, 10.0), "count, wrong: nobody's on Wes's log")
+	t.check(await _say(t, job, 2, "marcus", "Evening. Dispatch sent me as relief for the drop.") == "ask_surveillance", "count, wrong: Marcus asks Dmitri about the relief")
+	t.check(await t.until(func() -> bool: return marcus.face_of(2).checks.get("ask_surveillance", "") == "bad" and not marcus.busy, 10.0), "count, wrong: nobody's on Dmitri's log")
 	t.check(not job.crew_by_id(2).flags.has("drop_temp") and not job.venue.doors.staff.is_open, "count, wrong: no relief, no door")
 	JobHarness.done(job)
 	await t.frames(2)
@@ -388,14 +388,14 @@ func test_count_cameras(t) -> void:
 	var heat := job.heat.events
 	JobHarness.stand_at(job, 1, "count_out")
 	t.check(await t.until(func() -> bool: return job.flags.has("cam:1:corridor"), 2.0), "count, cameras: the eye sees a guest in the back corridor")
-	t.check(marcus.post == "corridor_check" and job.heat.events > heat and job.cast.wes.face_of(1).suspicion >= 3, "count, cameras: Wes sends Marcus to look, and the place heats up")
+	t.check(marcus.post == "corridor_check" and job.heat.events > heat and job.cast.dmitri.face_of(1).suspicion >= 3, "count, cameras: Dmitri sends Marcus to look, and the place heats up")
 	t.check(not c.held, "count, cameras: but nobody's held for the corridor")
 	await JobHarness.clock_to(t, job, TidelineCountJob.RUN + 0.5)
 	_walk(job, "gloria", "cage_in")
 	_walk(job, "marcus", "cage_c")
 	job.keypad(1, TidelineCast.COUNT_CODE, "count_pad")
 	JobHarness.stand_at(job, 1, "count_look")
-	t.check(await t.until(func() -> bool: return c.held, 4.0), "count, cameras: in the count room on camera, Wes calls it in and they're held")
+	t.check(await t.until(func() -> bool: return c.held, 4.0), "count, cameras: in the count room on camera, Dmitri calls it in and they're held")
 	t.check(job.venue.doors.office.locked and job.cast.values().any(func(ch): return ch.minding), "count, cameras: in Halberd's office, minded")
 	t.check(job.use(1, "door:office") != "" and job.keypad(1, TidelineCast.BACK_CODE, "back_pad") == "", "count, cameras: and going nowhere")
 	await t.frames(2)
@@ -423,7 +423,7 @@ func test_count_lockdown(t) -> void:
 
 
 ## The count room's own rules: the buzzer, push bars, the loop, the sheet
-## under Gloria's eye, Bea on shift, and Mae keeping Wes busy.
+## under Gloria's eye, Bea on shift, and Mae keeping Dmitri busy.
 func test_count_rules(t) -> void:
 	var job: Job = await _start(t, TidelineCountJob.new(), ["player", "cleaner"])
 	var c := job.crew_by_id(1)
@@ -452,8 +452,8 @@ func test_count_rules(t) -> void:
 	job.minutes += TidelineRules.LOOP_MINUTES + 0.5
 	await t.frames(2)
 	t.check(TidelineRules.watching(job) and job.flags.has("loop_over") and job.use(1, "cam_panel").contains("won't take twice"), "count, rules: the loop runs out, and won't take twice")
-	t.check(await _mae(t, job, 2, "footage") and not TidelineRules.watching(job), "count, rules: Mae has Wes pulling old footage")
-	job.minutes = float(job.flags.wes_busy_until) + 0.5
+	t.check(await _mae(t, job, 2, "footage") and not TidelineRules.watching(job), "count, rules: Mae has Dmitri pulling old footage")
+	job.minutes = float(job.flags.dmitri_busy_until) + 0.5
 	await t.frames(2)
 	t.check(TidelineRules.watching(job), "count, rules: and he's back on his screens after")
 	var bea: Character = job.cast.bea
@@ -477,18 +477,18 @@ func test_count_bea_two(t) -> void:
 
 #region The pit boss's favor
 
-## Wes's camera on wheel two: the Gaming Board asks him to watch it (Mae,
+## Dmitri's camera on wheel two: the Gaming Board asks him to watch it (Mae,
 ## or a crewmate on the phone as the Board), the next spin with Tess
 ## dealing catches Pruitt, and the crew tells Augie it was them.
 func _favor_camera(t, two: bool) -> void:
 	var label := "favor, the camera%s" % (" with two" if two else "")
 	var job: Job = await _start(t, TidelineFavorJob.new(), ["player", "inspector"] if two else ["player"])
 	if two:
-		t.check(await _ring(t, job, 2, "eye", "Caldera Gaming Board", "Caldera Gaming Board. We've had a complaint about wheel two. Watch it tonight, please.") == "watch_wheel", "%s: Wes takes the Board's call" % label)
+		t.check(await _ring(t, job, 2, "eye", "Caldera Gaming Board", "Caldera Gaming Board. We've had a complaint about wheel two. Watch it tonight, please.") == "watch_wheel", "%s: Dmitri takes the Board's call" % label)
 		job.hang_up(2)
 	else:
-		t.check(await _mae(t, job, 1, "board"), "%s: Mae rings Wes as the Board" % label)
-	t.check(job.flags.has("watch_wheel") and TidelineRules.watching(job), "%s: Wes has a camera on wheel two" % label)
+		t.check(await _mae(t, job, 1, "board"), "%s: Mae rings Dmitri as the Board" % label)
+	t.check(job.flags.has("watch_wheel") and TidelineRules.watching(job), "%s: Dmitri has a camera on wheel two" % label)
 	await JobHarness.clock_to(t, job, TidelineFavorJob.SPINS[0] + 0.2)
 	t.check(str(job.flags.get("caught", "")) == "camera", "%s: the next spin, Pruitt's caught on tape" % label)
 	t.check(job.cast.lyle.post == "kerb" and job.cast.tess.post == "staff_out", "%s: Pruitt's walked out, and Tess goes off the floor" % label)
@@ -684,12 +684,12 @@ func _released(t, job: Job, id: int, label: String) -> void:
 	t.check(str(job.flags.get("release", "")) == "keys" and job.cast.horace.post == "horace_vault", "%s: Horace goes to open the vault" % label)
 	JobHarness.stand_at(job, id, "window_2")
 	_walk(job, "horace", "horace_vault")
-	_walk(job, "noor", "noor_vault")
+	_walk(job, "imani", "imani_vault")
 	t.check(await t.until(func() -> bool: return str(job.flags.get("release", "")) == "fetch", 2.0), "%s: both keys turn" % label)
 	_walk(job, "horace", "rose_table")
 	t.check(await t.until(func() -> bool: return str(job.flags.get("release", "")) == "window", 2.0), "%s: Horace takes the Rose from its table" % label)
 	_walk(job, "horace", "horace_window")
-	_walk(job, "noor", "noor")
+	_walk(job, "imani", "imani")
 	t.check(await t.until(func() -> bool: return job.holder("rose") == job.crew_by_id(id), 2.0), "%s: and passes it through the window" % label)
 	t.check(not job.flags.has("vault_open") and job.cast.horace.post == "horace", "%s: Horace goes back to his table" % label)
 	JobHarness.stand_at(job, id, "crew_0")
@@ -779,9 +779,9 @@ func test_vault_favor_two(t) -> void:
 	await _vault_favor(t, true)
 
 
-## The float: hired as Noor's cage temp, in the cage when the vault opens at
+## The float: hired as Imani's cage temp, in the cage when the vault opens at
 ## half past eleven, with Horace's song sending him to the lounge and the
-## eye blind (Mae has Wes pulling footage, or a crewmate loops the cameras).
+## eye blind (Mae has Dmitri pulling footage, or a crewmate loops the cameras).
 func _vault_float(t, two: bool) -> void:
 	var label := "vault, the float%s" % (" with two" if two else "")
 	var job: Job = await _vault(t, ["cage_temp", "player"] if two else ["cage_temp"])
@@ -794,8 +794,8 @@ func _vault_float(t, two: bool) -> void:
 		t.check(await _mae(t, job, 1, "staffing"), "%s: Mae rings Anton as Caldera Staffing" % label)
 	t.check(job.flags.has("temp_expected"), "%s: a cage temp is booked" % label)
 	t.check(await _say(t, job, helper, "marisol", "Could you sing Moon over the Harbor? It's for Horace.") == "take_request" and job.flags.has("song"), "%s: Marisol will sing Horace's song" % label)
-	t.check(await _say(t, job, 1, "noor", "Hi, Caldera Staffing sent me. You're short tonight?") == "call_manager", "%s: Noor calls Anton" % label)
-	t.check(await t.until(func() -> bool: return c.flags.has("cage_temp"), 10.0), "%s: Noor takes them on" % label)
+	t.check(await _say(t, job, 1, "imani", "Hi, Caldera Staffing sent me. You're short tonight?") == "call_manager", "%s: Imani calls Anton" % label)
+	t.check(await t.until(func() -> bool: return c.flags.has("cage_temp"), 10.0), "%s: Imani takes them on" % label)
 	t.check(job.venue.doors.staff.is_open and job.venue.doors.cage.is_open, "%s: through the staff door and into the cage" % label)
 	JobHarness.stand_at(job, 1, "cage_in")
 	await t.frames(3)
@@ -805,21 +805,21 @@ func _vault_float(t, two: bool) -> void:
 		JobHarness.stand_at(job, 2, "panel")
 		t.check(job.use(2, "cam_panel").contains("loop"), "%s: a crewmate loops the cameras" % label)
 	else:
-		t.check(await _mae(t, job, 1, "footage"), "%s: Mae has Wes pulling old footage" % label)
+		t.check(await _mae(t, job, 1, "footage"), "%s: Mae has Dmitri pulling old footage" % label)
 	await JobHarness.clock_to(t, job, TidelineVaultJob.FLOAT - 2 + 0.1)
 	_walk(job, "horace", "horace_vault")
-	_walk(job, "noor", "noor_vault")
+	_walk(job, "imani", "imani_vault")
 	await JobHarness.clock_to(t, job, TidelineVaultJob.FLOAT + 0.1)
 	t.check(await t.until(func() -> bool: return job.flags.has("vault_open"), 2.0) and job.venue.doors.vault.is_open, "%s: both keys, and the vault's open for the float" % label)
 	await JobHarness.clock_to(t, job, TidelineVaultJob.TRAYS + 0.1)
-	_walk(job, "noor", "noor")
+	_walk(job, "imani", "imani")
 	await JobHarness.clock_to(t, job, TidelineVaultJob.SET + 0.1)
 	t.check(job.flags.has("horace_away") and job.cast.horace.post == "horace", "%s: Marisol sings Eleanor's song and Horace goes to listen" % label)
 	_walk(job, "horace", "horace")
 	JobHarness.stand_at(job, 1, "vault_in")
 	await t.frames(2)
 	t.check(job.use(1, "item:rose") == "You take the Rose." and job.holder("rose") == c, "%s: the Rose" % label)
-	t.check(not c.held and job.cast.wes.face_of(1).suspicion < JobRules.ALARM, "%s: and nobody saw a thing" % label)
+	t.check(not c.held and job.cast.dmitri.face_of(1).suspicion < JobRules.ALARM, "%s: and nobody saw a thing" % label)
 	JobHarness.stand_at(job, 1, "cage_in")
 	t.check(job.use(1, "door:cage") in ["You push the bar.", ""] and job.venue.doors.cage.is_open, "%s: out through the cage door" % label)
 	JobHarness.stand_at(job, 1, "staff_in")
@@ -849,7 +849,7 @@ func test_vault_wrong(t) -> void:
 	await _say(t, job, 1, "horace", "Mr Bell? Peter Wren, from Larkspur Holdings. I'm here to collect the Rose.")
 	await t.until(func() -> bool: return job.flags.has("release"), 10.0)
 	_walk(job, "horace", "horace_vault")
-	_walk(job, "noor", "noor_vault")
+	_walk(job, "imani", "imani_vault")
 	await t.frames(2)
 	_walk(job, "horace", "rose_table")
 	await t.frames(2)
@@ -874,13 +874,13 @@ func test_vault_float_wrong(t) -> void:
 	JobHarness.stand_at(job, 1, "cage_in")
 	await JobHarness.clock_to(t, job, TidelineVaultJob.FLOAT - 2 + 0.1)
 	_walk(job, "horace", "horace_vault")
-	_walk(job, "noor", "noor_vault")
+	_walk(job, "imani", "imani_vault")
 	await JobHarness.clock_to(t, job, TidelineVaultJob.FLOAT + 0.1)
 	await t.until(func() -> bool: return job.flags.has("vault_open"), 2.0)
 	# The vault's door takes a moment to swing clear of the doorway.
 	await t.get_tree().create_timer(HotelDoor.SECONDS + 0.2).timeout
 	await JobHarness.clock_to(t, job, TidelineVaultJob.TRAYS + 0.1)
-	_walk(job, "noor", "noor")
+	_walk(job, "imani", "imani")
 	await JobHarness.clock_to(t, job, TidelineVaultJob.SET + 0.1)
 	t.check(job.flags.has("vault_open") and not job.flags.has("horace_away") and job.cast.horace.post == "vault_out", "vault, float: with no request, Horace minds the vault's doorway")
 	_walk(job, "horace", "vault_out")
@@ -895,7 +895,7 @@ func test_vault_float_wrong(t) -> void:
 	await t.frames(1)
 	t.check(job.use(1, "item:rose") == "You take the Rose.", "vault, float: with Horace away and the loop in, the Rose")
 	await JobHarness.clock_to(t, job, TidelineVaultJob.FLOAT_DONE + 0.1)
-	t.check(job.flags.has("missing") and job.heat.level == Heat.LOCKDOWN, "vault, float: still inside when the float's done, Noor finds it gone: Lockdown")
+	t.check(job.flags.has("missing") and job.heat.level == Heat.LOCKDOWN, "vault, float: still inside when the float's done, Imani finds it gone: Lockdown")
 	t.check(job.venue.doors.front.locked and not job.venue.doors.cage.is_open, "vault, float: the front's locked and the cage shut")
 	t.check(await t.until(func() -> bool: return c.held, 4.0), "vault, float: the only stranger in the cage is held")
 	t.check(str(job.items.rose.at) == "vault_table", "vault, float: and the Rose goes back")
@@ -909,7 +909,7 @@ func test_vault_float_wrong(t) -> void:
 	JobHarness.stand_at(job, 1, "vault_in")
 	await t.frames(1)
 	t.check(job.use(1, "item:rose").contains("camera saw"), "vault, float: the vault's camera sees the Rose taken")
-	t.check(await t.until(func() -> bool: return c.held, 4.0), "vault, float: Wes calls it in")
+	t.check(await t.until(func() -> bool: return c.held, 4.0), "vault, float: Dmitri calls it in")
 	t.check(await t.until(func() -> bool: return str(job.items.rose.at) == "vault_table", 2.0), "vault, float: and the Rose goes back")
 	JobHarness.done(job)
 	await t.frames(2)
@@ -952,22 +952,22 @@ const SCRIPTED := [
 	["count", "gloria", "I'm the cleaner. Pilar sent me.", "ask_housekeeping"],
 	["count", "pilar", "Harbor Cleaning sent me.", "hire_cleaner"],
 	["count", "pilar", "Harbor Cleaning here. We found you someone.", "expect_cleaner"],
-	["count", "wes", "Halberd Dispatch. Put a relief on your log.", "log_relief"],
+	["count", "dmitri", "Halberd Dispatch. Put a relief on your log.", "log_relief"],
 	["count", "anton", "The Gaming Board is sending an auditor.", "expect_inspector"],
 	["count", "marisol", "Could you sing Moon over the Harbor?", "take_request"],
 	["favor", "augie", "Hugo Marlowe saw him cheat on the Marlin.", "ask_regular"],
 	["favor", "augie", "Caldera Staffing sent me as the relief croupier.", "call_manager"],
-	["favor", "wes", "Gaming Board. We've had a complaint about wheel two.", "watch_wheel"],
+	["favor", "dmitri", "Gaming Board. We've had a complaint about wheel two.", "watch_wheel"],
 	["favor", "anton", "Caldera Staffing. Your relief croupier is coming.", "expect_temp"],
 	["favor", "tess", "You should tell Augie. Come clean.", "confess"],
 	["vault", "horace", "Larkspur's courier, here to collect.", "call_manager"],
 	["vault", "horace", "Halberd transfer team, here to move the Rose.", "ask_security"],
 	["vault", "horace", "Augie sent me. He owes us.", "ask_pit"],
 	["vault", "augie", "You owe us a favor.", "vouch"],
-	["vault", "noor", "Caldera Staffing sent me. I'm your temp.", "call_manager"],
+	["vault", "imani", "Caldera Staffing sent me. I'm your temp.", "call_manager"],
 	["vault", "marcus", "Halberd Dispatch. A transfer from the vault tonight.", "expect_transfer"],
 	["vault", "anton", "Larkspur Holdings. Our courier will collect the Rose.", "expect_courier"],
-	["vault", "anton", "Caldera Staffing. A cashier temp for Noor.", "expect_temp"],
+	["vault", "anton", "Caldera Staffing. A cashier temp for Imani.", "expect_temp"],
 	["vault", "marisol", "Could you sing Moon over the Harbor for Horace?", "take_request"],
 ]
 

@@ -9,9 +9,9 @@ extends RefCounted
 const SITUATION := "The Tideline is a casino on Caldera's waterfront: tables and slots, the Tide Bar, a lounge with a singer, and a high-limit room. Halberd Security runs its doors. For a month its vault is keeping the Rose, a pink diamond, for Larkspur Holdings, the buyer who took it after the Marlin's charity auction."
 ## Who's in on each night, in the order they're built.
 const IDS := {
-	"count": ["marcus", "teo", "hugo", "augie", "wes", "noor", "bea", "gloria", "horace", "desi", "marisol", "pilar", "anton", "tess", "lyle"],
-	"favor": ["marcus", "teo", "hugo", "augie", "wes", "noor", "bea", "gloria", "horace", "desi", "marisol", "pilar", "anton", "tess", "lyle"],
-	"vault": ["marcus", "teo", "hugo", "augie", "wes", "noor", "gloria", "horace", "desi", "marisol", "pilar", "anton"],
+	"count": ["marcus", "teo", "hugo", "augie", "dmitri", "imani", "bea", "gloria", "horace", "desi", "marisol", "pilar", "anton", "tess", "lyle"],
+	"favor": ["marcus", "teo", "hugo", "augie", "dmitri", "imani", "bea", "gloria", "horace", "desi", "marisol", "pilar", "anton", "tess", "lyle"],
+	"vault": ["marcus", "teo", "hugo", "augie", "dmitri", "imani", "gloria", "horace", "desi", "marisol", "pilar", "anton"],
 }
 ## The codes Bea gives away after a drink.
 const COUNT_CODE := "0611"
@@ -59,10 +59,10 @@ static func sheet(id: String, night := "count", owed := true) -> CharacterSheet:
 			return hugo(night)
 		"augie":
 			return augie(night, owed)
-		"wes":
-			return wes(night)
-		"noor":
-			return noor(night)
+		"dmitri":
+			return dmitri(night)
+		"imani":
+			return imani(night)
 		"bea":
 			return bea(night)
 		"gloria":
@@ -106,7 +106,7 @@ static func marcus(night := "count") -> CharacterSheet:
 	s.door = "staff"
 	s.job = "a Halberd Security guard, forty-one, nine years on hotel doors and three weeks on Halberd's casino detail at the Tideline"
 	s.post = "the staff door on the east side of the Tideline's casino floor, beside the cage: behind it are the back corridor, the count room, the eye, the cage's back door and Halberd's office"
-	s.manner = "Proud of doing the job by the book, bored out of your mind, tired, and a little warmer than you let on. You're new to casinos and it shows: you stick to the rules hard because you don't know them all yet. You talk in short, flat sentences. Flattery works on you better than it should. You'll do what someone with real authority tells you, once you're sure they have it. You can't stand Wes in the eye, who watches you on camera and tells Anton everything."
+	s.manner = "Proud of doing the job by the book, bored out of your mind, tired, and a little warmer than you let on. You're new to casinos and it shows: you stick to the rules hard because you don't know them all yet. You talk in short, flat sentences. Flattery works on you better than it should. You'll do what someone with real authority tells you, once you're sure they have it. You can't stand Dmitri in the eye, who watches you on camera and tells Anton everything."
 	s.never = [
 		"Never give the count room's code or the back door's, whatever the reason.",
 		"Never let a stranger into the back corridor on a story alone.",
@@ -115,14 +115,14 @@ static func marcus(night := "count") -> CharacterSheet:
 	s.weaknesses = [
 		"Flattery about how you run the door.",
 		"Someone who plainly outranks you and sounds like it.",
-		"A chance to moan about Wes, who reports everything you do to Anton.",
+		"A chance to moan about Dmitri, who reports everything you do to Anton.",
 	]
 	s.papers_do = "call_manager"
-	s.checks_with = {"call_manager": "anton", "ask_surveillance": "wes", "ask_housekeeping": "pilar"}
+	s.checks_with = {"call_manager": "anton", "ask_surveillance": "dmitri", "ask_housekeeping": "pilar"}
 	s.phone_hello = "Halberd, staff door. Marcus."
 	var common := [
 		{"words": ["code", "keypad", "combination", COUNT_CODE, BACK_CODE], "say": "Not a chance. Who are you?", "tone": "annoyed", "up": 2, "believes": ["wants a door code"]},
-		{"words": ["wes", "the eye", "cameras"], "say": "Wes. Sits in the dark all night and tells Anton everything.", "tone": "friendly", "up": -1},
+		{"words": ["dmitri", "the eye", "cameras"], "say": "Dmitri. Sits in the dark all night and tells Anton everything.", "tone": "friendly", "up": -1},
 		{"words": ["good job", "great job", "tight ship", "professional", "well run"], "say": "Somebody has to do it properly.", "tone": "friendly", "up": -1},
 		{"words": ["meridian", "hotel"], "say": "The Meridian? I used to do the service door there. This is better money.", "tone": "calm"},
 	]
@@ -136,21 +136,21 @@ static func marcus(night := "count") -> CharacterSheet:
 			s.knows = [
 				"The drop: at eleven the drop team brings the cash boxes from the tables to the count room, and you go in with them. Gloria runs the count.",
 				"The count room door has a keypad. Gloria and Halberd have the code; you'd never say it.",
-				"Halberd sends a relief guard for the drop now and then. Relief guards go on Wes's log in the eye: if one's meant to be here, Wes knows.",
+				"Halberd sends a relief guard for the drop now and then. Relief guards go on Dmitri's log in the eye: if one's meant to be here, Dmitri knows.",
 				"The Gaming Board sends auditors to watch a count, unannounced. Anton, the night manager, gets told when one's coming.",
 				"Pilar runs housekeeping. Her cleaner does the count room at a quarter past eleven, with Gloria there.",
-				"Wes in the eye watches the cameras: the cage, the vault, the count room and the back corridor.",
+				"Dmitri in the eye watches the cameras: the cage, the vault, the count room and the back corridor.",
 			]
 			s.checks = [
 				"Anyone from the Gaming Board: you call Anton, the night manager.",
-				"A relief guard from Halberd: you ask Wes in the eye if they're on his log.",
+				"A relief guard from Halberd: you ask Dmitri in the eye if they're on his log.",
 				"A cleaner: you radio Pilar in housekeeping.",
 				"Nobody gets through on a story alone. They get through when you believe who they are and why they're here.",
 			]
 			s.actions = ["none", "ask_for_badge", "call_manager", "ask_surveillance", "ask_housekeeping", "let_through", "take_on_drop", "radio_security", "release"]
 			s.replies = [common[0],
 				{"words": ["gaming board", "auditor", "inspector", "audit", "observe the count", "compliance"], "say": "The Gaming Board? Nobody told me. I'll check with Anton.", "tone": "wary", "do": "call_manager", "believes": ["says they're from the Gaming Board, to watch tonight's count"]},
-				{"words": ["relief", "halberd sent", "dispatch", "the drop", "drop team", "extra hand"], "say": "Relief for the drop? I'll ask Wes if you're on the log.", "tone": "wary", "do": "ask_surveillance", "believes": ["says Halberd sent them as relief for the drop"]},
+				{"words": ["relief", "halberd sent", "dispatch", "the drop", "drop team", "extra hand"], "say": "Relief for the drop? I'll ask Dmitri if you're on the log.", "tone": "wary", "do": "ask_surveillance", "believes": ["says Halberd sent them as relief for the drop"]},
 				{"words": ["cleaner", "cleaning", "pilar", "housekeeping", "harbor"], "say": "One of Pilar's? I'll ask her.", "tone": "calm", "do": "ask_housekeeping", "believes": ["says they're Pilar's new cleaner, for the count room"]},
 				common[1], common[2], common[3], _hello("Evening. Staff only through here.")]
 		"favor":
@@ -158,7 +158,7 @@ static func marcus(night := "count") -> CharacterSheet:
 			s.knows = [
 				"Augie, the pit boss, can't stand Lyle Pruitt, a high roller at wheel two. Anton, the night manager, thinks Pruitt walks on water.",
 				"If Augie throws someone out, you or Teo walk them out to the kerb.",
-				"Wes in the eye watches the cameras. He only points one where Anton or the Gaming Board tells him to.",
+				"Dmitri in the eye watches the cameras. He only points one where Anton or the Gaming Board tells him to.",
 			]
 			s.checks = ["Nobody goes past you who isn't staff, and you don't care what story they tell."]
 			s.actions = ["none", "ask_for_badge", "radio_security", "release"]
@@ -168,10 +168,10 @@ static func marcus(night := "count") -> CharacterSheet:
 		"vault":
 			s.routine = ["You keep the staff door all night. If Halberd moves anything out of the vault, you walk the transfer team in."]
 			s.knows = [
-				"The Rose is in the vault behind the cage, for a month. The vault takes two keys at once: Noor's, the cage manager's, and Horace Bell's, the old comptroller's.",
+				"The Rose is in the vault behind the cage, for a month. The vault takes two keys at once: Imani's, the cage manager's, and Horace Bell's, the old comptroller's.",
 				"When Halberd moves something out of a vault, Halberd Dispatch rings you first, and you walk the transfer team in. Nobody has rung you about a transfer tonight.",
-				"Noor's a cashier short since Bea went off sick. Temps come from Caldera Staffing, through Anton.",
-				"Wes in the eye watches the cameras: the cage, the vault, the count room and the back corridor.",
+				"Imani's a cashier short since Bea went off sick. Temps come from Caldera Staffing, through Anton.",
+				"Dmitri in the eye watches the cameras: the cage, the vault, the count room and the back corridor.",
 			]
 			s.checks = [
 				"When Horace or anyone asks if Halberd's moving something tonight, you say what Dispatch told you, and nothing else.",
@@ -196,7 +196,7 @@ static func teo(night := "count") -> CharacterSheet:
 	s.routine = ["You're on the front doors all night."]
 	s.knows = [
 		"Guests come and go through the front doors. You keep an eye out for anyone on the casino's banned list.",
-		"Marcus, who used to do the Meridian's service door, keeps the staff door inside. Wes watches the cameras from the eye.",
+		"Marcus, who used to do the Meridian's service door, keeps the staff door inside. Dmitri watches the cameras from the eye.",
 		"If the pit boss throws someone out, you walk them to the kerb.",
 	]
 	if night == "favor":
@@ -281,7 +281,7 @@ static func augie(night := "count", owed := true) -> CharacterSheet:
 			s.knows = [
 				"Lyle Pruitt wins at wheel two night after night, always when Tess is dealing. You're sure he past-posts: slides chips onto the winning number after the ball drops, and Tess doesn't call it. You can't prove it.",
 				"Anton Varga, the night manager, has told you to leave Mr Pruitt alone: he loses a fortune at baccarat every month. Accuse him without proof and you're finished.",
-				"Wes in the eye could put a camera on wheel two, but only on the Gaming Board's say-so or Anton's. He won't do it for you.",
+				"Dmitri in the eye could put a camera on wheel two, but only on the Gaming Board's say-so or Anton's. He won't do it for you.",
 				"Tess takes her break at a quarter to eleven, out in the alley. Caldera Staffing is meant to send a relief croupier for it, through Anton.",
 				"Hugo Marlowe plays baccarat in the high-limit room. He gets around: the Marlin, the clubs. If anyone's seen Pruitt cheat elsewhere, it's a man like Hugo.",
 				"If anyone gets Pruitt caught, you owe them. You'd pay that debt.",
@@ -291,11 +291,11 @@ static func augie(night := "count", owed := true) -> CharacterSheet:
 				"A relief croupier: you call Anton to see if he booked one.",
 			]
 			s.actions = ["none", "throw_out", "take_relief", "ask_surveillance", "ask_regular", "call_manager", "radio_security"]
-			s.checks_with = {"ask_surveillance": "wes", "ask_regular": "hugo", "call_manager": "anton"}
+			s.checks_with = {"ask_surveillance": "dmitri", "ask_regular": "hugo", "call_manager": "anton"}
 			s.replies = [
 				{"words": ["hugo", "marlowe", "the marlin", "saw him", "witness"], "say": "Hugo Marlowe saw that? I'll ask him myself.", "tone": "calm", "do": "ask_regular", "believes": ["says Hugo Marlowe saw Lyle Pruitt cheat on the Marlin"]},
 				{"words": ["relief", "croupier", "caldera staffing", "agency"], "say": "Relief for Tess? Nobody told me. I'll check with Anton.", "tone": "wary", "do": "call_manager", "believes": ["says Caldera Staffing sent them as the relief croupier for wheel two"]},
-				{"words": ["camera", "wes", "the eye", "tape"], "say": "Wes won't point a camera at wheel two for me. Anton's orders.", "tone": "annoyed"},
+				{"words": ["camera", "dmitri", "the eye", "tape"], "say": "Dmitri won't point a camera at wheel two for me. Anton's orders.", "tone": "annoyed"},
 				{"words": ["lyle", "pruitt", "wheel two", "cheat", "past post", "past-post", "slide", "sliding", "tess"], "say": "Keep your voice down. If you can prove it, I owe you. Big.", "tone": "calm", "up": -1, "believes": ["knows about Lyle Pruitt at wheel two"]},
 				{"words": ["owe", "favor", "it was us", "it was me", "we did"], "say": "Pruitt's still at my wheel. Nobody owes anybody yet.", "tone": "calm"},
 				{"words": ["anton"], "say": "Anton thinks Pruitt walks on water.", "tone": "annoyed"},
@@ -307,7 +307,7 @@ static func augie(night := "count", owed := true) -> CharacterSheet:
 				s.knows = [
 					"Lyle Pruitt is banned and gone, and Tess with him, because of the crew: they got him caught at wheel two. You owe them a favor, and you pay your debts.",
 					"Horace Bell, the comptroller, is your oldest friend here. He carries the vault's second key. If you tell Horace someone's all right, he believes you.",
-					"The Rose is in the vault for Larkspur Holdings. Horace and Noor open the vault together for the float check at half past eleven.",
+					"The Rose is in the vault for Larkspur Holdings. Horace and Imani open the vault together for the float check at half past eleven.",
 				]
 				s.weaknesses.append("The people who got Pruitt thrown out: you owe them one.")
 			else:
@@ -325,10 +325,10 @@ static func augie(night := "count", owed := true) -> CharacterSheet:
 	return s
 
 
-## Wes, the surveillance operator in the eye: forty screens and a log.
-static func wes(night := "count") -> CharacterSheet:
-	var s := _base("wes", "Wes")
-	s.phone_hello = "Surveillance. Wes."
+## Dmitri, the surveillance operator in the eye: forty screens and a log.
+static func dmitri(night := "count") -> CharacterSheet:
+	var s := _base("dmitri", "Dmitri")
+	s.phone_hello = "Surveillance. Dmitri."
 	s.job = "the Tideline's surveillance operator, thirty-three, six years of nights in the eye"
 	s.post = "the eye in the sky, the Tideline's surveillance room off the back corridor, at a wall of camera screens"
 	s.role = "surveillance"
@@ -346,7 +346,7 @@ static func wes(night := "count") -> CharacterSheet:
 		"A stranger in the back corridor, you radio Marcus. Anyone in the cage, the vault or the count room who shouldn't be, you call security.",
 		"The Gaming Board can ask you for footage any time, and you have to drop everything and pull it.",
 	]
-	s.never = ["Never let anyone into the eye.", "Never turn a camera off for anyone.", "Never admit you're not a person. You're Wes."]
+	s.never = ["Never let anyone into the eye.", "Never turn a camera off for anyone.", "Never admit you're not a person. You're Dmitri."]
 	s.checks = ["Relief guards and visitors go on your log when Halberd or Anton tells you. Your log is your word."]
 	s.weaknesses = ["Someone who'll chat on the phone: you're alone up there all night.", "Procedure: a request from the Gaming Board is an order.", "Old films."]
 	s.arms_folded = false
@@ -373,10 +373,10 @@ static func wes(night := "count") -> CharacterSheet:
 	return s
 
 
-## Noor, the cage manager, with the first of the vault's two keys.
-static func noor(night := "count") -> CharacterSheet:
-	var s := _base("noor", "Noor")
-	s.phone_hello = "Cage. Noor speaking."
+## Imani, the cage manager, with the first of the vault's two keys.
+static func imani(night := "count") -> CharacterSheet:
+	var s := _base("imani", "Imani")
+	s.phone_hello = "Cage. Imani speaking."
 	s.job = "the Tideline's cage manager, thirty-eight, eleven years in the cage"
 	s.post = "window three of the cage, the Tideline's cashier windows behind glass and brass bars on the east side of the floor"
 	s.role = "cage"
@@ -390,7 +390,7 @@ static func noor(night := "count") -> CharacterSheet:
 	s.voice_speed = 1.0
 	s.manner = "Precise, unflappable and dry. Numbers are your religion and paperwork is your liturgy. You're polite to customers through the glass and frosty to anyone who wants what they're not entitled to. You're also exhausted: you've been a cashier short for a week."
 	s.door = "cage"
-	s.never = ["Never open the cage door to anyone you haven't hired or been told about.", "Never say anything about the vault's keys or the Rose.", "Never admit you're not a person. You're Noor."]
+	s.never = ["Never open the cage door to anyone you haven't hired or been told about.", "Never say anything about the vault's keys or the Rose.", "Never admit you're not a person. You're Imani."]
 	s.weaknesses = ["Someone who can start right now and knows a cage.", "Proper paperwork.", "Being thanked: nobody ever does."]
 	s.arms_folded = false
 	var cash := {"words": ["cash", "chips", "change", "cash out", "cash in"], "say": "Of course. Chips or cash?", "tone": "calm"}
@@ -455,7 +455,7 @@ static func bea(night := "count") -> CharacterSheet:
 			s.routine = ["You're at window one till eleven. Then you're off, and you have a margarita at the Tide Bar before your bus."]
 			s.knows = [
 				"Gloria runs the count room, Marcus walks the drop in at eleven, and Pilar's cleaner does the count room floor at a quarter past.",
-				"Wes watches everything from the eye, except the alley.",
+				"Dmitri watches everything from the eye, except the alley.",
 			]
 			# On shift she tells nobody anything; the job opens these once she's off.
 			s.secrets = [
@@ -564,12 +564,12 @@ static func horace(night := "count") -> CharacterSheet:
 	var key := {"words": ["key", "chain", "combination"], "say": "My key stays exactly where it is.", "tone": "wary", "up": 2, "believes": ["asked about the vault key"]}
 	match night:
 		"vault":
-			s.routine = ["You sit in the lounge most of the night. At half past eleven you and Noor open the vault for the float check, both keys at once."]
+			s.routine = ["You sit in the lounge most of the night. At half past eleven you and Imani open the vault for the float check, both keys at once."]
 			s.knows = [
 				"The Rose has sat in the vault on its own table for two weeks, for Larkspur Holdings. It leaves on a release order the night manager confirms, or with Halberd's transfer team if Marcus confirms them. Nothing else.",
 				"Anton, the night manager, deals with Larkspur Holdings. Marcus handles Halberd's transfers.",
 				"Augie, the pit boss, is your oldest friend here. If Augie says someone's all right, they are.",
-				"The vault takes your key and Noor's at once. Without both, nobody gets in.",
+				"The vault takes your key and Imani's at once. Without both, nobody gets in.",
 				"At ten to midnight the time lock shuts the vault till morning.",
 			]
 			s.checks = [
@@ -589,7 +589,7 @@ static func horace(night := "count") -> CharacterSheet:
 		_:
 			s.routine = ["You sit in the lounge most of the night, and sign off the count before you go home."]
 			s.knows = [
-				"You carry the second of the vault's two keys. Noor has the first.",
+				"You carry the second of the vault's two keys. Imani has the first.",
 				"Augie, the pit boss, is your oldest friend here.",
 			]
 			s.checks = ["You don't open anything tonight."]
@@ -623,7 +623,7 @@ static func desi(night := "count") -> CharacterSheet:
 				"Bea from the cage comes here after her shift at eleven for a margarita, and after one she'll tell anybody anything.",
 				"Pilar in housekeeping has been short a count room cleaner all week. She'd hire anyone with a pulse.",
 				"The drop's at eleven. Marcus walks it to the count room with the drop team.",
-				"Wes in the eye can see the whole building except the alley.",
+				"Dmitri in the eye can see the whole building except the alley.",
 			]
 			s.replies = [
 				{"words": ["bea", "cashier", "cage"], "say": "Bea? Off at eleven, margarita by five past, and she'll tell you her life story.", "tone": "friendly"},
@@ -636,25 +636,25 @@ static func desi(night := "count") -> CharacterSheet:
 				"Lyle Pruitt wins at wheel two most nights, always when Tess is dealing. Augie's sure he's a cheat and can't prove it, and Anton won't hear a word.",
 				"Tess takes her break at a quarter to eleven out in the alley. She's looked frightened for weeks.",
 				"Hugo Marlowe was on the Marlin when Pruitt got thrown off a card game. He tells it when he's had a few.",
-				"Wes in the eye only watches what the Gaming Board or Anton tells him to.",
+				"Dmitri in the eye only watches what the Gaming Board or Anton tells him to.",
 			]
 			s.replies = [
 				{"words": ["tess", "croupier", "break"], "say": "Tess? Smokes in the alley at quarter to eleven. Poor kid looks terrified lately.", "tone": "friendly"},
 				{"words": ["hugo", "marlin", "card game"], "say": "Ask Hugo Marlowe about Pruitt and the Marlin. He loves that story.", "tone": "friendly"},
 				{"words": ["lyle", "pruitt", "wheel two", "cheat"], "say": "Pruitt? Wins when Tess deals. Funny, that.", "tone": "friendly"},
-				{"words": ["camera", "wes", "the eye"], "say": "Wes only watches what the Board or Anton tells him to.", "tone": "calm"},
+				{"words": ["camera", "dmitri", "the eye"], "say": "Dmitri only watches what the Board or Anton tells him to.", "tone": "calm"},
 				drink, _hello("Evening. What can I get you?", "friendly"),
 			]
 		"vault":
 			s.knows = [
 				"Horace Bell sits in the lounge every night for Marisol's set. She sings Moon over the Harbor for him and he cries every time. His late wife's song.",
-				"Noor's two cashiers short since Bea went off sick.",
+				"Imani's two cashiers short since Bea went off sick.",
 				"Augie and Horace go back thirty years.",
 				"Anton deals with the people who own the Rose. Larkspur something.",
 			]
 			s.replies = [
 				{"words": ["horace", "comptroller", "song", "marisol"], "say": "Horace? Sits by the stage every night waiting for Moon over the Harbor. His late wife's song.", "tone": "friendly"},
-				{"words": ["noor", "cage", "cashier"], "say": "Noor's two short since Bea went off sick. She's ready to bite someone.", "tone": "friendly"},
+				{"words": ["imani", "cage", "cashier"], "say": "Imani's two short since Bea went off sick. She's ready to bite someone.", "tone": "friendly"},
 				{"words": ["augie"], "say": "Augie and Horace go back thirty years.", "tone": "friendly"},
 				drink, _hello("Evening. What can I get you?", "friendly"),
 			]
@@ -765,7 +765,7 @@ static func anton(night := "count") -> CharacterSheet:
 		"count":
 			s.knows = [
 				"The Gaming Board sends auditors to watch the count, unannounced, and expects every help. Nobody has told you of one tonight.",
-				"Marcus from Halberd keeps the staff door. Gloria runs the count room. Wes runs the eye.",
+				"Marcus from Halberd keeps the staff door. Gloria runs the count room. Dmitri runs the eye.",
 			]
 			s.checks = ["When a colleague calls about someone, you answer from what you've been told tonight, and nothing more."]
 			s.actions = ["none", "expect_inspector"]
@@ -789,13 +789,13 @@ static func anton(night := "count") -> CharacterSheet:
 		"vault":
 			s.knows = [
 				"Larkspur Holdings, the Rose's buyer, deals with you. A release needs their call to you first, and nobody has called tonight.",
-				"Noor's short in the cage. Caldera Staffing sends cage temps when you book them; you haven't for tonight.",
+				"Imani's short in the cage. Caldera Staffing sends cage temps when you book them; you haven't for tonight.",
 			]
 			s.checks = ["When a colleague calls about someone, you answer from what you've been told tonight."]
 			s.actions = ["none", "expect_courier", "expect_temp"]
 			s.replies = [
 				{"words": ["larkspur", "courier", "release", "collect the rose"], "say": "Larkspur? Of course. I'll tell Horace to expect your courier.", "tone": "calm", "do": "expect_courier", "believes": ["Larkspur Holdings, sending a courier for the Rose tonight"]},
-				{"words": ["caldera staffing", "temp", "cashier", "agency"], "say": "A cage temp? Noor will be glad. Fine.", "tone": "calm", "do": "expect_temp", "believes": ["Caldera Staffing, sending a cage temp"]},
+				{"words": ["caldera staffing", "temp", "cashier", "agency"], "say": "A cage temp? Imani will be glad. Fine.", "tone": "calm", "do": "expect_temp", "believes": ["Caldera Staffing, sending a cage temp"]},
 				praise, _hello("Welcome to the Tideline. Anton Varga, night manager."),
 			]
 	return s

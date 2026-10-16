@@ -5,7 +5,7 @@ extends JobDef
 ## look inside while it's on, or walk out with the count sheet. Ways in:
 ## the Gaming Board's auditor (Marcus checks with Anton, Gloria with Marcus),
 ## Pilar's new cleaner (Gloria opens up for the cleaner at a quarter past),
-## Halberd's relief for the drop (Marcus checks Wes's log), or Bea's codes
+## Halberd's relief for the drop (Marcus checks Dmitri's log), or Bea's codes
 ## after her shift and the ten minutes the room sits empty at twenty past,
 ## with the cameras blind.
 
@@ -69,11 +69,11 @@ func _init() -> void:
 		"halberd_temp": {
 			"title": "Halberd relief", "names": ["Ray Doyle", "Rae Doyle"],
 			"job": "a Halberd Security relief guard",
-			"story": "Halberd sends a relief guard for the drop now and then, and Wes in the eye puts them on his log when Dispatch rings ahead. Marcus walks the drop into the count room at eleven.",
+			"story": "Halberd sends a relief guard for the drop now and then, and Dmitri in the eye puts them on his log when Dispatch rings ahead. Marcus walks the drop into the count room at eleven.",
 			"outfit": "halberd_temp", "for": "Marcus, on the staff door",
 			"lines": [
 				"Evening. Dispatch sent me as relief for the drop.",
-				"I'm on Wes's log. Check with him.",
+				"I'm on Dmitri's log. Check with him.",
 				"Where do you want me at eleven?",
 				"You used to do the Meridian, didn't you?",
 			],
@@ -106,7 +106,7 @@ func _init() -> void:
 	chatter = TidelineCast.chatter("count", start, end)
 	chatter.append_array([
 		[22 * 60 + 50, "marcus", "Drop team, ten minutes. Meet me at the staff door.", "radio"],
-		[22 * 60 + 59, "bea", "Window one closing. That's me done, Noor.", "near"],
+		[22 * 60 + 59, "bea", "Window one closing. That's me done, Imani.", "near"],
 		[DROP, "gloria", "Drop's in. Count starts now.", "radio"],
 		[CLEAN, "gloria", "Pilar, I'm ready for your cleaner. Door's open.", "radio"],
 		[RUN, "gloria", "First bags to the cage. Marcus, with me.", "radio"],
@@ -143,7 +143,7 @@ func _init() -> void:
 	}
 	actions = {
 		"take_on_drop": {"text": "take them on as Halberd's relief for the drop: they walk the boxes into the count room with you at eleven", "kind": "opening", "lockdown": true},
-		"ask_surveillance": {"text": "radio Wes in the eye to check his log (takes a moment)", "kind": "check"},
+		"ask_surveillance": {"text": "radio Dmitri in the eye to check his log (takes a moment)", "kind": "check"},
 		"ask_housekeeping": {"text": "radio Pilar in housekeeping to check (takes a moment)", "kind": "check"},
 		"ask_security": {"text": "radio Marcus on the staff door to check (takes a moment)", "kind": "check"},
 		"let_in": {"text": "let them into the count room", "kind": "opening", "lockdown": true},
@@ -155,7 +155,7 @@ func _init() -> void:
 	actions["take_request"] = {"text": "take their song request for your next set", "kind": ""}
 	effects = {"take_request": {"flag": "requested", "toast": "%s will sing it in her next set."}}
 	hot_words = ["count sheet", "count room code", "back door code", "loop the cameras"]
-	phone = TidelineRules.phone_for(["anton", "wes", "pilar", "gloria"])
+	phone = TidelineRules.phone_for(["anton", "dmitri", "pilar", "gloria"])
 	caller_ids = ["Withheld", "Caldera Gaming Board", "Harbor Cleaning", "Halberd Dispatch"]
 	mae_calls = [
 		{"id": "board", "label": "Tell Anton the Board's coming", "who": "anton", "as": "Caldera Gaming Board",
@@ -166,10 +166,10 @@ func _init() -> void:
 			"line": "Harbor Cleaning here. We found you someone for the count room tonight after all. They're on their way.",
 			"answer": "Oh, thank God. Send them to me, I'm on the floor.",
 			"mae": "I'll ring Pilar from Harbor Cleaning. She'll be glad of anyone."},
-		{"id": "dispatch", "label": "Put a relief on Wes's log", "who": "wes", "as": "Halberd Dispatch",
+		{"id": "dispatch", "label": "Put a relief on Dmitri's log", "who": "dmitri", "as": "Halberd Dispatch",
 			"line": "Halberd Dispatch. We're sending a relief guard for tonight's drop. Put them on your log, would you?",
 			"answer": "Relief for the drop. Fine, they're on the log.",
-			"mae": "I'll ring Wes as Halberd Dispatch. You'll be on his log."},
+			"mae": "I'll ring Dmitri as Halberd Dispatch. You'll be on his log."},
 		TidelineRules.FOOTAGE,
 	]
 	outcomes = {
@@ -330,7 +330,7 @@ func lookup(job: Job, who: String, crew_id: int, said: String, _asker: Character
 			if Job.any(said, CLEANER_WORDS):
 				return Job.fact("bad", "Cleaners are Pilar's business, not yours.", "Housekeeping's Pilar's business. Ask her.")
 			return Job.fact("bad", "You don't know them.", "I've no idea who that is.")
-		"wes":
+		"dmitri":
 			if job.flags.has("relief_logged") and Job.any(said, RELIEF_WORDS):
 				return Job.fact("good", "Halberd Dispatch rang: a relief guard for tonight's drop is on your log.", "Yeah, Dispatch rang. Relief for the drop, on my log.")
 			return Job.fact("bad", "Nobody's on your log tonight.", "Nobody on my log tonight.")

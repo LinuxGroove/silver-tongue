@@ -54,7 +54,7 @@ const VAULT_H := 3.0
 const KERB := 6.0
 const FAR_KERB := 13.0
 const RAIL := 18.0
-## The cage's three windows onto the floor, along x = 10 (Bea's, closed, Noor's).
+## The cage's three windows onto the floor, along x = 10 (Bea's, closed, Imani's).
 const WINDOWS := [-12.6, -10.0, -7.4]
 ## The tables: [model, centre, turned to face north].
 const TABLES := [
@@ -534,7 +534,7 @@ func _cage() -> void:
 	# The vault door's frame on the cage side.
 	_m("tideline_vault_frame", Vector3(15.8, 0.0, -10.0), -PI * 0.5)
 	_sign("TIME LOCK", Vector3(15.74, 2.75, -10.0), -PI * 0.5, 24, Color(0.85, 0.82, 0.7), 0.003)
-	# Noor's desk, the key box, cash carts.
+	# Imani's desk, the key box, cash carts.
 	_box("office_desk", Vector3(14.6, 0.0, -13.37))
 	_m("desk_lamp", Vector3(14.0, 0.76, -13.55), 0.3)
 	_m("tideline_key_box", Vector3(13.2, 1.2, -13.8))
@@ -654,7 +654,7 @@ func _eye() -> void:
 	_omni(Vector3(19.5, 1.7, -24.2), Color(0.5, 0.68, 1.0), 1.0, 5.5)
 	_slab(Vector3(19.5, BACK_H - 0.03, -20.5), Vector3(0.6, 0.05, 0.6), _mat("panel_light"))
 	_omni(Vector3(19.5, BACK_H - 0.4, -20.5), COOL, 0.6, 4.5)
-	# Behind Wes's chair, so he isn't only a shape against the screens.
+	# Behind Dmitri's chair, so he isn't only a shape against the screens.
 	_omni(Vector3(20.2, 2.1, -22.0), COOL, 0.4, 3.0)
 	_probe(r, BACK_H, Color(0.18, 0.22, 0.3), 0.3)
 
@@ -886,13 +886,13 @@ func _graph() -> void:
 		"count_in": Vector2(13.5, -19.4), "count_e": Vector2(16.0, -20.2), "marcus_count": Vector2(16.0, -21.8),
 		"count_ne": Vector2(16.0, -23.7), "gloria": Vector2(13.4, -23.6), "count_look": Vector2(12.0, -19.8),
 		"count_door": Vector2(13.5, -19.0),
-		"eye_in": Vector2(19.5, -19.4), "wes": Vector2(19.5, -23.6),
+		"eye_in": Vector2(19.5, -19.4), "dmitri": Vector2(19.5, -23.6),
 		"office_in": Vector2(24.0, -19.4), "held": Vector2(24.5, -23.0),
 		"staff_room_in": Vector2(23.5, -12.6), "lockers": Vector2(23.0, -10.4),
 		# The cage and the vault.
-		"cage_in": Vector2(12.0, -12.8), "bea": Vector2(10.95, -12.6), "noor": Vector2(10.95, -7.4),
+		"cage_in": Vector2(12.0, -12.8), "bea": Vector2(10.95, -12.6), "imani": Vector2(10.95, -7.4),
 		"cage_c": Vector2(13.0, -10.0), "horace_window": Vector2(11.0, -10.0), "horace_listen": Vector2(13.4, -6.9),
-		"vault_out": Vector2(14.9, -10.0), "noor_vault": Vector2(15.0, -11.4), "horace_vault": Vector2(15.0, -8.6),
+		"vault_out": Vector2(14.9, -10.0), "imani_vault": Vector2(15.0, -11.4), "horace_vault": Vector2(15.0, -8.6),
 		"vault_in": Vector2(17.3, -10.0), "rose_table": Vector2(17.6, -11.4),
 	}
 	for k in P:
@@ -927,13 +927,13 @@ func _graph() -> void:
 		["staff_room_out", "back_in", ""], ["back_in", "back_out", "back"],
 		["count_out", "count_door", "count_room"], ["count_door", "count_in", ""], ["count_in", "count_look", ""], ["count_in", "count_e", ""],
 		["count_e", "marcus_count", ""], ["marcus_count", "count_ne", ""], ["count_ne", "gloria", ""],
-		["eye_out", "eye_in", "eye"], ["eye_in", "wes", ""],
+		["eye_out", "eye_in", "eye"], ["eye_in", "dmitri", ""],
 		["office_out", "office_in", "office"], ["office_in", "held", ""],
 		["staff_room_out", "staff_room_in", "staff_room"], ["staff_room_in", "lockers", ""],
 		# The cage and the vault.
-		["cage_out", "cage_in", "cage"], ["cage_in", "bea", ""], ["cage_in", "cage_c", ""], ["cage_c", "noor", ""],
+		["cage_out", "cage_in", "cage"], ["cage_in", "bea", ""], ["cage_in", "cage_c", ""], ["cage_c", "imani", ""],
 		["cage_c", "horace_window", ""], ["cage_c", "horace_listen", ""], ["cage_c", "vault_out", ""],
-		["vault_out", "noor_vault", ""], ["vault_out", "horace_vault", ""], ["vault_out", "vault_in", "vault"],
+		["vault_out", "imani_vault", ""], ["vault_out", "horace_vault", ""], ["vault_out", "vault_in", "vault"],
 		["vault_in", "rose_table", ""],
 	]
 	links = L
@@ -943,9 +943,9 @@ func _graph() -> void:
 		"pilar": Vector2(-1, -0.4), "marcus": Vector2(-1, 0.2), "lyle": Vector2(0, 1), "augie": Vector2(0, -1),
 		"tess": Vector2(0, -1), "horace": Vector2(1, -0.1), "marisol": Vector2(-1, 0), "anton": Vector2(-1, -0.4),
 		"hugo": Vector2(0, -1), "corridor_check": Vector2(-1, 0), "office_guard": Vector2(1, 0), "count_in": Vector2(0, -1),
-		"marcus_count": Vector2(-1, 0), "gloria": Vector2(0, 1), "count_look": Vector2(0, -1), "wes": Vector2(0, -1),
-		"held": Vector2(-1, 0), "lockers": Vector2(1, 0), "bea": Vector2(-1, 0), "noor": Vector2(-1, 0),
-		"horace_window": Vector2(-1, 0), "horace_listen": Vector2(0, 1), "noor_vault": Vector2(1, 0),
+		"marcus_count": Vector2(-1, 0), "gloria": Vector2(0, 1), "count_look": Vector2(0, -1), "dmitri": Vector2(0, -1),
+		"held": Vector2(-1, 0), "lockers": Vector2(1, 0), "bea": Vector2(-1, 0), "imani": Vector2(-1, 0),
+		"horace_window": Vector2(-1, 0), "horace_listen": Vector2(0, 1), "imani_vault": Vector2(1, 0),
 		"horace_vault": Vector2(1, 0), "vault_out": Vector2(1, 0), "vault_in": Vector2(1, 0), "rose_table": Vector2(1, 0), "count_out": Vector2(0, -1),
 		"window_2": Vector2(1, 0), "back_out": Vector2(1, 0), "staff_in": Vector2(1, 0), "staff_out": Vector2(-1, 0),
 		"cage_in": Vector2(0, 1), "cage_c": Vector2(-1, 0), "pit_c": Vector2(1, 0), "count_door": Vector2(0, 1), "front_in": Vector2(0, -1), "hl_in": Vector2(0, -1), "eye_in": Vector2(0, -1),
@@ -1037,12 +1037,12 @@ func _views() -> void:
 		"bar": "The Tide Bar on the west wall: Desi's counter, the back bar, the stools",
 		"lounge": "The lounge at the east end: banquettes, cocktail tables, Marisol on her stage",
 		"high_limit": "The high-limit room: baccarat under the chandelier, the private bar, Hugo's table",
-		"cage": "The cage from the floor: three windows behind brass bars, Bea's and Noor's open, the middle one closed",
-		"cage_inside": "Inside the cage: the counters, Noor's desk, the vault door in its frame",
+		"cage": "The cage from the floor: three windows behind brass bars, Bea's and Imani's open, the middle one closed",
+		"cage_inside": "Inside the cage: the counters, Imani's desk, the vault door in its frame",
 		"vault": "Inside the vault: shelves of cash, deposit boxes, the Rose on its table",
 		"corridor": "The back corridor off the staff door: the count room, the eye, security, the cage, the back door",
 		"count_room": "The count room: the count table, the drop carts, the key box and the count sheet",
-		"eye": "The eye in the sky: the wall of camera feeds and Wes's console",
+		"eye": "The eye in the sky: the wall of camera feeds and Dmitri's console",
 		"office": "Halberd's security office, where anyone held is kept",
 		"staff_room": "The staff room: lockers, a bench, the cleaner's cart",
 		"alley": "The alley out the back: the back door and its keypad, the cameras' junction box, the bins",

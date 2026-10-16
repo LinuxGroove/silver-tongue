@@ -4,7 +4,7 @@ extends JobDef
 ## night: he slides chips onto the winning number after the ball drops, and
 ## Tess, the croupier, is paid not to see. Augie, the pit boss, can't prove
 ## it, and Anton protects him. Get Pruitt caught so Augie owes the crew: get
-## Wes's camera on wheel two (the Gaming Board's say-so), talk Tess into
+## Dmitri's camera on wheel two (the Gaming Board's say-so), talk Tess into
 ## confessing on her break, bring Augie a witness (Hugo saw Pruitt cheat on
 ## the Marlin), or deal wheel two yourself while Tess is on her break.
 
@@ -16,7 +16,7 @@ const CASH_OUT := 23 * 60 + 5
 ## How close to wheel two's croupier spot the relief must stand.
 const AT_WHEEL := 1.5
 ## Words that tell Augie the crew is behind it.
-const TOLD := ["lyle", "pruitt", "wheel", "tess", "cheat", "wes", "camera", "board", "relief", "hugo"]
+const TOLD := ["lyle", "pruitt", "wheel", "tess", "cheat", "dmitri", "camera", "board", "relief", "hugo"]
 ## Real seconds between Augie saying he owes the crew and the night ending.
 const OWED_PAUSE := 3.5
 
@@ -48,8 +48,8 @@ func _init() -> void:
 		"inspector": {
 			"title": "Gaming Board inspector", "names": ["Martin Kessler", "Marta Kessler"],
 			"job": "an inspector from the Caldera Gaming Board",
-			"story": "The Board's word is an order to the eye: if the Board asks Wes to watch a table, he watches it. Your card is a good copy. Tess is frightened of the Board.",
-			"outfit": "auditor", "for": "Wes, on the phone, and Tess",
+			"story": "The Board's word is an order to the eye: if the Board asks Dmitri to watch a table, he watches it. Your card is a good copy. Tess is frightened of the Board.",
+			"outfit": "auditor", "for": "Dmitri, on the phone, and Tess",
 			"lines": [
 				"%s, Caldera Gaming Board. We've had a complaint about wheel two.",
 				"I'd like a camera on that table tonight, please.",
@@ -117,7 +117,7 @@ func _init() -> void:
 	actions = {
 		"throw_out": {"text": "throw Lyle Pruitt out for cheating, now that you have proof", "kind": "opening", "lockdown": true},
 		"take_relief": {"text": "put them on wheel two as the relief croupier for Tess's break", "kind": "opening", "lockdown": true},
-		"ask_surveillance": {"text": "radio Wes in the eye to ask what his cameras saw (takes a moment)", "kind": "check"},
+		"ask_surveillance": {"text": "radio Dmitri in the eye to ask what his cameras saw (takes a moment)", "kind": "check"},
 		"ask_regular": {"text": "go and ask Hugo Marlowe if it's true (takes a moment)", "kind": "check"},
 		"watch_wheel": {"text": "keep a camera on wheel two tonight, as the Gaming Board asks", "kind": ""},
 		"expect_temp": {"text": "tell Augie a relief croupier from Caldera Staffing is coming", "kind": ""},
@@ -126,13 +126,13 @@ func _init() -> void:
 	actions["take_request"] = {"text": "take their song request for your next set", "kind": ""}
 	effects = {"take_request": {"flag": "requested", "toast": "%s will sing it in her next set."}}
 	hot_words = ["past post", "past-post", "pruitt's a cheat", "slides chips"]
-	phone = TidelineRules.phone_for(["anton", "wes", "augie"])
+	phone = TidelineRules.phone_for(["anton", "dmitri", "augie"])
 	caller_ids = ["Withheld", "Caldera Gaming Board", "Caldera Staffing"]
 	mae_calls = [
-		{"id": "board", "label": "Get Wes watching wheel two", "who": "wes", "as": "Caldera Gaming Board",
+		{"id": "board", "label": "Get Dmitri watching wheel two", "who": "dmitri", "as": "Caldera Gaming Board",
 			"line": "Caldera Gaming Board. We've had a complaint about your wheel two. Keep a camera on it tonight, please, and call your pit boss if you see anything.",
 			"answer": "Wheel two. Right. I'm on it.",
-			"mae": "I'll ring the eye as the Gaming Board, love. Wes will have a camera on that wheel."},
+			"mae": "I'll ring the eye as the Gaming Board, love. Dmitri will have a camera on that wheel."},
 		{"id": "staffing", "label": "Book a relief croupier", "who": "anton", "as": "Caldera Staffing",
 			"line": "Caldera Staffing. Your relief croupier for wheel two is on the way, for the quarter to eleven break.",
 			"answer": "Relief? Fine, fine. I'll tell Augie.",
@@ -252,7 +252,7 @@ func lookup(job: Job, who: String, crew_id: int, said: String, _asker: Character
 			if warm:
 				return Job.fact("good", "You saw Lyle Pruitt thrown off the Marlin's card game for sliding chips, and you like the person asking.", "Pruitt? Sliding chips on the Marlin's card game. I saw it myself, and I'll tell Anton so.")
 			return Job.fact("bad", "You don't know who that is, and you're not getting dragged into anything.", "Who? I'm not getting dragged into anything, Augie.")
-		"wes":
+		"dmitri":
 			if job.flags.has("caught") and str(job.flags.caught) == "camera":
 				return Job.fact("good", "You have Pruitt on tape sliding chips at wheel two.", "Got him on tape, Augie. Clear as day.")
 			return Job.fact("bad", "You haven't been watching wheel two; Anton told you not to.", "I've had no reason to look at wheel two.")
@@ -336,9 +336,9 @@ func _catch(job: Job, how: String, crew_id := 0) -> void:
 	var teo: Character = job.cast.get("teo")
 	match how:
 		"camera":
-			var w: Character = job.cast.get("wes")
+			var w: Character = job.cast.get("dmitri")
 			if w and a:
-				w.say_scripted("Augie, it's Wes. Got Pruitt on tape, wheel two, sliding a stack after the ball dropped.", a)
+				w.say_scripted("Augie, it's Dmitri. Got Pruitt on tape, wheel two, sliding a stack after the ball dropped.", a)
 		"relief":
 			if lyle:
 				lyle.say_scripted("Seventeen! That's mine, pal.")
@@ -430,7 +430,7 @@ func report(job: Job, outcome: String, r: Dictionary) -> void:
 	if outcome != "owed":
 		return
 	var how := {
-		"camera": "Wes caught him on tape.", "relief": "He tried it on the crew's relief croupier.",
+		"camera": "Dmitri caught him on tape.", "relief": "He tried it on the crew's relief croupier.",
 		"tess": "Tess told Augie everything.", "hugo": "Hugo Marlowe was the witness.",
 	}
 	r["text"] = str(r.text) + " " + str(how.get(str(job.flags.get("caught", "")), ""))

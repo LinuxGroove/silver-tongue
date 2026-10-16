@@ -1,10 +1,10 @@
 class_name TidelineVaultJob
 extends JobDef
-## Job 9, the vault. It takes two keys at once: Noor's, the cage manager's,
+## Job 9, the vault. It takes two keys at once: Imani's, the cage manager's,
 ## and the one on a chain round Horace Bell's neck, the old comptroller's.
 ## Horace opens it for a release Anton confirms (Larkspur's courier), a
 ## transfer Marcus confirms (Halberd's team), or anyone Augie vouches for
-## (the pit boss's favor). Or work the vault's own routine: hired as Noor's
+## (the pit boss's favor). Or work the vault's own routine: hired as Imani's
 ## cage temp, wait for the float check at half past eleven, and have Marisol
 ## sing Horace's song while the vault stands open.
 
@@ -31,7 +31,7 @@ func _init() -> void:
 	memory_from = ["meridian"]
 	title = "The vault"
 	venue_name = "The Tideline"
-	briefing = "This is the one, love. The Rose is in the Tideline's vault, and the vault takes two keys turned at once: Noor's, who runs the cage, and old Horace Bell's, on a chain round his neck since before you were born. Horace is the way in. He'll open it for a release the manager confirms, or for Halberd's own transfer, or for a friend of Augie's, if Augie owes you. Or there's the float check at half past eleven, when the vault stands open and Horace's mind is on his late wife's song. In, out, and out the front door with the Rose before the time lock at ten to midnight."
+	briefing = "This is the one, love. The Rose is in the Tideline's vault, and the vault takes two keys turned at once: Imani's, who runs the cage, and old Horace Bell's, on a chain round his neck since before you were born. Horace is the way in. He'll open it for a release the manager confirms, or for Halberd's own transfer, or for a friend of Augie's, if Augie owes you. Or there's the float check at half past eleven, when the vault stands open and Horace's mind is on his late wife's song. In, out, and out the front door with the Rose before the time lock at ten to midnight."
 	goal = "Get the Rose out of the vault and out of the Tideline by 11:50"
 	situation = TidelineCast.SITUATION + " Tonight the vault's float check is at half past eleven, and the time lock shuts the vault till morning at ten to midnight."
 	prize = "the Rose"
@@ -69,8 +69,8 @@ func _init() -> void:
 		"cage_temp": {
 			"title": "Cage temp", "names": ["Leo Brandt", "Lena Brandt"],
 			"job": "a cashier temp from Caldera Staffing",
-			"story": "Noor's two cashiers short tonight. Caldera Staffing sends temps through Anton. At half past eleven the vault opens for the float check. Horace can't resist Marisol singing Moon over the Harbor, and the cameras have a junction box in the alley.",
-			"outfit": "cage_temp", "for": "Noor, at the cage's third window",
+			"story": "Imani's two cashiers short tonight. Caldera Staffing sends temps through Anton. At half past eleven the vault opens for the float check. Horace can't resist Marisol singing Moon over the Harbor, and the cameras have a junction box in the alley.",
+			"outfit": "cage_temp", "for": "Imani, at the cage's third window",
 			"lines": [
 				"Hi, Caldera Staffing sent me. You're short tonight?",
 				"Mr Varga booked me. Check with him.",
@@ -99,15 +99,15 @@ func _init() -> void:
 	extras = TidelineRules.EXTRAS.duplicate()
 	routine = [
 		[FLOAT - 2, "horace", "horace_vault"],
-		[FLOAT - 2, "noor", "noor_vault"],
-		[TRAYS, "noor", "noor"],
+		[FLOAT - 2, "imani", "imani_vault"],
+		[TRAYS, "imani", "imani"],
 		[FLOAT_DONE, "horace", "horace"],
 	]
 	chatter = TidelineCast.chatter("vault", start, end)
 	chatter.append_array([
-		[FLOAT - 2, "noor", "Horace, it's the float. Meet me at the vault.", "radio"],
-		[TRAYS, "noor", "Float trays to window one, please.", "near"],
-		[FLOAT_DONE, "noor", "Vault's shut. Float's done.", "radio"],
+		[FLOAT - 2, "imani", "Horace, it's the float. Meet me at the vault.", "radio"],
+		[TRAYS, "imani", "Float trays to window one, please.", "near"],
+		[FLOAT_DONE, "imani", "Vault's shut. Float's done.", "radio"],
 	])
 	events = [[FLOAT, "float"], [TRAYS, "trays"], [SET, "set"], [FLOAT_DONE, "float_done"]]
 	locked = ["staff", "count_room", "eye", "office", "cage", "vault", "back", "staff_room"]
@@ -133,28 +133,28 @@ func _init() -> void:
 			"name": "the release order", "at": "", "carry": "carrying a Larkspur Holdings envelope",
 			"papers": "a release order from Larkspur Holdings for the Rose, to their courier %s", "forged": true,
 			"copy": "the letterhead's a photocopy and the signature's printed. It's not real.",
-			"belief": "has a release order from Larkspur Holdings for the Rose", "to": ["horace", "noor", "anton", "marcus"],
+			"belief": "has a release order from Larkspur Holdings for the Rose", "to": ["horace", "imani", "anton", "marcus"],
 		},
 		"transfer": {
 			"name": "the transfer order", "at": "", "carry": "",
 			"papers": "a Halberd transfer order for one item from the Tideline's vault, escort %s", "forged": true,
 			"copy": "the order number's the wrong format. It's a fake.",
-			"belief": "has a Halberd transfer order", "to": ["horace", "marcus", "noor"],
+			"belief": "has a Halberd transfer order", "to": ["horace", "marcus", "imani"],
 		},
 	}
 	actions = {
-		"release_rose": {"text": "open the vault with Noor and hand them the Rose through the cage's middle window", "kind": "opening", "lockdown": true},
+		"release_rose": {"text": "open the vault with Imani and hand them the Rose through the cage's middle window", "kind": "opening", "lockdown": true},
 		"ask_security": {"text": "radio Marcus on the staff door to check (takes a moment)", "kind": "check"},
 		"ask_pit": {"text": "radio Augie in the pit to check (takes a moment)", "kind": "check"},
 		"hire_cashier": {"text": "take them on as tonight's cage temp: through the staff door and into the cage", "kind": "opening", "lockdown": true},
 		"vouch": {"text": "tell Horace on the radio that they're friends of yours and he can trust them", "kind": "opening"},
 		"take_request": {"text": "take their song request for your next set", "kind": ""},
 		"expect_courier": {"text": "tell Horace that Larkspur's courier is coming for the Rose tonight", "kind": ""},
-		"expect_temp": {"text": "tell Noor that a cage temp from Caldera Staffing is coming", "kind": ""},
+		"expect_temp": {"text": "tell Imani that a cage temp from Caldera Staffing is coming", "kind": ""},
 		"expect_transfer": {"text": "expect Halberd's transfer team tonight, and say so if anyone asks", "kind": ""},
 	}
 	hot_words = ["the vault", "both keys", "horace's key", "loop the cameras"]
-	phone = TidelineRules.phone_for(["anton", "marcus", "noor", "wes"])
+	phone = TidelineRules.phone_for(["anton", "marcus", "imani", "dmitri"])
 	caller_ids = ["Withheld", "Larkspur Holdings", "Halberd Dispatch", "Caldera Staffing", "Caldera Gaming Board"]
 	mae_calls = [
 		{"id": "buyer", "label": "Tell Anton Larkspur's collecting", "who": "anton", "as": "Larkspur Holdings",
@@ -167,8 +167,8 @@ func _init() -> void:
 			"mae": "I'll ring Marcus as Halberd Dispatch. He'll vouch for a transfer team."},
 		{"id": "staffing", "label": "Book a cage temp", "who": "anton", "as": "Caldera Staffing",
 			"line": "Caldera Staffing. Your cage temp for tonight is on the way. So sorry it's late notice.",
-			"answer": "A temp? Noor will be thrilled. Fine.",
-			"mae": "I'll ring Anton from the agency. Noor will get her temp."},
+			"answer": "A temp? Imani will be thrilled. Fine.",
+			"mae": "I'll ring Anton from the agency. Imani will get her temp."},
 		TidelineRules.FOOTAGE,
 	]
 	outcomes = {
@@ -248,11 +248,11 @@ func on_action(job: Job, ch: Character, c: CrewInfo, act: String) -> bool:
 				return true
 			job.flags["release"] = "keys"
 			job.flags["release_for"] = c.id
-			ch.say_scripted("Noor, it's Horace. I need the vault open. A release.", job.cast.get("noor"))
+			ch.say_scripted("Imani, it's Horace. I need the vault open. A release.", job.cast.get("imani"))
 			ch.walk_to("horace_vault")
-			var noor: Character = job.cast.get("noor")
-			if noor and not noor.minding:
-				noor.walk_to("noor_vault")
+			var imani: Character = job.cast.get("imani")
+			if imani and not imani.minding:
+				imani.walk_to("imani_vault")
 			job.toast_for.emit(c.id, "Horace is opening the vault. Wait at the cage's middle window.")
 			return true
 		"hire_cashier":
@@ -264,8 +264,8 @@ func on_action(job: Job, ch: Character, c: CrewInfo, act: String) -> bool:
 			job.open_for("cage", Job.OPEN_FOR * 1.6)
 			var m: Character = job.cast.get("marcus")
 			if m:
-				m.note("On the radio, Noor: \"Marcus, I've a temp from Caldera Staffing coming through to the cage. %s.\"" % job.describe(c.id))
-			job.toast_for.emit(c.id, "Noor takes you on. The staff door and the cage door are open for you: window one is yours. The float check is at 11:30.")
+				m.note("On the radio, Imani: \"Marcus, I've a temp from Caldera Staffing coming through to the cage. %s.\"" % job.describe(c.id))
+			job.toast_for.emit(c.id, "Imani takes you on. The staff door and the cage door are open for you: window one is yours. The float check is at 11:30.")
 			return true
 		"vouch":
 			if not owed:
@@ -291,7 +291,7 @@ func on_action(job: Job, ch: Character, c: CrewInfo, act: String) -> bool:
 		"expect_temp":
 			if not TidelineRules.on_phone(job, c, ch) or TidelineRules.calling_as(job, c, ch, "Caldera Staffing"):
 				job.flags["temp_expected"] = true
-				ch.note("Caldera Staffing rang: a cage temp for Noor is on the way.")
+				ch.note("Caldera Staffing rang: a cage temp for Imani is on the way.")
 			return true
 		"expect_transfer":
 			if not TidelineRules.on_phone(job, c, ch) or TidelineRules.calling_as(job, c, ch, "Halberd Dispatch"):
@@ -311,7 +311,7 @@ func lookup(job: Job, who: String, crew_id: int, said: String, _asker: Character
 				return Job.fact("bad", "Larkspur Holdings hasn't said anything to you about a courier tonight.", "Larkspur? Nobody's called me about a courier. Don't release anything.")
 			if Job.any(said, TEMP_WORDS):
 				if job.flags.has("temp_expected"):
-					return Job.fact("good", "Caldera Staffing told you a cage temp is coming tonight.", "Yes, the agency rang. Your temp's expected, Noor.")
+					return Job.fact("good", "Caldera Staffing told you a cage temp is coming tonight.", "Yes, the agency rang. Your temp's expected, Imani.")
 				return Job.fact("bad", "You haven't booked a cage temp tonight.", "A temp? I didn't book one.")
 			return Job.fact("bad", "You don't know them.", "No idea who that is.")
 		"marcus":
@@ -327,7 +327,7 @@ func lookup(job: Job, who: String, crew_id: int, said: String, _asker: Character
 
 
 func on_routine(job: Job, ch: Character, _spot: String) -> bool:
-	if ch.sheet.id in ["horace", "noor"] and str(job.flags.get("release", "")) in ["keys", "fetch", "window"]:
+	if ch.sheet.id in ["horace", "imani"] and str(job.flags.get("release", "")) in ["keys", "fetch", "window"]:
 		return false
 	if ch.sheet.id == "horace" and job.flags.has("horace_away"):
 		return false
@@ -335,7 +335,7 @@ func on_routine(job: Job, ch: Character, _spot: String) -> bool:
 
 
 func on_event(job: Job, event_name: String) -> void:
-	var noor: Character = job.cast.get("noor")
+	var imani: Character = job.cast.get("imani")
 	var horace: Character = job.cast.get("horace")
 	match event_name:
 		"float":
@@ -343,7 +343,7 @@ func on_event(job: Job, event_name: String) -> void:
 		"trays":
 			for c in job.crew:
 				if c.flags.has("cage_temp"):
-					job.toast_for.emit(c.id, "Noor wants the float trays at window one. The vault's standing open.")
+					job.toast_for.emit(c.id, "Imani wants the float trays at window one. The vault's standing open.")
 		"set":
 			var m: Character = job.cast.get("marisol")
 			if not job.flags.has("song"):
@@ -355,7 +355,7 @@ func on_event(job: Job, event_name: String) -> void:
 			if horace and not horace.minding and str(job.flags.get("release", "")) == "":
 				job.flags["horace_away"] = true
 				if job.venue.zone_at(horace.global_position) != "lounge":
-					horace.say_scripted("Noor, two minutes. It's Eleanor's song.")
+					horace.say_scripted("Imani, two minutes. It's Eleanor's song.")
 					horace.walk_to("horace")
 				for id in horace.faces:
 					horace.faces[id]["suspicion"] = maxi(int(horace.faces[id].suspicion) - 1, 0)
@@ -366,34 +366,34 @@ func on_event(job: Job, event_name: String) -> void:
 			if job.flags.has("vault_open"):
 				job.flags.erase("vault_open")
 				job.set_door("vault", false)
-			if noor and str(job.items.get("rose", {}).get("at", "")) != "vault_table" and not job.flags.has("released"):
-				_missing(job, noor)
+			if imani and str(job.items.get("rose", {}).get("at", "")) != "vault_table" and not job.flags.has("released"):
+				_missing(job, imani)
 
 
-## Noor finds the Rose gone after the float.
-func _missing(job: Job, noor: Character) -> void:
+## Imani finds the Rose gone after the float.
+func _missing(job: Job, imani: Character) -> void:
 	job.flags["missing"] = true
-	noor.say_scripted("Marcus! The Rose is gone! Lock it all down!", job.cast.get("marcus"))
+	imani.say_scripted("Marcus! The Rose is gone! Lock it all down!", job.cast.get("marcus"))
 	job.heat.bump(Heat.CAUGHT * 2.0)
 	for c in job.free_crew():
 		if c.flags.has("cage_temp"):
-			JobRules.nudge(noor.face_of(c.id), JobRules.CAUGHT)
-			noor.event("The Rose is gone from the vault, and the only stranger in the cage tonight was %s." % job.describe(c.id), c.id, "event")
+			JobRules.nudge(imani.face_of(c.id), JobRules.CAUGHT)
+			imani.event("The Rose is gone from the vault, and the only stranger in the cage tonight was %s." % job.describe(c.id), c.id, "event")
 
 
 func tick(job: Job, delta: float) -> void:
 	TidelineRules.tick(job, self, delta)
-	var noor: Character = job.cast.get("noor")
+	var imani: Character = job.cast.get("imani")
 	var horace: Character = job.cast.get("horace")
-	# The float: once Horace and Noor are both at the vault, it opens.
+	# The float: once Horace and Imani are both at the vault, it opens.
 	if job.flags.has("float_due") and not job.flags.has("vault_open") and str(job.flags.get("release", "")) == "" \
-			and TidelineRules.at(job, horace, "horace_vault") and TidelineRules.at(job, noor, "noor_vault"):
+			and TidelineRules.at(job, horace, "horace_vault") and TidelineRules.at(job, imani, "imani_vault"):
 		job.flags["vault_open"] = true
 		job.set_door("vault", true)
 		horace.say_scripted("Both keys. Three, two, one.")
 		# He minds the vault's doorway while the float's counted.
 		horace.walk_to("vault_out")
-	_release(job, horace, noor)
+	_release(job, horace, imani)
 	# The Rose goes back to the vault from anyone held.
 	var h := job.holder("rose")
 	if h and h.held:
@@ -403,10 +403,10 @@ func tick(job: Job, delta: float) -> void:
 
 ## Horace's release: both keys, the Rose from its table, and through the
 ## cage's middle window to whoever it's for.
-func _release(job: Job, horace: Character, noor: Character) -> void:
+func _release(job: Job, horace: Character, imani: Character) -> void:
 	match str(job.flags.get("release", "")):
 		"keys":
-			if TidelineRules.at(job, horace, "horace_vault") and TidelineRules.at(job, noor, "noor_vault"):
+			if TidelineRules.at(job, horace, "horace_vault") and TidelineRules.at(job, imani, "imani_vault"):
 				job.flags["release"] = "fetch"
 				horace.say_scripted("Both keys. Three, two, one.")
 				horace.walk_to("rose_table")
@@ -415,7 +415,7 @@ func _release(job: Job, horace: Character, noor: Character) -> void:
 				job.flags["release"] = "window"
 				job.place_item(0, "rose", "")
 				horace.walk_to("horace_window")
-				noor.walk_to("noor")
+				imani.walk_to("imani")
 				job.flags["window_until"] = job.elapsed + WINDOW_WAIT
 		"window":
 			if not TidelineRules.at(job, horace, "horace_window"):
@@ -487,7 +487,7 @@ func on_mae(job: Job, call_id: String, ch: Character) -> void:
 			ch.note("Halberd Dispatch rang: a transfer team is coming for one item from the vault tonight. You walk them in.")
 		"staffing":
 			job.flags["temp_expected"] = true
-			ch.note("Caldera Staffing rang: a cage temp for Noor is on the way.")
+			ch.note("Caldera Staffing rang: a cage temp for Imani is on the way.")
 		"footage":
 			TidelineRules.keep_busy(job, ch)
 

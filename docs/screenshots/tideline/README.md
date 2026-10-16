@@ -12,12 +12,12 @@ Made by `tools/screenshot.tscn -- --all=docs/screenshots group=tideline` (see `t
 - [`bar`](bar.png): The Tide Bar on the west wall: Desi's counter, the back bar, the stools
 - [`lounge`](lounge.png): The lounge at the east end: banquettes, cocktail tables, Marisol on her stage
 - [`high_limit`](high_limit.png): The high-limit room: baccarat under the chandelier, the private bar, Hugo's table
-- [`cage`](cage.png): The cage from the floor: three windows behind brass bars, Bea's and Noor's open, the middle one closed
-- [`cage_inside`](cage_inside.png): Inside the cage: the counters, Noor's desk, the vault door in its frame
+- [`cage`](cage.png): The cage from the floor: three windows behind brass bars, Bea's and Imani's open, the middle one closed
+- [`cage_inside`](cage_inside.png): Inside the cage: the counters, Imani's desk, the vault door in its frame
 - [`vault`](vault.png): Inside the vault: shelves of cash, deposit boxes, the Rose on its table
 - [`corridor`](corridor.png): The back corridor off the staff door: the count room, the eye, security, the cage, the back door
 - [`count_room`](count_room.png): The count room: the count table, the drop carts, the key box and the count sheet
-- [`eye`](eye.png): The eye in the sky: the wall of camera feeds and Wes's console
+- [`eye`](eye.png): The eye in the sky: the wall of camera feeds and Dmitri's console
 - [`office`](office.png): Halberd's security office, where anyone held is kept
 - [`staff_room`](staff_room.png): The staff room: lockers, a bench, the cleaner's cart
 - [`alley`](alley.png): The alley out the back: the back door and its keypad, the cameras' junction box, the bins
