@@ -35,6 +35,7 @@ signal shown_received(node_name: String, is_visible: bool)
 signal goal_received(text: String)
 signal mae_received(text: String)
 signal call_received(char_id: String, number_name: String)
+signal moved_received(at: Transform3D)
 signal report_received(report: Dictionary)
 signal peer_gone(peer: int)
 
@@ -288,6 +289,12 @@ func mae(peer: int, text: String) -> void:
 		_h_mae.rpc_id(peer, text)
 
 
+## One guest was taken somewhere at once.
+func move(peer: int, at: Transform3D) -> void:
+	if peer in guests():
+		_h_move.rpc_id(peer, at)
+
+
 ## One guest's phone call started (or ended: both "").
 func call_state(peer: int, char_id: String, number_name: String) -> void:
 	if peer in guests():
@@ -378,5 +385,10 @@ func _h_mae(text: String) -> void:
 @rpc("authority", "call_remote", "reliable")
 func _h_call(char_id: String, number_name: String) -> void:
 	call_received.emit(char_id, number_name)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _h_move(at: Transform3D) -> void:
+	moved_received.emit(at)
 
 #endregion

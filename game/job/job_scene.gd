@@ -123,7 +123,7 @@ func _ready() -> void:
 		job = Job.new()
 		job.name = "Job"
 		add_child(job)
-		job.memories = Progress.memories_for(def.venue_id)
+		job.memories = Progress.memories_of([def.venue_id] + def.memory_from)
 		job.setup(def, venue, crew, int(setup.get("seed", 0)))
 		cast = job.cast
 		_connect_job()
@@ -289,6 +289,7 @@ func _connect_job() -> void:
 	job.goal_changed.connect(_on_goal_host)
 	job.mae_said.connect(_on_mae_host)
 	job.call_changed.connect(_on_call_host)
+	job.moved.connect(_on_moved_host)
 	job.ended.connect(_on_job_ended)
 	for ch in cast.values():
 		ch.thought.connect(_on_thought)
@@ -307,6 +308,7 @@ func _connect_net() -> void:
 	net.goal_received.connect(_on_goal)
 	net.mae_received.connect(_on_mae)
 	net.call_received.connect(_on_call)
+	net.moved_received.connect(_on_moved)
 	net.pose_received.connect(_on_pose)
 	net.voice_received.connect(_on_voice)
 	net.line_received.connect(_on_line)
@@ -753,6 +755,13 @@ func _on_goal_host(crew_id: int, text: String) -> void:
 		_on_goal(text)
 
 
+func _on_moved_host(crew_id: int, at: Transform3D) -> void:
+	if crew_id == me.id:
+		_on_moved(at)
+	else:
+		net.move(crew_id, at)
+
+
 func _on_mae_host(crew_id: int, text: String) -> void:
 	if crew_id == me.id:
 		_on_mae(text)
@@ -899,6 +908,15 @@ func _on_shown(node_name: String, is_visible: bool) -> void:
 
 func _on_goal(text: String) -> void:
 	hud.set_goal(text)
+
+
+## Taken somewhere at once: a fade, then there.
+func _on_moved(at: Transform3D) -> void:
+	hud.fade()
+	await get_tree().create_timer(0.35).timeout
+	if is_inside_tree():
+		player.global_transform = _player_at(at)
+		player.reset_physics_interpolation()
 
 
 ## Auntie Mae, in your ear.

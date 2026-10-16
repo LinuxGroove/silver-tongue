@@ -16,24 +16,6 @@ extends Node
 
 const SETTLE := 150
 const FRAMES := 6
-## What each view shows, for the README.
-const ABOUT := {
-	"street": "The street out front: the Meridian's arch, canopy and red carpet, the buildings across",
-	"entrance": "Just inside the front doors, where the crew starts, looking up the lobby",
-	"lobby": "The lobby from its south-west corner: the lounges, the columns, the chandelier",
-	"reception": "Reception in the north-east corner, Dana's desk, the key cabinet and the clock",
-	"bar": "The lobby bar on the west side, Benny's counter and the back bar",
-	"ballroom_doors": "The ballroom doors, where Teo checks invitations, with the rope and the easel",
-	"ballroom": "The ballroom from its doors: tables of eight, the chandeliers, the stage",
-	"stage": "The stage: the curtain, the lectern, the covered piece, the dance floor",
-	"pass": "The kitchen's pass from the service door: Laurent's post and the pass door",
-	"kitchen": "The kitchen: the cooking line under its hood, the pass, the walk-in freezer",
-	"staff_room": "The staff room: lockers, the bench and the rack of waiters' jackets",
-	"corridor": "The service corridor from the loading door, the service door at the end",
-	"service_door": "The service door (M0's), Marcus's post, and the keypad",
-	"office": "The security office: the CCTV monitors, the desk",
-	"loading_bay": "The loading bay: the dumpster, the gate onto the street, the loading door",
-}
 ## The gala's shots, in order, for the README.
 const GALA := {
 	"briefing": "The title's gala page: Auntie Mae's briefing, the four covers and how to play",
@@ -103,7 +85,7 @@ func _ready() -> void:
 		await _shoot("_look", out if out != "" else "/tmp/look.png")
 	elif view != "":
 		if not venue.views.has(view):
-			printerr("No view called %s; there are %s" % [view, ", ".join(_order())])
+			printerr("No view called %s; there are %s" % [view, ", ".join(_order(venue.view_about))])
 			get_tree().quit(1)
 			return
 		await _shoot(view, out if out != "" else "/tmp/%s.png" % view)
@@ -150,7 +132,7 @@ func _venue_shots(venue_id: String, dir: String, only: Array) -> void:
 	await _build_venue(venue_id)
 	DirAccess.make_dir_recursive_absolute(dir)
 	var lines := ["# %s" % Jobs.VENUES[venue_id], "", "Made by `tools/screenshot.tscn -- --all=docs/screenshots group=%s` (see `tools/screenshot.gd`)." % dir.get_file(), ""]
-	var about: Dictionary = ABOUT if venue_id == "meridian" else venue.view_about
+	var about: Dictionary = venue.view_about
 	for v in _order(about):
 		if only.is_empty() or v in only:
 			await _shoot(v, dir.path_join(v + ".png"))
@@ -162,7 +144,7 @@ func _venue_shots(venue_id: String, dir: String, only: Array) -> void:
 	await get_tree().process_frame
 
 
-func _order(about := ABOUT) -> Array:
+func _order(about: Dictionary) -> Array:
 	var out := []
 	for v in about:
 		if venue.views.has(v):

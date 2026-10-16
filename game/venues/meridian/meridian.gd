@@ -692,3 +692,20 @@ func _views() -> void:
 		"street": [Vector3(0.5, 1.7, 11.4), Vector3(-4.0, 3.6, 0.0)],
 	}
 	_set_views(v)
+	view_about = {
+		"street": "The street out front: the Meridian's arch, canopy and red carpet, the buildings across",
+		"entrance": "Just inside the front doors, where the crew starts, looking up the lobby",
+		"lobby": "The lobby from its south-west corner: the lounges, the columns, the chandelier",
+		"reception": "Reception in the north-east corner, Dana's desk, the key cabinet and the clock",
+		"bar": "The lobby bar on the west side, Benny's counter and the back bar",
+		"ballroom_doors": "The ballroom doors, where Teo checks invitations, with the rope and the easel",
+		"ballroom": "The ballroom from its doors: tables of eight, the chandeliers, the stage",
+		"stage": "The stage: the curtain, the lectern, the covered piece, the dance floor",
+		"pass": "The kitchen's pass from the service door: Laurent's post and the pass door",
+		"kitchen": "The kitchen: the cooking line under its hood, the pass, the walk-in freezer",
+		"staff_room": "The staff room: lockers, the bench and the rack of waiters' jackets",
+		"corridor": "The service corridor from the loading door, the service door at the end",
+		"service_door": "The service door (M0's), Marcus's post, and the keypad",
+		"office": "The security office: the CCTV monitors, the desk",
+		"loading_bay": "The loading bay: the dumpster, the gate onto the street, the loading door",
+	}

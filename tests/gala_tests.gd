@@ -472,6 +472,28 @@ func test_title_gala(t) -> void:
 ## The job in the real Meridian: everyone's routine walks get where
 ## they're going, through doors locked to the crew, and the spots are in
 ## the rooms the job expects.
+func test_job_move(t) -> void:
+	var job := JobHarness.start(t, MeridianGalaJob.new(), ["guest", "press"], StubHotel.new())
+	await t.frames(2)
+	var moved := []
+	job.moved.connect(func(id, at): moved.append([id, at]))
+	job.move_crew(1, "ballroom_in")
+	job.move_crew(2, "ballroom_in")
+	var spot: Transform3D = job.venue.spots.ballroom_in
+	t.check(job.crew_node(1).global_position.distance_to(spot.origin) < 0.01, "taken somewhere, a crew member is there at once")
+	t.check(job.crew_node(2).global_position.distance_to(spot.origin) > 0.7, "and a crewmate taken to the same spot stands beside them")
+	t.check(moved.size() == 2 and moved[0][0] == 1, "their devices are told")
+	job.move_crew(1, "nowhere")
+	t.check(moved.size() == 2, "a spot that isn't there goes nowhere")
+	JobHarness.done(job)
+	await t.frames(2)
+
+
+func test_job_data(t) -> void:
+	VenueChecks.job_data(t, MeridianGalaJob.new())
+	await VenueChecks.routines(t, MeridianGalaJob.new())
+
+
 func test_job_in_meridian(t) -> void:
 	LGSettings.set_value("ai", "mode", "off")
 	var root := Node3D.new()

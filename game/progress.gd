@@ -145,6 +145,18 @@ func memories_for(venue_id: String) -> Dictionary:
 	return memories.get(venue_id, {})
 
 
+## What the people of several venues remember, together.
+func memories_of(venues: Array) -> Dictionary:
+	var out := {}
+	for v in venues:
+		var m: Dictionary = memories.get(str(v), {})
+		for ch in m:
+			var lines: Array = out.get(ch, [])
+			lines.append_array(m[ch])
+			out[ch] = lines
+	return out
+
+
 ## Buys a new face, so Halberd's photo is of someone else. False when the
 ## take won't cover it or the face isn't burned.
 func buy_face() -> bool:

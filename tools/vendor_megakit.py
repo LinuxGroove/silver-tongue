@@ -9,6 +9,9 @@ https://github.com/LinuxGroove/quaternius-assets):
 Each model's glTF and buffer are copied as they are, with the textures they
 name scaled to MAX_TEX pixels (the kit's 2K sheets are more than a hotel room
 needs on a handheld). The kit is CC0 (Downtown_City_MegaKit_License.txt).
+
+MODELS are the Meridian's; each other venue lists the pieces it adds in
+tools/megakit/<venue>.txt, one name a line (# starts a comment).
 """
 import json
 import os
@@ -56,10 +59,28 @@ MODELS = [
 TEXTURES = ["T_lit_interior_1.png", "T_lit_interior_2.png", "T_dark_interior.png"]
 
 
+def venue_models() -> list:
+    """The pieces the other venues add (tools/megakit/*.txt)."""
+    out = []
+    here = os.path.join(os.path.dirname(__file__), "megakit")
+    if not os.path.isdir(here):
+        return out
+    for f in sorted(os.listdir(here)):
+        if not f.endswith(".txt"):
+            continue
+        with open(os.path.join(here, f)) as lines:
+            for line in lines:
+                name = line.split("#")[0].strip()
+                if name and name not in MODELS and name not in out:
+                    out.append(name)
+    return out
+
+
 def main(src: str) -> None:
     os.makedirs(DEST, exist_ok=True)
     textures = set(TEXTURES)
-    for name in MODELS:
+    models = MODELS + venue_models()
+    for name in models:
         gltf = os.path.join(src, name + ".gltf")
         g = json.load(open(gltf))
         shutil.copy(gltf, os.path.join(DEST, name + ".gltf"))
@@ -78,7 +99,7 @@ def main(src: str) -> None:
         if os.path.exists(cand):
             shutil.copy(cand, os.path.join(DEST, "Downtown_City_MegaKit_License.txt"))
             break
-    print("%d models, %d textures" % (len(MODELS), len(textures)))
+    print("%d models, %d textures" % (len(models), len(textures)))
 
 
 if __name__ == "__main__":

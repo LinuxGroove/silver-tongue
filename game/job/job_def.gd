@@ -15,6 +15,10 @@ extends RefCounted
 var id := ""
 var venue_id := ""
 var number := 1
+## Other venues whose people this job's cast shares, with what they
+## remember of the crew (the finale's guests come from all over Caldera).
+## Character ids are the same person wherever they turn up.
+var memory_from: Array = []
 ## For the board and the HUD: "The gala", "The Hotel Meridian".
 var title := ""
 var venue_name := ""

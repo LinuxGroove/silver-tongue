@@ -1,5 +1,6 @@
 extends RefCounted
-## The Meridian (game/world/meridian.gd): it builds, people can stand at its
+## The Meridian (game/venues/meridian/meridian.gd), through the checks every
+## venue passes ([VenueChecks]) and its own: it builds, people can stand at its
 ## spots and walk its links, its doors block when shut and not when open,
 ## locked doors stay shut, and its zones are the rooms of docs/m1.md.
 ##   godot --headless --path . tests/run_tests.tscn -- --only=hotel
@@ -24,40 +25,10 @@ const ROOM_SAMPLES := {
 	"office": [Vector3(15, 1, -11), Vector3(17, 1, -7), Vector3(13, 1, -15)],
 	"outside": [Vector3(-4, 1, 5), Vector3(12, 1, -3), Vector3(19, 1, -1), Vector3(30, 1, 8)],
 }
-## Head room: a spot's or extra's person is a 0.25 m ball at hip and at head height.
-const BODY := 0.25
 
 
 func _hotel(t: Node, open_doors := false) -> Meridian:
-	var h := Meridian.new()
-	h.build()
-	if open_doors:
-		for d in h.doors.values():
-			d.open()
-	t.add_child(h)
-	await t.get_tree().physics_frame
-	await t.get_tree().physics_frame
-	return h
-
-
-func _space(t: Node) -> PhysicsDirectSpaceState3D:
-	return t.get_tree().root.get_world_3d().direct_space_state
-
-
-func _ray(t: Node, a: Vector3, b: Vector3, mask: int) -> Dictionary:
-	var q := PhysicsRayQueryParameters3D.create(a, b, mask)
-	return _space(t).intersect_ray(q)
-
-
-## What solid things a ball at `p` touches.
-func _touching(t: Node, p: Vector3, r: float, mask: int) -> Array:
-	var q := PhysicsShapeQueryParameters3D.new()
-	var s := SphereShape3D.new()
-	s.radius = r
-	q.shape = s
-	q.transform = Transform3D(Basis.IDENTITY, p)
-	q.collision_mask = mask
-	return _space(t).intersect_shape(q, 4)
+	return await VenueChecks.built(t, Meridian.new(), open_doors)
 
 
 func test_builds(t) -> void:
@@ -82,71 +53,26 @@ func test_builds(t) -> void:
 	for l in h.links:
 		t.check(h.points.has(l[0]) and h.points.has(l[1]), "hotel: link %s-%s joins two points" % [l[0], l[1]])
 		t.check(l[2] == "" or h.doors.has(l[2]), "hotel: link %s-%s goes through a door there is" % [l[0], l[1]])
-	t.check(h.environment() is Environment, "hotel: an environment")
+	VenueChecks.structure(t, h, "hotel", SPOT_ZONES)
 	h.queue_free()
 
 
 func test_spots(t) -> void:
 	var h: Meridian = await _hotel(t)
-	for s in SPOT_ZONES:
-		var p: Vector3 = (h.spots[s] as Transform3D).origin
-		t.check(absf(p.y) < 0.01, "hotel: spot %s is on the floor" % s)
-		t.check(h.zone_at(p + Vector3.UP) == SPOT_ZONES[s], "hotel: spot %s is in the %s (%s)" % [s, SPOT_ZONES[s], h.zone_at(p + Vector3.UP)])
-		t.check(h.points.has(s) and h.points[s].is_equal_approx(p), "hotel: spot %s is a point people walk to" % s)
-		for y in [0.9, 1.6]:
-			var hit := _touching(t, p + Vector3(0, y, 0), BODY, Kit.LAYER_SOLID)
-			t.check(hit.is_empty(), "hotel: room to stand at %s (%s)" % [s, hit[0].collider.name if hit else ""])
-	for room in h.extras:
-		for x in h.extras[room]:
-			var p: Vector3 = (x as Transform3D).origin
-			t.check(h.zone_at(p + Vector3.UP) == room, "hotel: the %s's crowd is in it (%s)" % [room, p])
-			var hit := _touching(t, p + Vector3(0, 1.2, 0), 0.22, Kit.LAYER_SOLID)
-			t.check(hit.is_empty(), "hotel: room for a guest at %s (%s)" % [p, hit[0].collider.name if hit else ""])
+	VenueChecks.standing_room(t, h, "hotel")
 	h.queue_free()
 
 
 func test_links_clear(t) -> void:
 	var h: Meridian = await _hotel(t, true)
-	for l in h.links:
-		var a: Vector3 = h.points[l[0]]
-		var b: Vector3 = h.points[l[1]]
-		for side in [-0.2, 0.0, 0.2]:
-			var off: Vector3 = (b - a).cross(Vector3.UP).normalized() * side
-			var hit := _ray(t, a + off + Vector3(0, 0.45, 0), b + off + Vector3(0, 0.45, 0), Kit.LAYER_SOLID)
-			t.check(hit.is_empty(), "hotel: %s to %s is clear at knee height (%s at %s)" % [l[0], l[1], hit.collider.name if hit else "", hit.position if hit else ""])
-	# Everyone can get everywhere from where the crew starts.
-	var seen := {"crew_0": true}
-	var todo := ["crew_0"]
-	while not todo.is_empty():
-		var n = todo.pop_back()
-		for l in h.links:
-			for k in 2:
-				if l[k] == n and not seen.has(l[1 - k]):
-					seen[l[1 - k]] = true
-					todo.append(l[1 - k])
-	for p in h.points:
-		t.check(seen.has(p), "hotel: %s can be reached from the front" % p)
+	VenueChecks.walkable(t, h, "hotel")
 	h.queue_free()
 
 
 func test_doors_block(t) -> void:
 	var h: Meridian = await _hotel(t)
-	for name in DOORS:
-		var d: HotelDoor = h.doors[name]
-		var c := d.centre() + Vector3(0, 1.0, 0)
-		var across := d.global_basis.z.normalized()
-		var hit := _ray(t, c - across, c + across, Kit.LAYER_SOLID)
-		t.check(not hit.is_empty() and hit.collider.get_parent() == d, "hotel: the shut %s door blocks" % name)
-		t.check(not hit.is_empty() and str(hit.collider.get_meta("use", "")) == "door:" + name, "hotel: the %s door's leaf says what it is" % name)
-		t.check(d.open(), "hotel: the %s door opens" % name)
-	await t.until(func() -> bool: return false, HotelDoor.SECONDS + 0.3)
-	for name in DOORS:
-		var d: HotelDoor = h.doors[name]
-		var c := d.centre() + Vector3(0, 1.0, 0)
-		var across := d.global_basis.z.normalized()
-		var hit := _ray(t, c - across * 1.5, c + across * 1.5, Kit.LAYER_SOLID)
-		t.check(hit.is_empty(), "hotel: the open %s door lets you through (%s)" % [name, hit.collider.name if hit else ""])
-		d.close()
+	t.check(h.doors.size() == DOORS.size(), "hotel: no doors but the seven (%d)" % h.doors.size())
+	await VenueChecks.doors_block(t, h, "hotel")
 	# The staff door swings away from whoever opens it.
 	await t.until(func() -> bool: return false, HotelDoor.SECONDS + 0.3)
 	var staff: HotelDoor = h.doors.staff

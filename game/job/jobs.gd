@@ -22,7 +22,7 @@ const PATHS := {
 	"marlin_safe": "res://game/venues/marlin/safe_job.gd",
 	"marlin_auction": "res://game/venues/marlin/auction_job.gd",
 	"tideline_count": "res://game/venues/tideline/count_job.gd",
-	"tideline_favor": "res://game/venues/tideline/favour_job.gd",
+	"tideline_favor": "res://game/venues/tideline/favor_job.gd",
 	"tideline_vault": "res://game/venues/tideline/vault_job.gd",
 	"vantage_lift": "res://game/venues/vantage/lift_job.gd",
 	"vantage_board": "res://game/venues/vantage/board_job.gd",

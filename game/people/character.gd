@@ -385,11 +385,14 @@ func _walk(delta: float) -> void:
 		if not hd.is_open:
 			job.open_door(door, global_position)
 			_opened.append(hd)
+	# Up and down (stairs, a gangway) follows the line between two points; a
+	# link straight up (a lift) is ridden in a step.
+	var rise := target.y - global_position.y
 	var to := target - global_position
 	to.y = 0.0
 	var step := WALK_SPEED * delta
 	if to.length() <= step:
-		global_position = Vector3(target.x, global_position.y, target.z)
+		global_position = target
 		_path.pop_front()
 		_path_doors.pop_front()
 		# Doors behind them shut once they're through.
@@ -407,7 +410,7 @@ func _walk(delta: float) -> void:
 			_opened.clear()
 			person.play(_idle)
 		return
-	global_position += to.normalized() * step
+	global_position += to.normalized() * step + Vector3(0, rise * step / to.length(), 0)
 	rotation.y = lerp_angle(rotation.y, atan2(to.x, to.z), 1.0 - exp(-delta * 8.0))
 	person.play("Walk")
 

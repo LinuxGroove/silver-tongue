@@ -41,6 +41,9 @@ signal mae_said(crew_id: int, text: String)
 ## A crew member's phone call started (with whom, as the phone lists them)
 ## or ended (both "").
 signal call_changed(crew_id: int, char_id: String, number_name: String)
+## A crew member was taken somewhere at once (a lift's ride, the tender out
+## to a yacht): their device fades and puts them at `at`.
+signal moved(crew_id: int, at: Transform3D)
 signal ended(report: Dictionary)
 
 ## Seconds a door stays open for someone a character let through.
@@ -153,6 +156,21 @@ func crew_by_id(id: int) -> CrewInfo:
 func crew_node(id: int) -> Node3D:
 	var c := crew_by_id(id)
 	return c.node if c else null
+
+
+## Takes a crew member to a spot at once: a lift's ride, the tender out to a
+## yacht. Crewmates sent to the same spot stand side by side. The player's
+## own body is moved by their scene, after a fade; anyone else's here and now.
+func move_crew(crew_id: int, spot_name: String) -> void:
+	var c := crew_by_id(crew_id)
+	if c == null or not venue.spots.has(spot_name):
+		return
+	var at: Transform3D = venue.spots[spot_name]
+	at.origin += at.basis.x * (0.8 * crew.find(c))
+	var n := crew_node(crew_id)
+	if n and not n is CharacterBody3D:
+		n.global_transform = at
+	moved.emit(crew_id, at)
 
 
 ## How the characters see a crew member: "a man in a black dinner suit",
