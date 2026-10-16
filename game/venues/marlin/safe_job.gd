@@ -123,6 +123,8 @@ func _init() -> void:
 		"hand_watch": {"flag": "watch", "toast": "%s hands you the watch. Keep her on her heading."},
 	}
 	hot_words = ["strongroom", "captain's safe", "the safe", "auction file", "the code"]
+	# The Rose is on show for the sale's preview: everyone aboard talks about her.
+	cool_words = ["the rose", "diamond"]
 	phone = [
 		{"id": "bridge", "name": "The Marlin's bridge", "who": "freya"},
 		{"id": "chief_stew", "name": "Bianca, chief stew", "who": "bianca"},

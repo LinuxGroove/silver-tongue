@@ -146,6 +146,8 @@ func _init() -> void:
 		"ask_bosun": {"text": "radio Kofi, the bosun, to check they're crew (takes a moment)", "kind": "check"},
 	}
 	hot_words = ["fake letter", "no money", "can't pay", "the reserve"]
+	# The Rose is the night's lot: everyone aboard talks about her.
+	cool_words = ["the rose", "diamond"]
 	phone = [
 		{"id": "registrar", "name": "Ashcombe & Vale, Nina Castell", "who": "nina"},
 		{"id": "hugo", "name": "Hugo Marlowe", "who": "hugo"},
