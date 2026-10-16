@@ -25,19 +25,44 @@ func _ready() -> void:
 	LGInput.register_actions(GameConfig.ACTIONS)
 	LGInput.extend_ui_actions()
 	await get_tree().process_frame
-	if only != "":
+	if only != "" and has_method(only):
 		printerr("- " + only)
 		await call(only)
-	else:
+	elif only == "":
 		for t in ["_test_schema", "_test_rules", "_test_earshot", "_test_prompt", "_test_voice_helpers",
 				"_test_launch_ping", "_test_person", "_test_room", "_test_menus", "_test_hud_edges", "_test_pause",
 				"_test_text_entry_pad_enter", "_test_playtest", "_test_scripted_door",
 				"_test_fake_door", "_test_fake_hearing", "_test_fake_caught_and_timeout", "_test_fake_setup"]:
 			printerr("- " + t)
 			await call(t)
+	await _run_sets(only)
 	_stop_fake()
 	print("\n%d checks, %d failed" % [checks, failures])
 	get_tree().quit(1 if failures > 0 else 0)
+
+
+## Every `tests/*_tests.gd` is a set of tests: a RefCounted whose `test_*`
+## methods take this runner as `t`, call `t.check(ok, "what")` and may await
+## (`t.frames()`, `t.until()`; `t` is in the tree, so it can parent nodes).
+## `only` names one set (`hotel`) or one of its methods.
+func _run_sets(only: String) -> void:
+	var files := []
+	for f in DirAccess.get_files_at("res://tests"):
+		var file := f.trim_suffix(".remap")
+		if file.ends_with("_tests.gd"):
+			files.append(file)
+	files.sort()
+	for f in files:
+		var set_name := str(f).trim_suffix("_tests.gd")
+		var set: Object = load("res://tests/" + f).new()
+		for m in set.get_method_list():
+			var name := str(m.name)
+			if not name.begins_with("test_"):
+				continue
+			if only != "" and only != set_name and only != name:
+				continue
+			printerr("- %s.%s" % [set_name, name])
+			await set.call(name, self)
 
 
 func check(ok: bool, what: String) -> void:
