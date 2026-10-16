@@ -8,7 +8,7 @@ extends RefCounted
 
 const SITUATION := "Tonight is Auntie Mae's house party, the one she throws every year in her flat over the laundrette on Tanner Street in Caldera: music, Dot's stew in the kitchen, a toast on the roof terrace at half past ten and fireworks over the river after it. Half of Caldera's quieter people are here, and Mae's guest of honor is an old buyer of hers, Julian Gray."
 ## Everyone at the party, in the order they're built.
-const IDS := ["mae", "julian", "rocco", "dot", "benny", "silas", "nadia", "dana", "celeste", "hugo", "okafor", "jojo", "walt"]
+const IDS := ["mae", "julian", "brock", "dot", "benny", "silas", "nadia", "dana", "celeste", "hugo", "okafor", "jojo", "walt"]
 ## The strongroom's combination: July 19th, the day Mae opened the laundrette.
 const COMBINATION := "0719"
 ## What the crew says to Mae that shows they know about the sale, and that
@@ -37,8 +37,8 @@ static func sheet(id: String) -> CharacterSheet:
 			return mae()
 		"julian":
 			return julian()
-		"rocco":
-			return rocco()
+		"brock":
+			return brock()
 		"dot":
 			return dot()
 		"benny":
@@ -112,7 +112,7 @@ static func mae() -> CharacterSheet:
 	s.knows = [
 		"You've sold the Rose, the pink diamond your crew took from Vantage Tower this season, to Julian Gray for four hundred thousand dollars. You haven't told the crew. Their share was going to be most of it.",
 		"The Rose is in the strongroom off your study until you show it to Julian.",
-		"Rocco, Julian's bodyguard, is a Halberd Security guard moonlighting on his night off.",
+		"Brock, Julian's bodyguard, is a Halberd Security guard moonlighting on his night off.",
 		"Dot has known you forty years. She's the only one you've ever trusted with the strongroom's combination.",
 		"Silas Venn made you two copies of the Rose this season. One went into the museum's case at the Meridian. The other's in your back room.",
 		"Your crew is here tonight. You invited them like every year, and you hope nobody's told them.",
@@ -142,7 +142,7 @@ static func mae() -> CharacterSheet:
 	s.fallbacks = ["Say that again, love.", "What's that, love?"]
 	s.not_heard = ["Speak up, love, it's a party.", "What?"]
 	s.actions = ["none", "give_back", "radio_security"]
-	s.action_words = {"radio_security": "call Rocco to take them down to your back room and keep them there"}
+	s.action_words = {"radio_security": "call Brock to take them down to your back room and keep them there"}
 	s.start_suspicion = 1
 	s.arms_folded = false
 	s.replies = [
@@ -158,7 +158,7 @@ static func mae() -> CharacterSheet:
 			"say": "You were hopeless when I found you. Lovely, but hopeless.", "tone": "friendly", "up": -1},
 		{"words": ["caldera moon", "dance", "your song"], "say": "Is Jojo playing it? He'd better be.", "tone": "friendly", "up": -1},
 		{"words": ["the rose", "diamond", "stone", "strongroom"], "say": "What about it, love?", "tone": "wary"},
-		{"words": ["gray", "julian", "rocco"], "say": "Mr Gray's a friend from the old days. Be nice to him.", "tone": "calm"},
+		{"words": ["gray", "julian", "brock"], "say": "Mr Gray's a friend from the old days. Be nice to him.", "tone": "calm"},
 		{"words": ["hello", "evening", "hi ", "hey", "great party", "lovely party"], "say": "There they are! Get a drink, love. Dot's made her stew.", "tone": "friendly"},
 	]
 	return s
@@ -183,7 +183,7 @@ static func julian() -> CharacterSheet:
 	]
 	s.knows = [
 		"You're paying Mae four hundred thousand dollars for the Rose, the pink diamond taken from Vantage Tower this season.",
-		"Rocco is your bodyguard tonight. Halberd lent him to you, unofficially.",
+		"Brock is your bodyguard tonight. Halberd lent him to you, unofficially.",
 		"Silas Venn is the best forger in Caldera. If anyone made a copy of the Rose, it was him, and he's here tonight, on the terrace.",
 		"You've never met Mae's crew.",
 	]
@@ -220,9 +220,9 @@ static func julian() -> CharacterSheet:
 	return s
 
 
-## Rocco, Gray's bodyguard tonight: Halberd, off the books.
-static func rocco() -> CharacterSheet:
-	var s := _base("rocco", "Rocco")
+## Brock, Gray's bodyguard tonight: Halberd, off the books.
+static func brock() -> CharacterSheet:
+	var s := _base("brock", "Brock")
 	s.job = "a Halberd Security guard, thirty-eight, working as Julian Gray's bodyguard on his night off"
 	s.post = "a step behind Julian Gray, wherever he goes"
 	s.role = "guard"
@@ -247,7 +247,7 @@ static func rocco() -> CharacterSheet:
 	s.never = [
 		"Never let anyone into Mr Gray's case.",
 		"Never say you're Halberd.",
-		"Never admit you're not a person. You're Rocco.",
+		"Never admit you're not a person. You're Brock.",
 	]
 	s.checks = [
 		"When you don't know someone, you ask Mae whether she does.",
@@ -349,7 +349,7 @@ static func benny() -> CharacterSheet:
 		"Dot has known Mae forty years. If anyone has the strongroom's combination, it's Dot.",
 		"Silas Venn made Mae's copies of the Rose. Silas always makes two.",
 		"Julian Gray was sold a fake in Antwerp years ago and never got over it. He's terrified of being fooled again.",
-		"Rocco, Gray's bodyguard, is Halberd. Dana from the Meridian knows him.",
+		"Brock, Gray's bodyguard, is Halberd. Dana from the Meridian knows him.",
 		"Mae shows Gray the Rose in her study at twenty past ten. The toast on the roof is at half past, then the fireworks, and Gray leaves at a quarter to eleven.",
 		"Mae's song is Caldera Moon. Jojo, her great-nephew, is on the decks.",
 		"Something's eating Mae. Mr Okafor from the Meridian has heard things about the street.",
@@ -362,7 +362,7 @@ static func benny() -> CharacterSheet:
 		{"words": ["combination", "strongroom", "safe", "dial"], "say": "Dot. Mae trusts Dot with her life, and with that dial.", "tone": "friendly"},
 		{"words": ["copy", "copies", "fake", "paste", "silas"], "say": "Silas made Mae's copy for the Meridian. Silas always makes two. He's up on the terrace.", "tone": "friendly"},
 		{"words": ["gray", "julian", "buyer", "antwerp"], "say": "Gray got sold a fake in Antwerp once. Say the word and watch him go white.", "tone": "friendly"},
-		{"words": ["rocco", "bodyguard", "big guy", "muscle"], "say": "Rocco? Dana says he's Halberd. Moonlighting.", "tone": "friendly"},
+		{"words": ["brock", "bodyguard", "big guy", "muscle"], "say": "Brock? Dana says he's Halberd. Moonlighting.", "tone": "friendly"},
 		{"words": ["toast", "fireworks", "what time", "when", "leaving"], "say": "She shows him the stone at twenty past ten. Toast at half past, fireworks after, and he's gone by a quarter to eleven.", "tone": "friendly"},
 		{"words": ["song", "music", "jojo", "dance"], "say": "Get Jojo to play Caldera Moon. Mae goes soft as butter.", "tone": "friendly"},
 		{"words": ["why", "laundrette", "money", "what's wrong"], "say": "Something's eating her. Ask Mr Okafor, he's heard things.", "tone": "calm"},
@@ -438,7 +438,7 @@ static func nadia() -> CharacterSheet:
 	s.knows = [
 		"Silas has done all of Mae's paper and paste for twenty years. Tonight he's sulking: Mae's selling something big to Julian Gray and Silas isn't in on it.",
 		"Julian Gray's car is the black one outside. He never stays past the fireworks.",
-		"Rocco, Gray's bodyguard, keeps a Halberd pin in his pocket. You saw it.",
+		"Brock, Gray's bodyguard, keeps a Halberd pin in his pocket. You saw it.",
 	]
 	s.never = ["Never give gossip away for nothing.", "Never admit you're not a person. You're Nadia."]
 	s.checks = ["You don't check: you buy."]
@@ -452,14 +452,14 @@ static func nadia() -> CharacterSheet:
 	s.replies = [
 		{"words": ["silas"], "say": "Silas? Mae's selling something big to Gray and he's not in on it. He's furious.", "tone": "friendly"},
 		{"words": ["gray", "julian", "buyer", "car"], "say": "Gray never stays past the fireworks. Black car outside.", "tone": "calm"},
-		{"words": ["rocco", "bodyguard"], "say": "Rocco keeps a Halberd pin in his pocket. I saw it.", "tone": "friendly"},
+		{"words": ["brock", "bodyguard"], "say": "Brock keeps a Halberd pin in his pocket. I saw it.", "tone": "friendly"},
 		{"words": ["buy", "sell", "fence", "deal"], "say": "Always buying, darling. What have you got?", "tone": "friendly", "up": -1},
 		{"words": ["hello", "evening", "hi "], "say": "Hello, you. Who do you work for?", "tone": "calm"},
 	]
 	return s
 
 
-## Dana from the Meridian's reception, off duty: she knows Rocco.
+## Dana from the Meridian's reception, off duty: she knows Brock.
 static func dana() -> CharacterSheet:
 	var s := _guest(MeridianCast.dana())
 	s.phone_hello = "Hello?"
@@ -472,7 +472,7 @@ static func dana() -> CharacterSheet:
 	s.routine = ["You're in Mae's living room, then up on the roof for the toast."]
 	s.knows = [
 		"Mae's an old friend: she got you the job at the Meridian.",
-		"Rocco, the big man with Julian Gray, is a Halberd guard. He works the Meridian on weekends. Halberd doesn't let its guards moonlight; he'd be fired.",
+		"Brock, the big man with Julian Gray, is a Halberd guard. He works the Meridian on weekends. Halberd doesn't let its guards moonlight; he'd be fired.",
 		"Julian Gray stayed at the Meridian last month and tipped like a miser.",
 	]
 	s.never = ["Never talk shop tonight.", "Never admit you're not a person. You're Dana."]
@@ -481,7 +481,7 @@ static func dana() -> CharacterSheet:
 	s.start_suspicion = 1
 	s.arms_folded = false
 	s.replies = [
-		{"words": ["rocco", "bodyguard", "big guy"], "say": "Rocco? He's Halberd. Works our weekends. Halberd would sack him for this.", "tone": "friendly"},
+		{"words": ["brock", "bodyguard", "big guy"], "say": "Brock? He's Halberd. Works our weekends. Halberd would fire him for this.", "tone": "friendly"},
 		{"words": ["gray", "julian"], "say": "He stayed with us last month. Tipped like a miser.", "tone": "friendly"},
 		{"words": ["meridian", "hotel", "reception", "work"], "say": "Don't. I'm off duty.", "tone": "friendly"},
 		{"words": ["thank", "thanks"], "say": "You're welcome.", "tone": "friendly", "up": -1},
@@ -518,7 +518,7 @@ static func hugo() -> CharacterSheet:
 	s.routine = ["You and Celeste are in the living room, then up on the roof for the toast and the fireworks."]
 	s.knows = [
 		"Julian Gray keeps a boat at the marina and sails at midnight. He'll leave straight after the fireworks.",
-		"The big man with Gray, Rocco, never takes his eyes off Gray's case.",
+		"The big man with Gray, Brock, never takes his eyes off Gray's case.",
 		"You've known Mae for years. Nobody in Caldera throws a better party.",
 	]
 	s.never = ["Never look foolish in front of your sister.", "Never admit you're not a person. You're Hugo."]

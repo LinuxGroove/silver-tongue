@@ -35,11 +35,11 @@ const PLACES := {
 ## Where Mae stands to fetch the stone from each place.
 const FETCH := {"safe": "safe_in", "desk": "mae_desk", "case": "mae_toast", "gray": "mae_street"}
 ## Who'd see a hand going for the Rose.
-const WATCHERS := ["mae", "julian", "rocco", "dot"]
+const WATCHERS := ["mae", "julian", "brock", "dot"]
 ## The toast's spots and the fireworks', by who stands there.
-const TOAST_SPOTS := {"mae": "mae_toast", "julian": "julian_toast", "rocco": "rocco_toast", "dot": "dot_toast",
+const TOAST_SPOTS := {"mae": "mae_toast", "julian": "julian_toast", "brock": "brock_toast", "dot": "dot_toast",
 	"celeste": "celeste_toast", "hugo": "hugo_toast", "silas": "silas", "nadia": "nadia"}
-const FIREWORK_SPOTS := {"mae": "mae_fw", "julian": "julian_fw", "rocco": "rocco_fw", "dot": "dot_fw",
+const FIREWORK_SPOTS := {"mae": "mae_fw", "julian": "julian_fw", "brock": "brock_fw", "dot": "dot_fw",
 	"celeste": "celeste_fw", "hugo": "hugo_fw", "silas": "silas_fw", "nadia": "nadia_fw"}
 ## Out of Mae's house.
 const OUTSIDE := ["street", "alley"]
@@ -74,7 +74,7 @@ const ENDINGS := {
 	"kept": {"rose": "mae", "mae": "kept", "buyer": "waiting", "mae_says": "More stew, love? No? Then off you go.",
 		"epilogue": "The party ended with the Rose still Mae's. She'll find another buyer, and now she knows that you know."},
 	"held": {"rose": "buyer", "mae": "rich", "buyer": "paid", "mae_says": "I'm sorry it came to this, love. I really am.",
-		"epilogue": "You spent the fireworks in Mae's back room with Rocco on the door. Mae never came down, and by the time he let you go, Gray's car was gone."},
+		"epilogue": "You spent the fireworks in Mae's back room with Brock on the door. Mae never came down, and by the time he let you go, Gray's car was gone."},
 }
 
 
@@ -172,16 +172,16 @@ func _init() -> void:
 	unlocked = ["front", "back_room", "yard", "gate", "study", "terrace"]
 	open = ["terrace"]
 	lockdown_doors = ["front", "yard", "gate"]
-	lockdown_text = "Rocco's locked the doors. Nobody leaves Mae's until he says so."
+	lockdown_text = "Brock's locked the doors. Nobody leaves Mae's until he says so."
 	door_texts = {
 		"safe": "Mae's strongroom. There's a dial beside the door.",
-		"front": "Locked. Rocco has the key.",
-		"yard": "Locked. Rocco has the key.",
+		"front": "Locked. Brock has the key.",
+		"yard": "Locked. Brock has the key.",
 		"gate": "Locked, and it sticks.",
 	}
 	keypads = {"dial": {"door": "safe", "code": MaeCast.COMBINATION, "for": 40.0, "label": "Mae's strongroom"}}
 	office = {"door": "back_room", "held": "held", "guard": "held_guard", "name": "Mae's back room"}
-	held_text = "Rocco's ringing Gray's people to come and collect you. Talk your way out before they get here."
+	held_text = "Brock's ringing Gray's people to come and collect you. Talk your way out before they get here."
 	cool_words = ["mae"]
 	items = {
 		"rose": {"name": "the Rose", "at": "safe_shelf", "carry": "", "hot": true},
@@ -210,7 +210,7 @@ func _init() -> void:
 		"swapped": ["A VERY GOOD COPY", "Silas's copy went home in Gray's case, and the Rose is yours. It's %s."],
 		"gone": ["GONE WITH GRAY", "Gray drove off at %s with the Rose in his case."],
 		"kept": ["MAE KEEPS IT", "The party's over, and the Rose is still Mae's. So is your share."],
-		"held": ["IN THE BACK ROOM", "The whole crew ended up in Mae's back room, with Rocco on the door."],
+		"held": ["IN THE BACK ROOM", "The whole crew ended up in Mae's back room, with Brock on the door."],
 	}
 	wins = ["forgiven", "back", "ruined", "swapped"]
 
@@ -295,7 +295,7 @@ func prompt_for(c: CrewInfo, what: String) -> Variant:
 	return null
 
 
-## A hand going for the Rose, wherever it lies: not with Mae, Gray, Rocco or
+## A hand going for the Rose, wherever it lies: not with Mae, Gray, Brock or
 ## Dot watching; with Silas's copy in the other hand it's a swap.
 func _take_rose(job: Job, c: CrewInfo) -> Variant:
 	var at := str(job.items.get("rose", {}).get("at", ""))
@@ -406,10 +406,10 @@ func _call_off(job: Job, gray: Character, _c: CrewInfo) -> void:
 	gray.say_scripted("Tell Mae the sale's off. I won't be made a fool of twice.")
 	_away(job, "julian")
 	gray.walk_to("gray_car")
-	var rocco: Character = job.cast.get("rocco")
-	if rocco and not rocco.minding:
-		_away(job, "rocco")
-		rocco.walk_to("rocco_car")
+	var brock: Character = job.cast.get("brock")
+	if brock and not brock.minding:
+		_away(job, "brock")
+		brock.walk_to("brock_car")
 	job.show_node("GrayCase", false)
 	job.toast_for.emit(0, "Gray's called off the sale. He's leaving.")
 	var mae: Character = job.cast.get("mae")
@@ -440,7 +440,7 @@ func _song(job: Job, jojo: Character) -> void:
 
 
 ## What a colleague answers a check with: Silas, asked by Gray whether
-## Mae's stone is one of his; Mae, asked by Rocco whether she knows them.
+## Mae's stone is one of his; Mae, asked by Brock whether she knows them.
 func lookup(job: Job, who: String, crew_id: int, said: String, _asker: Character) -> Dictionary:
 	match who:
 		"silas":
@@ -455,9 +455,9 @@ func lookup(job: Job, who: String, crew_id: int, said: String, _asker: Character
 			if int(f.get("suspicion", 1)) <= 2:
 				if Job.any(said, ["assay", "appraiser", "gemologist", "caterer", "dot hired", "agency"]):
 					JobRules.nudge(f, 1)
-					return Job.fact("good", "Rocco's asking about one of your own crew, who told him a cover story. You'd like to know why.",
-						"That's one of mine, Rocco, whatever they told you. Leave them to me.")
-				return Job.fact("good", "That's one of your crew. You invited them.", "That's one of mine, Rocco. Leave them be.")
+					return Job.fact("good", "Brock's asking about one of your own crew, who told him a cover story. You'd like to know why.",
+						"That's one of mine, Brock, whatever they told you. Leave them to me.")
+				return Job.fact("good", "That's one of your crew. You invited them.", "That's one of mine, Brock. Leave them be.")
 			return Job.fact("bad", "That's one of your crew, and they're up to something tonight.", "I know them. Keep an eye on them for me.")
 	return {}
 
@@ -498,7 +498,7 @@ func on_event(job: Job, event_name: String) -> void:
 				return
 			_walk(job, "mae", "mae_desk")
 			_walk(job, "julian", "julian_study")
-			_walk(job, "rocco", "rocco_study")
+			_walk(job, "brock", "brock_study")
 			job.toast_for.emit(0, "Mae's taking Gray into her study to see the Rose.")
 		"rose_out":
 			if _sale_off(job):
@@ -520,7 +520,7 @@ func on_event(job: Job, event_name: String) -> void:
 				job.show_node("GrayCase", true)
 				_walk(job, "mae", "mae_toast")
 				_walk(job, "julian", "julian_toast")
-				_walk(job, "rocco", "rocco_toast")
+				_walk(job, "brock", "brock_toast")
 				job.toast_for.emit(0, "Gray has the Rose in his case. They're taking it up to the roof for the toast.")
 			else:
 				_alarm(job, "The Rose is gone from Mae's desk.")
@@ -555,7 +555,7 @@ func on_event(job: Job, event_name: String) -> void:
 				job.flags["gray_has"] = it
 				job.show_node("GrayCase", false)
 				_walk(job, "julian", "gray_car")
-				_walk(job, "rocco", "rocco_car")
+				_walk(job, "brock", "brock_car")
 				_walk(job, "mae", "mae_street")
 				_away(job, "julian")
 				job.toast_for.emit(0, "Gray's leaving, with his case.")
@@ -611,28 +611,28 @@ func _no_sale(job: Job, mae: Character, delta: float) -> void:
 			_drive_off(job)
 
 
-## Gray's car pulls away (Rocco with him, unless he's minding someone).
+## Gray's car pulls away (Brock with him, unless he's minding someone).
 func _drive_off(job: Job) -> void:
 	job.flags["gray_gone"] = true
 	_away(job, "julian")
-	_away(job, "rocco")
+	_away(job, "brock")
 	var gray: Character = job.cast.get("julian")
 	if gray:
 		gray.walk_to("gone")
-	var rocco: Character = job.cast.get("rocco")
-	if rocco and not rocco.minding:
-		rocco.walk_to("gone")
+	var brock: Character = job.cast.get("brock")
+	if brock and not brock.minding:
+		brock.walk_to("gone")
 	job.show_node("GrayCar", false)
 	job.toast_for.emit(0, "Gray's car pulls away.")
 
 
-## The stone's gone missing: Mae, Gray and Rocco turn on the crew, and
-## Rocco watches the front door.
+## The stone's gone missing: Mae, Gray and Brock turn on the crew, and
+## Brock watches the front door.
 func _alarm(job: Job, text: String) -> void:
 	if job.flags.has("alarm"):
 		return
 	job.flags["alarm"] = true
-	for char_id in ["mae", "julian", "rocco"]:
+	for char_id in ["mae", "julian", "brock"]:
 		var ch: Character = job.cast.get(char_id)
 		if ch == null:
 			continue
@@ -643,15 +643,15 @@ func _alarm(job: Job, text: String) -> void:
 				f["suspicion"] = maxi(int(f.suspicion), 3)
 				job.faced.emit(c.id, char_id, int(f.suspicion))
 	job.heat.bump(Heat.CAUGHT)
-	_walk(job, "rocco", "front_guard")
-	job.toast_for.emit(0, "The Rose is missing, and Mae knows it. Rocco's watching the front door.")
+	_walk(job, "brock", "front_guard")
+	job.toast_for.emit(0, "The Rose is missing, and Mae knows it. Brock's watching the front door.")
 
 
 func on_heat(job: Job, was: int, now: int) -> void:
 	if now >= Heat.LOCKDOWN and was < Heat.LOCKDOWN:
 		for d in lockdown_doors:
 			job.lock(d, true)
-		_walk(job, "rocco", "front_guard")
+		_walk(job, "brock", "front_guard")
 	elif was >= Heat.LOCKDOWN and now < Heat.LOCKDOWN:
 		for d in lockdown_doors:
 			job.lock(d, false)

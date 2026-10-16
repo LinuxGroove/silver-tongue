@@ -1037,7 +1037,7 @@ func _graph() -> void:
 		# The street.
 		"crew_0": Vector3(-5.6, 0, 2.4), "crew_1": Vector3(-4.4, 0, 2.4), "front_out": Vector3(-5.0, 0, 1.1),
 		"street_c": Vector3(-1.6, 0, 2.0), "mae_street": Vector3(0.4, 0, 2.0), "gray_car": Vector3(2.4, 0, 3.3),
-		"rocco_car": Vector3(4.6, 0, 3.3), "street_e": Vector3(12.0, 0, 2.4), "gone": Vector3(26.0, 0, 2.4),
+		"brock_car": Vector3(4.6, 0, 3.3), "street_e": Vector3(12.0, 0, 2.4), "gone": Vector3(26.0, 0, 2.4),
 		# The laundrette.
 		"front_in": Vector3(-5.0, 0, -1.2), "front_guard": Vector3(-4.3, 0, -1.9), "laund_w": Vector3(-4.3, 0, -3.1),
 		"laund_c": Vector3(-1.4, 0, -3.1), "laund_e": Vector3(2.6, 0, -3.1), "walt": Vector3(2.8, 0, -1.6),
@@ -1058,27 +1058,27 @@ func _graph() -> void:
 		# The living room.
 		"kitchen_door_l": Vector3(1.0, F, -10.0), "living_e": Vector3(1.0, F, -14.0), "living_c": Vector3(-1.4, F, -12.0),
 		"living_mid": Vector3(-1.6, F, -14.6), "living_sw": Vector3(-3.6, F, -10.2), "living_nw": Vector3(-3.0, F, -16.6),
-		"mae": Vector3(-3.2, F, -11.4), "julian": Vector3(-0.9, F, -12.6), "rocco": Vector3(0.9, F, -11.4),
+		"mae": Vector3(-3.2, F, -11.4), "julian": Vector3(-0.9, F, -12.6), "brock": Vector3(0.9, F, -11.4),
 		"dana": Vector3(-1.6, F, -10.3), "celeste": Vector3(-1.9, F, -15.6), "hugo": Vector3(-1.1, F, -15.4),
 		"dj_w": Vector3(-1.1, F, -17.3), "jojo": Vector3(0.2, F, -17.3), "mae_dance": Vector3(-0.3, F, -14.9),
 		# The study.
 		"study_in": Vector3(-3.6, F, -8.0), "study_c": Vector3(-3.6, F, -4.4), "mae_desk": Vector3(-3.4, F, -1.65),
-		"julian_study": Vector3(-2.4, F, -1.65), "rocco_study": Vector3(-4.3, F, -7.2), "safe_out": Vector3(-3.5, F, -7.1),
+		"julian_study": Vector3(-2.4, F, -1.65), "brock_study": Vector3(-4.3, F, -7.2), "safe_out": Vector3(-3.5, F, -7.1),
 		"safe_in": Vector3(-1.6, F, -7.1),
 		# The terrace.
 		"terrace_in": Vector3(-3.0, F, -17.0), "terrace_out": Vector3(-3.0, F, -19.0), "terrace_e": Vector3(0.0, F, -18.7), "terrace_se": Vector3(0.5, F, -19.9),
 		"platform": Vector3(1.7, F, -18.7), "iron_top": Vector3(1.7, F, -19.45), "terrace_c": Vector3(-2.6, F, -22.4),
 		"terrace_n": Vector3(-2.6, F, -24.6), "silas": Vector3(-4.8, F, -21.6), "nadia": Vector3(-4.6, F, -22.7),
-		"mae_toast": Vector3(-2.4, F, -20.3), "julian_toast": Vector3(-0.4, F, -20.8), "rocco_toast": Vector3(0.3, F, -21.6),
+		"mae_toast": Vector3(-2.4, F, -20.3), "julian_toast": Vector3(-0.4, F, -20.8), "brock_toast": Vector3(0.3, F, -21.6),
 		"dot_toast": Vector3(-3.4, F, -21.6), "celeste_toast": Vector3(-2.8, F, -22.7), "hugo_toast": Vector3(-2.0, F, -22.8),
 		"silas_fw": Vector3(-5.0, F, -25.6), "dot_fw": Vector3(-4.2, F, -25.6), "mae_fw": Vector3(-3.4, F, -25.6),
-		"julian_fw": Vector3(-2.6, F, -25.6), "rocco_fw": Vector3(-1.8, F, -25.6), "celeste_fw": Vector3(-1.0, F, -25.6),
+		"julian_fw": Vector3(-2.6, F, -25.6), "brock_fw": Vector3(-1.8, F, -25.6), "celeste_fw": Vector3(-1.0, F, -25.6),
 		"hugo_fw": Vector3(-0.2, F, -25.6), "nadia_fw": Vector3(0.4, F, -25.6),
 	}
 	points = P.duplicate()
 	links = [
 		["crew_0", "front_out", ""], ["crew_1", "front_out", ""], ["front_out", "street_c", ""], ["street_c", "mae_street", ""],
-		["mae_street", "gray_car", ""], ["gray_car", "rocco_car", ""], ["rocco_car", "street_e", ""], ["street_e", "gone", ""],
+		["mae_street", "gray_car", ""], ["gray_car", "brock_car", ""], ["brock_car", "street_e", ""], ["street_e", "gone", ""],
 		["front_out", "front_in", "front"], ["front_in", "front_guard", ""], ["front_in", "laund_w", ""], ["front_guard", "laund_w", ""],
 		["laund_w", "laund_c", ""], ["laund_c", "laund_e", ""], ["laund_e", "walt", ""], ["laund_e", "laund_ne", ""],
 		["laund_ne", "hall_s", ""], ["hall_s", "stairs_foot", ""], ["hall_s", "back_room_out", ""], ["back_room_out", "held_guard", ""],
@@ -1090,35 +1090,35 @@ func _graph() -> void:
 		["landing_s", "kitchen_in", ""], ["kitchen_in", "kitchen_c", ""], ["kitchen_c", "kitchen_bar", ""], ["kitchen_bar", "benny", ""],
 		["kitchen_c", "dot", ""], ["kitchen_c", "kitchen_s", ""], ["kitchen_s", "okafor", ""], ["kitchen_bar", "kitchen_door_k", ""],
 		["kitchen_door_k", "kitchen_door_l", ""], ["kitchen_door_l", "living_c", ""], ["landing_c", "living_e", ""],
-		["living_e", "living_c", ""], ["living_e", "rocco", ""], ["living_e", "living_mid", ""], ["living_c", "julian", ""],
+		["living_e", "living_c", ""], ["living_e", "brock", ""], ["living_e", "living_mid", ""], ["living_c", "julian", ""],
 		["living_c", "dana", ""], ["living_c", "living_sw", ""], ["living_sw", "mae", ""], ["living_c", "mae", ""],
 		["living_mid", "mae_dance", ""], ["living_mid", "hugo", ""], ["living_mid", "celeste", ""], ["celeste", "dj_w", ""],
 		["dj_w", "jojo", ""], ["living_mid", "living_nw", ""], ["living_nw", "terrace_in", ""],
-		["living_sw", "study_in", "study"], ["study_in", "rocco_study", ""], ["study_in", "study_c", ""], ["rocco_study", "safe_out", ""],
+		["living_sw", "study_in", "study"], ["study_in", "brock_study", ""], ["study_in", "study_c", ""], ["brock_study", "safe_out", ""],
 		["study_c", "safe_out", ""], ["safe_out", "safe_in", "safe"], ["study_c", "mae_desk", ""], ["study_c", "julian_study", ""],
 		["mae_desk", "julian_study", ""],
 		["terrace_in", "terrace_out", "terrace"], ["terrace_out", "terrace_e", ""], ["terrace_out", "terrace_c", ""],
-		["terrace_out", "mae_toast", ""], ["terrace_e", "terrace_se", ""], ["terrace_se", "julian_toast", ""], ["terrace_se", "rocco_toast", ""], ["julian_toast", "rocco_toast", ""],
+		["terrace_out", "mae_toast", ""], ["terrace_e", "terrace_se", ""], ["terrace_se", "julian_toast", ""], ["terrace_se", "brock_toast", ""], ["julian_toast", "brock_toast", ""],
 		["terrace_c", "dot_toast", ""], ["terrace_c", "celeste_toast", ""], ["terrace_c", "hugo_toast", ""], ["terrace_c", "silas", ""],
 		["terrace_c", "nadia", ""], ["terrace_c", "terrace_n", ""], ["mae_toast", "terrace_c", ""], ["julian_toast", "terrace_c", ""],
 		["terrace_n", "silas_fw", ""], ["terrace_n", "dot_fw", ""], ["terrace_n", "mae_fw", ""], ["terrace_n", "julian_fw", ""],
-		["terrace_n", "rocco_fw", ""], ["terrace_n", "celeste_fw", ""], ["terrace_n", "hugo_fw", ""], ["terrace_n", "nadia_fw", ""],
+		["terrace_n", "brock_fw", ""], ["terrace_n", "celeste_fw", ""], ["terrace_n", "hugo_fw", ""], ["terrace_n", "nadia_fw", ""],
 	]
 	var face := {
 		"crew_0": Vector2(0, -1), "crew_1": Vector2(0, -1), "walt": Vector2(-0.3, 1), "front_guard": Vector2(-0.4, 1),
-		"held": Vector2(0, -1), "held_guard": Vector2(-1, 0.6), "gray_car": Vector2(0, 1), "rocco_car": Vector2(0, 1),
+		"held": Vector2(0, -1), "held_guard": Vector2(-1, 0.6), "gray_car": Vector2(0, 1), "brock_car": Vector2(0, 1),
 		"mae_street": Vector2(1, 0.5), "gone": Vector2(1, 0),
 		"dot": Vector2(-1, 0.2), "benny": Vector2(1, 0), "okafor": Vector2(1, -0.4),
-		"mae": Vector2(1, -0.5), "julian": Vector2(-1, 0.5), "rocco": Vector2(-1, -0.4), "dana": Vector2(-1, -0.1),
+		"mae": Vector2(1, -0.5), "julian": Vector2(-1, 0.5), "brock": Vector2(-1, -0.4), "dana": Vector2(-1, -0.1),
 		"celeste": Vector2(1, 0.3), "hugo": Vector2(-1, -0.1), "jojo": Vector2(0, 1), "mae_dance": Vector2(0.5, -1),
-		"mae_desk": Vector2(0.2, 1), "julian_study": Vector2(-0.2, 1), "rocco_study": Vector2(0.4, 1), "safe_in": Vector2(1, 0),
+		"mae_desk": Vector2(0.2, 1), "julian_study": Vector2(-0.2, 1), "brock_study": Vector2(0.4, 1), "safe_in": Vector2(1, 0),
 		"silas": Vector2(1, -0.3), "nadia": Vector2(-0.2, 1),
-		"mae_toast": Vector2(0, -1), "julian_toast": Vector2(-1, -0.3), "rocco_toast": Vector2(-1, 0.2), "dot_toast": Vector2(1, 0.5),
+		"mae_toast": Vector2(0, -1), "julian_toast": Vector2(-1, -0.3), "brock_toast": Vector2(-1, 0.2), "dot_toast": Vector2(1, 0.5),
 		"celeste_toast": Vector2(0.2, 1), "hugo_toast": Vector2(-0.1, 1),
 	}
 	for k in face:
 		spots[k] = Transform3D(Basis(Vector3.UP, atan2(face[k].x, face[k].y)), P[k])
-	for k in ["silas_fw", "dot_fw", "mae_fw", "julian_fw", "rocco_fw", "celeste_fw", "hugo_fw", "nadia_fw"]:
+	for k in ["silas_fw", "dot_fw", "mae_fw", "julian_fw", "brock_fw", "celeste_fw", "hugo_fw", "nadia_fw"]:
 		spots[k] = Transform3D(Basis(Vector3.UP, PI), P[k])
 	# The crowd: dancing, talking by the records, in the kitchen, on the
 	# terrace, a couple downstairs and two smoking outside.

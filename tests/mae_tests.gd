@@ -7,12 +7,12 @@ extends RefCounted
 const DOORS: Array[String] = ["front", "back_room", "yard", "gate", "study", "safe", "terrace"]
 ## Every spot, and the zone it's in.
 const SPOT_ZONES := {
-	"crew_0": "street", "crew_1": "street", "gray_car": "street", "rocco_car": "street", "mae_street": "street",
+	"crew_0": "street", "crew_1": "street", "gray_car": "street", "brock_car": "street", "mae_street": "street",
 	"gone": "street", "walt": "laundrette", "front_guard": "laundrette", "held": "back_room", "held_guard": "back_hall",
-	"dot": "kitchen", "benny": "kitchen", "okafor": "kitchen", "mae": "living", "julian": "living", "rocco": "living",
+	"dot": "kitchen", "benny": "kitchen", "okafor": "kitchen", "mae": "living", "julian": "living", "brock": "living",
 	"dana": "living", "celeste": "living", "hugo": "living", "jojo": "living", "mae_dance": "living",
-	"mae_desk": "study", "julian_study": "study", "rocco_study": "study", "safe_in": "study",
-	"silas": "terrace", "nadia": "terrace", "mae_toast": "terrace", "julian_toast": "terrace", "rocco_toast": "terrace",
+	"mae_desk": "study", "julian_study": "study", "brock_study": "study", "safe_in": "study",
+	"silas": "terrace", "nadia": "terrace", "mae_toast": "terrace", "julian_toast": "terrace", "brock_toast": "terrace",
 	"dot_toast": "terrace", "celeste_toast": "terrace", "hugo_toast": "terrace", "mae_fw": "terrace", "julian_fw": "terrace",
 }
 
@@ -108,12 +108,12 @@ func test_scripted_replies(t) -> void:
 	var gray := def.sheet("julian")
 	t.check(_reply(gray, JobRules.new_face(gray), "That stone is paste.", rng).do == "ask_silas", "told it's paste, Gray asks Silas")
 	t.check(_reply(gray, JobRules.new_face(gray), "Remember Antwerp?", rng).suspicion == 1, "Antwerp gets Gray listening")
-	var rocco := def.sheet("rocco")
-	f = JobRules.new_face(rocco)
-	t.check(_reply(rocco, f, "You're Halberd, aren't you?", rng).suspicion == 1, "Rocco goes quiet about Halberd")
+	var brock := def.sheet("brock")
+	f = JobRules.new_face(brock)
+	t.check(_reply(brock, f, "You're Halberd, aren't you?", rng).suspicion == 1, "Brock goes quiet about Halberd")
 	f.turns = 3
-	t.check(_reply(rocco, f, "Let us go, it was a mistake.", rng, {"someone_held": true, "minding": true}).do == "release", "minding the back room, Rocco can let the crew go")
-	t.check(_reply(rocco, JobRules.new_face(rocco), "Can I see the case?", rng).suspicion == 3, "Rocco doesn't like anyone near the case")
+	t.check(_reply(brock, f, "Let us go, it was a mistake.", rng, {"someone_held": true, "minding": true}).do == "release", "minding the back room, Brock can let the crew go")
+	t.check(_reply(brock, JobRules.new_face(brock), "Can I see the case?", rng).suspicion == 3, "Brock doesn't like anyone near the case")
 	var mae := def.sheet("mae")
 	t.check(_reply(mae, JobRules.new_face(mae), "Martha Shaw, Caldera Assay Office.", rng).suspicion == 3, "Mae hears a cover story coming")
 	f = JobRules.new_face(mae)
@@ -272,9 +272,9 @@ func test_way_swap(t) -> void:
 		t.check(str(job.items.rose.at) == "case", "swap: it goes into Gray's case, on the terrace")
 		await _clock(t, job, MaeHousePartyJob.TOAST)
 		_at(job, hand, "terrace_e", "terrace_out")
-		t.check(job.use(hand, "item:rose").begins_with("Not with"), "swap (%d): not under Rocco's nose" % by)
+		t.check(job.use(hand, "item:rose").begins_with("Not with"), "swap (%d): not under Brock's nose" % by)
 		await _clock(t, job, MaeHousePartyJob.FIREWORKS)
-		t.check(job.flags.has("fireworks") and str(job.cast.rocco.post) == "rocco_fw", "swap: everyone turns to the fireworks")
+		t.check(job.flags.has("fireworks") and str(job.cast.brock.post) == "brock_fw", "swap: everyone turns to the fireworks")
 		t.check(job.use(hand, "item:rose") == "You swap the Rose for Silas's copy. Nobody saw.", "swap (%d): the swap, while they look up" % by)
 		t.check(str(job.items.copy.at) == "copy_case" and job.holder("rose") != null, "swap (%d): the copy's in the case, the Rose in a pocket" % by)
 		await _clock(t, job, MaeHousePartyJob.FIREWORKS_END)
@@ -350,7 +350,7 @@ func test_mae_moods(t) -> void:
 	await t.frames(2)
 
 
-## The ways it goes wrong: a lie to Mae, a story Silas won't back, Rocco and
+## The ways it goes wrong: a lie to Mae, a story Silas won't back, Brock and
 ## the back room, Lockdown, the Rose found missing, and Gray driving off with it.
 func test_failures(t) -> void:
 	var p: Array = await _party(t, ["appraiser"])
@@ -366,29 +366,29 @@ func test_failures(t) -> void:
 	t.check(job.cast.julian.face_of(1).checks.get("ask_silas", "") == "bad" and not job.flags.has("no_sale"), "Silas, not sore, says it's the real thing")
 	JobHarness.done(job)
 	await t.frames(2)
-	# Rocco, the back room, and talking him round.
+	# Brock, the back room, and talking him round.
 	p = await _party(t, ["crew"])
 	job = p[0]
-	JobHarness.face(job, 1, "rocco")
-	await _talk(t, job, 1, "rocco", ["Let me see the case.", "Show me the Rose.", "Open the case."])
+	JobHarness.face(job, 1, "brock")
+	await _talk(t, job, 1, "brock", ["Let me see the case.", "Show me the Rose.", "Open the case."])
 	var c := job.crew_by_id(1)
 	await t.until(func(): return c.held, 2.0)
-	t.check(c.held and job.cast.rocco.minding, "Rocco takes you down to Mae's back room")
+	t.check(c.held and job.cast.brock.minding, "Brock takes you down to Mae's back room")
 	t.check(job.venue.doors.back_room.locked, "the back room's locked")
 	t.check(job.use(1, "item:copy") == "", "held, you can't get at the drawer")
-	JobHarness.walk(job, job.cast.rocco, "held_guard")
+	JobHarness.walk(job, job.cast.brock, "held_guard")
 	JobHarness.stand_at(job, 1, "held")
-	JobHarness.face(job, 1, "rocco")
-	await _talk(t, job, 1, "rocco", ["You're Halberd, aren't you? Moonlighting on your night off.", "Dana at the Meridian knows you.",
-		"Halberd would fire you for this, Rocco.", "Let us go. It was a mistake."])
-	t.check(not c.held, "talked round, Rocco lets you go")
+	JobHarness.face(job, 1, "brock")
+	await _talk(t, job, 1, "brock", ["You're Halberd, aren't you? Moonlighting on your night off.", "Dana at the Meridian knows you.",
+		"Halberd would fire you for this, Brock.", "Let us go. It was a mistake."])
+	t.check(not c.held, "talked round, Brock lets you go")
 	JobHarness.done(job)
 	await t.frames(2)
 	# Held for good: Gray's people come.
 	p = await _party(t, ["crew"])
 	job = p[0]
-	JobHarness.face(job, 1, "rocco")
-	await _talk(t, job, 1, "rocco", ["Let me see the case.", "Show me the Rose.", "Open the case."])
+	JobHarness.face(job, 1, "brock")
+	await _talk(t, job, 1, "brock", ["Let me see the case.", "Show me the Rose.", "Open the case."])
 	await t.until(func(): return job.crew_by_id(1).held, 2.0)
 	await JobHarness.clock_to(t, job, job.minutes + Job.POLICE + 0.5)
 	t.check(await _ended_as(t, p[1], "held") and not p[1][0].win and str(p[1][0].title) == "IN THE BACK ROOM", "the whole crew held: it's over")
@@ -400,8 +400,8 @@ func test_failures(t) -> void:
 	job.heat.bump(30.0)
 	await t.until(func(): return job.heat.level >= Heat.LOCKDOWN, 2.0)
 	await t.frames(2)
-	t.check(job.venue.doors.front.locked and job.venue.doors.gate.locked, "Lockdown: Rocco locks the doors out")
-	t.check(job.use(1, "door:front") == "Locked. Rocco has the key.", "Lockdown: the front door won't open")
+	t.check(job.venue.doors.front.locked and job.venue.doors.gate.locked, "Lockdown: Brock locks the doors out")
+	t.check(job.use(1, "door:front") == "Locked. Brock has the key.", "Lockdown: the front door won't open")
 	JobHarness.done(job)
 	await t.frames(2)
 	# The Rose found missing, and Gray leaving with it.
@@ -414,7 +414,7 @@ func test_failures(t) -> void:
 	_at(job, 1, "living_c", "living_e")
 	await _clock(t, job, MaeHousePartyJob.VIEWING)
 	await _clock(t, job, MaeHousePartyJob.ROSE_OUT)
-	t.check(job.flags.has("alarm") and job.cast.mae.suspicion_of(1) >= 3 and str(job.cast.rocco.post) == "front_guard", "the strongroom's found empty: Mae knows, and Rocco watches the door")
+	t.check(job.flags.has("alarm") and job.cast.mae.suspicion_of(1) >= 3 and str(job.cast.brock.post) == "front_guard", "the strongroom's found empty: Mae knows, and Brock watches the door")
 	await JobHarness.clock_to(t, job, job.def.end)
 	t.check(await _ended_as(t, p[1], "back"), "still holding it at the end of the party, it's back")
 	JobHarness.done(job)
