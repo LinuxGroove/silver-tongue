@@ -167,7 +167,7 @@ static func as_text(r: Dictionary) -> String:
 	elif bool(r.get("win", false)) and str(r.get("unpaid", "")) != "":
 		lines.append("No take: the rule was %s." % str(r.unpaid).to_lower())
 	if not r.get("rules", []).is_empty():
-		lines.append("Rules: %s." % ", ".join(PackedStringArray(r.rules)))
+		lines.append("Rules: %s." % ". ".join(PackedStringArray(r.rules)))
 	if str(r.get("mae_says", "")) != "":
 		lines.append("Mae: \"%s\"" % str(r.mae_says))
 	if str(r.get("epilogue", "")) != "":

@@ -124,9 +124,9 @@ static func rule_names(def: JobDef) -> Array:
 	return def.circuit.get("rules", []).map(func(r): return str(RULES[r].name))
 
 
-## A night on the board: "Talk only, Jumpy staff."
+## A night on the board: "Talk only. Jumpy staff."
 static func rules_text(def: JobDef) -> String:
-	return ", ".join(PackedStringArray(rule_names(def))) + "."
+	return ". ".join(PackedStringArray(rule_names(def))) + "."
 
 
 #region Hooks
