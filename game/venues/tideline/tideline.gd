@@ -938,7 +938,7 @@ func _graph() -> void:
 		"marcus_count": Vector2(-1, 0), "gloria": Vector2(0, 1), "count_look": Vector2(0, -1), "wes": Vector2(0, -1),
 		"held": Vector2(-1, 0), "lockers": Vector2(1, 0), "bea": Vector2(-1, 0), "noor": Vector2(-1, 0),
 		"horace_window": Vector2(-1, 0), "horace_listen": Vector2(0, 1), "noor_vault": Vector2(1, 0),
-		"horace_vault": Vector2(1, 0), "vault_in": Vector2(1, 0), "rose_table": Vector2(1, 0), "count_out": Vector2(0, -1),
+		"horace_vault": Vector2(1, 0), "vault_out": Vector2(1, 0), "vault_in": Vector2(1, 0), "rose_table": Vector2(1, 0), "count_out": Vector2(0, -1),
 		"window_2": Vector2(1, 0), "back_out": Vector2(1, 0), "staff_in": Vector2(1, 0), "staff_out": Vector2(-1, 0),
 		"cage_in": Vector2(0, 1), "cage_c": Vector2(-1, 0), "pit_c": Vector2(1, 0), "count_door": Vector2(0, 1), "front_in": Vector2(0, -1), "hl_in": Vector2(0, -1), "eye_in": Vector2(0, -1),
 		"office_in": Vector2(0, -1), "staff_room_in": Vector2(0, 1),

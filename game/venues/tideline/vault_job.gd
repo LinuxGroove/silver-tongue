@@ -391,6 +391,8 @@ func tick(job: Job, delta: float) -> void:
 		job.flags["vault_open"] = true
 		job.set_door("vault", true)
 		horace.say_scripted("Both keys. Three, two, one.")
+		# He minds the vault's doorway while the float's counted.
+		horace.walk_to("vault_out")
 	_release(job, horace, noor)
 	# The Rose goes back to the vault from anyone held.
 	var h := job.holder("rose")

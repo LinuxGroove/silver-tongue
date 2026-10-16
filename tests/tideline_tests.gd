@@ -16,7 +16,7 @@ const SPOT_ZONES := {
 	"count_out": "corridor", "staff_in": "corridor", "count_in": "count_room", "marcus_count": "count_room",
 	"gloria": "count_room", "count_look": "count_room", "wes": "eye", "eye_in": "eye", "held": "office",
 	"office_in": "office", "lockers": "staff_room", "staff_room_in": "staff_room", "bea": "cage", "noor": "cage",
-	"horace_window": "cage", "horace_listen": "cage", "noor_vault": "cage", "horace_vault": "cage",
+	"horace_window": "cage", "horace_listen": "cage", "noor_vault": "cage", "horace_vault": "cage", "vault_out": "cage",
 	"cage_in": "cage", "vault_in": "vault", "rose_table": "vault",
 }
 ## Places in each room, for the zones.
@@ -830,11 +830,169 @@ func _vault_float(t, two: bool) -> void:
 	await t.frames(2)
 
 
+## Stories that don't check out, a favor nobody owes, Horace tired of
+## waiting at the window, and the time lock.
+func test_vault_wrong(t) -> void:
+	var job: Job = await _vault(t, ["courier", "player"], false)
+	var horace: Character = job.cast.horace
+	t.check(await _say(t, job, 1, "horace", "Mr Bell? Peter Wren, from Larkspur Holdings. I'm here to collect the Rose.") == "call_manager", "vault, wrong: Horace calls Anton")
+	t.check(await t.until(func() -> bool: return horace.face_of(1).checks.get("call_manager", "") == "bad" and not horace.busy, 10.0), "vault, wrong: Larkspur never rang Anton")
+	t.check(not job.flags.has("release") and horace.face_of(1).suspicion >= 2, "vault, wrong: no release, and Horace is wary")
+	t.check(await _say(t, job, 1, "horace", "Where do you keep your key?") == "none" and horace.face_of(1).suspicion >= 4, "vault, wrong: asking about his key makes it worse")
+	await _say(t, job, 2, "augie", "Evening, Augie. Remember us?")
+	await _say(t, job, 2, "augie", "You said you owed us one.")
+	t.check(not job.flags.has("vouched"), "vault, wrong: Augie owes nobody anything if the crew never did him the favor")
+	JobHarness.done(job)
+	await t.frames(2)
+	job = await _vault(t, ["courier"])
+	job.flags["courier_expected"] = true
+	await _say(t, job, 1, "horace", "Mr Bell? Peter Wren, from Larkspur Holdings. I'm here to collect the Rose.")
+	await t.until(func() -> bool: return job.flags.has("release"), 10.0)
+	_walk(job, "horace", "horace_vault")
+	_walk(job, "noor", "noor_vault")
+	await t.frames(2)
+	_walk(job, "horace", "rose_table")
+	await t.frames(2)
+	_walk(job, "horace", "horace_window")
+	await t.frames(2)
+	t.check(str(job.flags.get("release", "")) == "window" and job.holder("rose") == null, "vault, wrong: Horace waits at the window with the Rose")
+	job.flags["window_until"] = job.elapsed
+	await t.frames(2)
+	t.check(str(job.items.rose.at) == "vault_table" and str(job.flags.release) == "", "vault, wrong: with nobody there, he puts it back")
+	await JobHarness.clock_to(t, job, job.def.end + 0.1)
+	t.check(await _ends(t, job) == "late", "vault, wrong: the time lock shuts the vault with the Rose inside (%s)" % _outcome(job))
+	JobHarness.done(job)
+	await t.frames(2)
+
+
+## The float gone wrong: no song, the vault's camera, and the Rose missed
+## when the float's done.
+func test_vault_float_wrong(t) -> void:
+	var job: Job = await _vault(t, ["cage_temp"])
+	var c := job.crew_by_id(1)
+	c.flags["cage_temp"] = true
+	JobHarness.stand_at(job, 1, "cage_in")
+	await JobHarness.clock_to(t, job, TidelineVaultJob.FLOAT - 2 + 0.1)
+	_walk(job, "horace", "horace_vault")
+	_walk(job, "noor", "noor_vault")
+	await JobHarness.clock_to(t, job, TidelineVaultJob.FLOAT + 0.1)
+	await t.until(func() -> bool: return job.flags.has("vault_open"), 2.0)
+	# The vault's door takes a moment to swing clear of the doorway.
+	await t.get_tree().create_timer(HotelDoor.SECONDS + 0.2).timeout
+	await JobHarness.clock_to(t, job, TidelineVaultJob.TRAYS + 0.1)
+	_walk(job, "noor", "noor")
+	await JobHarness.clock_to(t, job, TidelineVaultJob.SET + 0.1)
+	t.check(job.flags.has("vault_open") and not job.flags.has("horace_away") and job.cast.horace.post == "vault_out", "vault, float: with no request, Horace minds the vault's doorway")
+	_walk(job, "horace", "vault_out")
+	JobHarness.stand_at(job, 1, "vault_in")
+	await t.frames(1)
+	var said := job.use(1, "item:rose")
+	t.check(said.begins_with("Not with"), "vault, float: nobody takes the Rose under Horace's nose (%s, held %s, at %s)" % [said, c.held, job.venue.zone_at(c.position())])
+	JobHarness.stand_at(job, 1, "panel")
+	job.use(1, "cam_panel")
+	JobHarness.stand_at(job, 1, "vault_in")
+	job.cast.horace.global_position = job.spot("horace").origin
+	await t.frames(1)
+	t.check(job.use(1, "item:rose") == "You take the Rose.", "vault, float: with Horace away and the loop in, the Rose")
+	await JobHarness.clock_to(t, job, TidelineVaultJob.FLOAT_DONE + 0.1)
+	t.check(job.flags.has("missing") and job.heat.level == Heat.LOCKDOWN, "vault, float: still inside when the float's done, Noor finds it gone: Lockdown")
+	t.check(job.venue.doors.front.locked and not job.venue.doors.cage.is_open, "vault, float: the front's locked and the cage shut")
+	t.check(await t.until(func() -> bool: return c.held, 4.0), "vault, float: the only stranger in the cage is held")
+	t.check(str(job.items.rose.at) == "vault_table", "vault, float: and the Rose goes back")
+	JobHarness.done(job)
+	await t.frames(2)
+	job = await _vault(t, ["cage_temp"])
+	c = job.crew_by_id(1)
+	c.flags["cage_temp"] = true
+	job.flags["vault_open"] = true
+	job.set_door("vault", true)
+	JobHarness.stand_at(job, 1, "vault_in")
+	await t.frames(1)
+	t.check(job.use(1, "item:rose").contains("camera saw"), "vault, float: the vault's camera sees the Rose taken")
+	t.check(await t.until(func() -> bool: return c.held, 4.0), "vault, float: Wes calls it in")
+	t.check(await t.until(func() -> bool: return str(job.items.rose.at) == "vault_table", 2.0), "vault, float: and the Rose goes back")
+	JobHarness.done(job)
+	await t.frames(2)
+
+
+## The request card, Lockdown and Mae's calls.
+func test_vault_rules(t) -> void:
+	var job: Job = await _vault(t, ["player"])
+	t.check(job.def.prompt_for(job.crew_by_id(1), "request") == "Leave a request for Marisol" and job.use(1, "request").contains(TidelineCast.SONG) and job.flags.has("song"), "vault, rules: a request on Marisol's stand")
+	t.check(job.use(1, "request") == "Your request's already on the stand.", "vault, rules: once")
+	for call in ["buyer", "dispatch", "staffing"]:
+		t.check(await _mae(t, job, 1, call), "vault, rules: Mae makes her %s call" % call)
+	t.check(job.flags.has("courier_expected") and job.flags.has("transfer_expected") and job.flags.has("temp_expected"), "vault, rules: Anton expects a courier and a temp, and Marcus a transfer")
+	t.check(not job.mae_call(1, "buyer"), "vault, rules: each of Mae's calls is made once")
+	job.heat.bump(Heat.CAUGHT * 2.0)
+	await t.frames(3)
+	t.check(job.heat.level == Heat.LOCKDOWN and job.venue.doors.front.locked, "vault, rules: at Lockdown Halberd locks the front")
+	JobHarness.done(job)
+	await t.frames(2)
+
+
 func test_vault_float(t) -> void:
 	await _vault_float(t, false)
 
 
 func test_vault_float_two(t) -> void:
 	await _vault_float(t, true)
+
+#endregion
+
+
+#region The scripted replies
+
+## Each night's key words, and what they get from whoever hears them.
+const SCRIPTED := [
+	["count", "marcus", "I'm from the Gaming Board, here to observe the count.", "call_manager"],
+	["count", "marcus", "Halberd dispatch sent me as relief for the drop.", "ask_surveillance"],
+	["count", "marcus", "I'm Pilar's new cleaner.", "ask_housekeeping"],
+	["count", "gloria", "Gaming Board. I'm here to observe.", "ask_security"],
+	["count", "gloria", "I'm the cleaner. Pilar sent me.", "ask_housekeeping"],
+	["count", "pilar", "Harbor Cleaning sent me.", "hire_cleaner"],
+	["count", "pilar", "Harbor Cleaning here. We found you someone.", "expect_cleaner"],
+	["count", "wes", "Halberd Dispatch. Put a relief on your log.", "log_relief"],
+	["count", "anton", "The Gaming Board is sending an auditor.", "expect_inspector"],
+	["count", "marisol", "Could you sing Moon over the Harbor?", "take_request"],
+	["favor", "augie", "Hugo Marlowe saw him cheat on the Marlin.", "ask_regular"],
+	["favor", "augie", "Caldera Staffing sent me as the relief croupier.", "call_manager"],
+	["favor", "wes", "Gaming Board. We've had a complaint about wheel two.", "watch_wheel"],
+	["favor", "anton", "Caldera Staffing. Your relief croupier is coming.", "expect_temp"],
+	["favor", "tess", "You should tell Augie. Come clean.", "confess"],
+	["vault", "horace", "Larkspur's courier, here to collect.", "call_manager"],
+	["vault", "horace", "Halberd transfer team, here to move the Rose.", "ask_security"],
+	["vault", "horace", "Augie sent me. He owes us.", "ask_pit"],
+	["vault", "augie", "You owe us a favor.", "vouch"],
+	["vault", "noor", "Caldera Staffing sent me. I'm your temp.", "call_manager"],
+	["vault", "marcus", "Halberd Dispatch. A transfer from the vault tonight.", "expect_transfer"],
+	["vault", "anton", "Larkspur Holdings. Our courier will collect the Rose.", "expect_courier"],
+	["vault", "anton", "Caldera Staffing. A cashier temp for Noor.", "expect_temp"],
+	["vault", "marisol", "Could you sing Moon over the Harbor for Horace?", "take_request"],
+]
+
+
+func test_scripted(t) -> void:
+	for row in SCRIPTED:
+		var s := TidelineCast.sheet(row[1], row[0])
+		var face := JobRules.new_face(s)
+		face["turns"] = 2
+		face["suspicion"] = 1
+		var r := ScriptedBrain.reply(s, face, {"kind": "line", "heard": row[2]})
+		t.check(str(r.do) == row[3], "tideline, scripted: %s on the %s night hears \"%s\" and does %s (%s)" % [row[1], row[0], row[2], row[3], r.do])
+		t.check(row[3] in s.actions, "tideline, scripted: %s may %s on the %s night" % [row[1], row[3], row[0]])
+	var bea := TidelineCast.sheet("bea", "count")
+	var face := JobRules.new_face(bea)
+	face["secrets"] = [0, 1, 2]
+	for row in [["What's the code on the count room?", TidelineCast.COUNT_CODE], ["How do you get in from the alley?", TidelineCast.BACK_CODE], ["When's the count room empty?", "twenty past"]]:
+		t.check(str(ScriptedBrain.reply(bea, face, {"kind": "line", "heard": row[0]}).say).contains(row[1]), "tideline, scripted: Bea, warmed up, says %s" % row[1])
+	var hugo := TidelineCast.sheet("hugo", "favor")
+	face = JobRules.new_face(hugo)
+	face["secrets"] = [0]
+	t.check(str(ScriptedBrain.reply(hugo, face, {"kind": "line", "heard": "Ever seen Pruitt at the Marlin's card game?"}).say).contains("sliding chips"), "tideline, scripted: Hugo, warmed up, saw Pruitt cheat")
+	for night in ["count", "favor", "vault"]:
+		for s in TidelineCast.all(night):
+			var r := ScriptedBrain.reply(s, JobRules.new_face(s), {"kind": "line", "heard": "Good evening."})
+			t.check(str(r.say) != "" and str(r.do) == "none", "tideline, scripted: %s says good evening back on the %s night" % [s.id, night])
 
 #endregion
