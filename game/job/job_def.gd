@@ -107,6 +107,9 @@ var actions := {}
 var effects := {}
 ## Words that make anyone overhearing look up, on top of the usual ones.
 var hot_words: Array = []
+## Usual hot words that nobody looks up at in this job, because everyone
+## says them ("the rose" at the Rose's own press call).
+var cool_words: Array = []
 ## Numbers on the phone: [{"id", "name", "who" (character id)}], and the
 ## names the crew can make the caller ID say.
 var phone: Array = []
@@ -149,6 +152,9 @@ func sheets() -> Array[CharacterSheet]:
 		for w in hot_words:
 			if not w in s.hot_words:
 				s.hot_words.append(w)
+		for w in cool_words:
+			if not w in s.cool_words:
+				s.cool_words.append(w)
 		if s.situation == "":
 			s.situation = situation
 	Circuit.on_sheets(self, out)

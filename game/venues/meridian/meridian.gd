@@ -3,12 +3,14 @@ extends Venue
 ## The Hotel Meridian's ground floor, where the gala is: the lobby with
 ## reception and the bar, the ballroom and its stage, the kitchen with the pass
 ## and the staff room, the back corridor and its service door (M0's), the
-## security office, the loading bay, and the street out front. Built in code
-## from the Downtown City kit and the hotel's own props
+## security office, Mr Okafor's office, the loading bay, and the street out
+## front. Built in code from the Downtown City kit and the hotel's own props
 ## (`tools/blender/props.py`). X runs east and Z south, the floor is y = 0;
 ## docs/m1.md has the room table.
 ##
-## Its rooms light only themselves, as every [Venue]'s do.
+## What's on changes it a little ([member setting]): the gala, a wedding a
+## week later, and the Rose's press call the morning it leaves. Its rooms
+## light only themselves, as every [Venue]'s do.
 
 ## The rooms (and outside, the street and the loading bay). Some overlap:
 ## [method zone_at] checks them in [constant ZONE_ORDER].
@@ -19,13 +21,14 @@ const ZONES := {
 	"staff_room": AABB(Vector3(14.0, -1.0, -34.0), Vector3(6.0, 13.0, 6.0)),
 	"corridor": AABB(Vector3(6.0, -1.0, -20.0), Vector3(6.0, 13.0, 14.0)),
 	"office": AABB(Vector3(12.0, -1.0, -16.0), Vector3(6.0, 13.0, 10.0)),
+	"manager_office": AABB(Vector3(12.0, -1.0, -20.0), Vector3(8.0, 13.0, 4.0)),
 	"outside": AABB(Vector3(-40.0, -1.0, -6.0), Vector3(80.0, 31.0, 23.0)),
 }
 ## The staff room is inside the kitchen, and outside's box takes in the lobby's
 ## front, so the smaller rooms come first.
-const ZONE_ORDER: Array[String] = ["staff_room", "kitchen", "office", "corridor", "ballroom", "lobby", "outside"]
+const ZONE_ORDER: Array[String] = ["staff_room", "kitchen", "manager_office", "office", "corridor", "ballroom", "lobby", "outside"]
 ## Each zone's render layer (1 is for people and doors, lit everywhere).
-const LAYERS := {"lobby": 2, "ballroom": 3, "kitchen": 4, "staff_room": 4, "corridor": 5, "office": 6, "outside": 7}
+const LAYERS := {"lobby": 2, "ballroom": 3, "kitchen": 4, "staff_room": 4, "corridor": 5, "office": 6, "outside": 7, "manager_office": 8}
 
 ## Ceiling heights.
 const LOBBY_H := 6.0
@@ -33,6 +36,7 @@ const BALLROOM_H := 7.0
 const KITCHEN_H := 3.6
 const CORRIDOR_H := 5.0
 const OFFICE_H := 3.2
+const MANAGER_H := 3.2
 ## The street: pavement from the hotel's front (z = 0) to the kerb, the road,
 ## then the far pavement and the buildings across.
 const KERB := 6.0
@@ -49,7 +53,17 @@ const DOOR_SPECS := {
 	"service": {"at": Vector2(9.0, -19.8), "w": 1.12, "h": 2.2, "to": Vector2(0, -1), "model": "Door_1", "thick": 0.12},
 	"office": {"at": Vector2(12.0, -11.0), "w": 1.1, "h": 2.2, "to": Vector2(1, 0), "model": "door_wood"},
 	"loading": {"at": Vector2(9.0, -6.0), "w": 1.1, "h": 2.2, "to": Vector2(0, 1), "model": "door_steel"},
+	"manager": {"at": Vector2(12.0, -18.0), "w": 1.1, "h": 2.2, "to": Vector2(1, 0), "model": "door_wood"},
 }
+## Where the Rose's case stands on the stage at the press call (the top of
+## its plinth).
+const CASE_AT := Vector3(-4.0, 1.66, -30.7)
+
+## What's on: "gala" (the museum's gala, job 1), "wedding" (the Achterberg
+## wedding a week later, job 2: the guest list on Mr Okafor's desk) or
+## "press" (the morning the Rose leaves, job 3: daylight, the press
+## breakfast, the Rose's case on the stage). Set it before building.
+var setting := "gala"
 
 func _init() -> void:
 	zones = ZONES
@@ -58,10 +72,12 @@ func _init() -> void:
 
 
 ## The doors are HotelDoors by name (front, ballroom, pass, staff, service,
-## office, loading); the uses are "jackets" (the rack in the staff room) and
-## "keypad" (beside the service door).
+## office, loading, manager); the uses are "jackets" (the rack in the staff
+## room) and "keypad" (beside the service door), at the wedding
+## "okafor_desk" (the guest list), and at the press call "plinth" and
+## "plinth_copy" (the Rose's case and Mae's) and "trolley" (in the kitchen).
 func _build() -> void:
-	_make_rooms(["lobby", "ballroom", "kitchen", "corridor", "office", "outside"])
+	_make_rooms(["lobby", "ballroom", "kitchen", "corridor", "office", "manager_office", "outside"])
 	_ground()
 	_lobby()
 	_ballroom()
@@ -69,6 +85,7 @@ func _build() -> void:
 	_staff_room()
 	_corridor()
 	_office()
+	_manager_office()
 	_bay()
 	_street()
 	_facades()
@@ -76,8 +93,32 @@ func _build() -> void:
 	_graph()
 	_views()
 	_apply_layers()
+	_daylight()
 	_dress(self)
-	set_clock(20 * 60 + 45)
+	set_clock({"gala": 20 * 60 + 45, "wedding": 21 * 60 + 30, "press": 9 * 60 + 40}.get(setting, 20 * 60 + 45))
+
+
+## The press call's morning has a bright sky; the other nights are dark.
+func environment() -> Environment:
+	var env := super.environment()
+	if setting != "press":
+		return env
+	var sky_mat := ProceduralSkyMaterial.new()
+	sky_mat.sky_top_color = Color(0.33, 0.5, 0.78)
+	sky_mat.sky_horizon_color = Color(0.72, 0.78, 0.84)
+	sky_mat.ground_horizon_color = Color(0.62, 0.64, 0.66)
+	sky_mat.ground_bottom_color = Color(0.3, 0.3, 0.3)
+	var sky := Sky.new()
+	sky.sky_material = sky_mat
+	env.background_mode = Environment.BG_SKY
+	env.sky = sky
+	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+	env.ambient_light_color = Color(0.55, 0.6, 0.68)
+	env.ambient_light_energy = 0.35
+	env.fog_light_color = Color(0.62, 0.68, 0.76)
+	env.fog_density = 0.0025
+	env.glow_hdr_threshold = 1.2
+	return env
 
 
 # --- The ground under it all ------------------------------------------------------------------
@@ -182,7 +223,12 @@ func _lobby() -> void:
 		_solid(Vector3(-5.7, 0.5, z), Vector3(0.36, 1.0, 0.36))
 	_m("easel", Vector3(-7.6, 0.0, -16.9))
 	_solid(Vector3(-7.6, 0.9, -16.95), Vector3(0.9, 1.8, 0.6))
-	_sign("THE CALDERA\nMUSEUM\n\nAutumn Gala\n\nIn the Ballroom\nfrom eight o'clock", Vector3(-7.6, 1.27, -16.82), 0.0, 40, Color(0.2, 0.15, 0.1), 0.0018)
+	var poster := {
+		"gala": "THE CALDERA\nMUSEUM\n\nAutumn Gala\n\nIn the Ballroom\nfrom eight o'clock",
+		"wedding": "THE WEDDING OF\n\nAnneke Achterberg\n&\nTomas Lindgren\n\nIn the Ballroom",
+		"press": "THE CALDERA\nMUSEUM\n\nThe Rose\nPress call\n\nIn the Ballroom\nhalf past nine",
+	}
+	_sign(str(poster.get(setting, poster.gala)), Vector3(-7.6, 1.27, -16.82), 0.0, 40, Color(0.2, 0.15, 0.1), 0.0018)
 	# The middle: flowers under the chandelier.
 	_box("flower_table", Vector3(-4.0, 0.0, -8.5))
 	_chandelier(-4.0, -8.5, LOBBY_H, 1.6)
@@ -203,6 +249,9 @@ func _lobby() -> void:
 	ch.shadow_bias = 0.08
 	for p in [Vector3(-10.5, 4.6, -4.0), Vector3(2.5, 4.6, -4.0), Vector3(-9.0, 4.6, -15.0), Vector3(1.0, 4.6, -16.0)]:
 		_omni(p, WARM, 0.75, 9.0)
+	if setting == "press":
+		for x in [-10.0, 2.0]:
+			_omni(Vector3(x, 2.4, -1.8), Color(0.9, 0.95, 1.0), 1.4, 9.0)
 	_probe(r, LOBBY_H, Color(0.42, 0.33, 0.24), 0.35)
 	# The kit's marble is a yellow beige; the lobby's is creamier.
 	_tint(_at, "MI_Trim", Color(1.0, 0.95, 0.92))
@@ -245,8 +294,15 @@ func _ballroom() -> void:
 			_solid(Vector3(x0, y * 0.5, (z0 + z1) * 0.5), Vector3(1.2, y, z1 - z0))
 	_m("curtain_stage", Vector3(-4.0, 0.0, -33.66))
 	_box("lectern", Vector3(-1.6, 0.6, -31.0))
-	var plinth := _box("display_plinth", Vector3(-6.4, 0.6, -31.4))
-	_tint(plinth, "paint_white", Color(0.5, 0.47, 0.43))
+	match setting:
+		"gala":
+			var plinth := _box("display_plinth", Vector3(-6.4, 0.6, -31.4))
+			_tint(plinth, "paint_white", Color(0.5, 0.47, 0.43))
+		"wedding":
+			_box("meridian_cake_table", Vector3(-6.4, 0.6, -31.4))
+			_omni(Vector3(-6.4, 2.2, -30.6), CANDLE, 0.5, 3.0)
+		"press":
+			_press_call()
 	# Tables of eight.
 	for x in [-10.9, -6.9, -1.1, 2.9]:
 		for z in [-21.4, -25.0]:
@@ -294,6 +350,22 @@ func _table(c: Vector2) -> void:
 		_solid_turned(_v(p, 0.46), Vector3(0.4, 0.92, 0.42), a + PI)
 
 
+## The press call: the Rose's case on a plinth in the middle of the stage
+## (its use, and Mae's copy's in the same place), cameras on tripods, and
+## breakfast along the walls.
+func _press_call() -> void:
+	_box("meridian_case_plinth", CASE_AT - Vector3(0.0, 1.06, 0.0))
+	for id in ["plinth", "plinth_copy"]:
+		var u := _use(id, CASE_AT, Vector3(0.55, 0.55, 0.55), "meridian_display_case")
+		u.set_meta("use", "item:" + ("rose_case" if id == "plinth" else "mae_case"))
+	_omni(CASE_AT + Vector3(0.0, 1.2, 0.9), Color(1.0, 0.92, 0.85), 0.7, 3.0)
+	_sign("THE ROSE", Vector3(-4.0, 4.3, -33.4), 0.0, 96, Color(0.86, 0.7, 0.4))
+	for p in [Vector2(-10.3, -26.9), Vector2(0.9, -27.0)]:
+		_box("meridian_tripod", _v(p), atan2(-4.0 - p.x, -30.7 - p.y))
+	_box("meridian_buffet", Vector3(-13.2, 0.0, -25.0), PI * 0.5)
+	_box("meridian_buffet", Vector3(5.2, 0.0, -31.6), -PI * 0.5)
+
+
 # --- The kitchen ------------------------------------------------------------------------------
 
 func _kitchen() -> void:
@@ -324,6 +396,8 @@ func _kitchen() -> void:
 	for x in [7.0, 8.6]:
 		_box("pot_shelf", Vector3(x, 0.0, -33.52))
 	_box("service_trolley", Vector3(6.8, 0.0, -30.2), PI * 0.5)
+	if setting == "press":
+		_use("trolley", Vector3(6.85, 0.0, -30.2), Vector3(0.8, 1.05, 1.1))
 	# The walk-in freezer: an insulated box against the north wall.
 	var fz := -30.6
 	_slab(Vector3(11.7, 1.5, fz - 0.05), Vector3(4.0, 3.0, 0.1), _mat("freezer"))
@@ -385,7 +459,7 @@ func _corridor() -> void:
 	_floor(r, "kit_marble")
 	_wall("marble", Vector2(6.2, -6.2), Vector2(6.2, -19.8), Vector2(1, 0), CORRIDOR_H, [{"at": -10.0, "w": 1.1, "h": 2.2}])
 	_wall("marble", Vector2(6.2, -19.8), Vector2(11.8, -19.8), Vector2(0, 1), CORRIDOR_H, [{"at": 9.0, "w": 3.98, "h": 4.0}])
-	_wall("marble", Vector2(11.8, -19.8), Vector2(11.8, -6.2), Vector2(-1, 0), CORRIDOR_H, [{"at": -11.0, "w": 1.1, "h": 2.2}])
+	_wall("marble", Vector2(11.8, -19.8), Vector2(11.8, -6.2), Vector2(-1, 0), CORRIDOR_H, [{"at": -11.0, "w": 1.1, "h": 2.2}, {"at": -18.0, "w": 1.1, "h": 2.2}])
 	_wall("marble", Vector2(11.8, -6.2), Vector2(6.2, -6.2), Vector2(0, -1), CORRIDOR_H, [{"at": 9.0, "w": 1.1, "h": 2.2}])
 	_ceiling(r, CORRIDOR_H, "ceiling_dark")
 	# M0's service door: pilasters, the wooden frame, a short panel over it.
@@ -423,6 +497,8 @@ func _corridor() -> void:
 	_m("doorframe_walnut", Vector3(6.2, 0.0, -10.0), PI * 0.5)
 	_m("doorframe_walnut", Vector3(11.8, 0.0, -11.0), -PI * 0.5)
 	_sign("SECURITY", Vector3(11.76, 2.62, -11.0), -PI * 0.5, 40)
+	_m("doorframe_walnut", Vector3(11.8, 0.0, -18.0), -PI * 0.5)
+	_sign("MANAGER", Vector3(11.76, 2.62, -18.0), -PI * 0.5, 40)
 	_m("doorframe_plain", Vector3(9.0, 0.0, -6.2), PI)
 	# Dressing, as in M0.
 	for corner in [Vector3(6.5, 0.0, -6.5), Vector3(11.5, 0.0, -6.5)]:
@@ -466,6 +542,77 @@ func _office() -> void:
 	_omni(Vector3(16.5, 1.5, -11.0), Color(0.6, 0.75, 1.0), 0.7, 3.5)
 	_omni(Vector3(13.95, 1.0, -15.2), CANDLE, 0.4, 2.5)
 	_probe(r, OFFICE_H, Color(0.3, 0.32, 0.34), 0.3)
+
+
+## Mr Okafor's office, through the door opposite the service door: walnut
+## panelling under a green wall, his desk facing the door with his chair
+## behind it, a safe in the corner, filing cabinets, a sideboard under the
+## window with its blind down. At the wedding his guest list lies on the
+## desk ("okafor_desk").
+func _manager_office() -> void:
+	_in("manager_office")
+	var r := Rect2(12.2, -19.8, 7.6, 3.6)
+	_floor(r, "parquet")
+	_m("rug", Vector3(15.6, 0.0, -18.0), 0.0, Vector3(0.7, 1.0, 0.75))
+	_wall("study", Vector2(12.2, -16.2), Vector2(12.2, -19.8), Vector2(1, 0), MANAGER_H, [{"at": -18.0, "w": 1.1, "h": 2.2}])
+	_wall("study", Vector2(12.2, -19.8), Vector2(19.8, -19.8), Vector2(0, 1), MANAGER_H)
+	_wall("study", Vector2(19.8, -19.8), Vector2(19.8, -16.2), Vector2(-1, 0), MANAGER_H)
+	_wall("study", Vector2(19.8, -16.2), Vector2(12.2, -16.2), Vector2(0, -1), MANAGER_H)
+	_ceiling(r, MANAGER_H, "plaster")
+	_m("doorframe_walnut", Vector3(12.2, 0.0, -18.0), PI * 0.5)
+	# The desk, side on to the door, and the chair behind it.
+	_box("meridian_manager_desk", Vector3(16.9, 0.0, -18.3), -PI * 0.5)
+	_m("desk_lamp", Vector3(16.95, 0.78, -19.0), -PI * 0.5)
+	_box("meridian_desk_chair", Vector3(17.95, 0.0, -18.35), -PI * 0.5)
+	for z in [-18.75, -17.95]:
+		_box("meridian_side_chair", Vector3(15.5, 0.0, z), PI * 0.5)
+	if setting == "wedding":
+		_use("okafor_desk", Vector3(16.8, 0.78, -17.95), Vector3(0.36, 0.1, 0.42), "meridian_list_folder", -PI * 0.5).set_meta("use", "item:guest_list")
+	# The safe in the corner behind him, the sideboard under the window.
+	_box("meridian_safe", Vector3(19.47, 0.0, -19.47), -PI * 0.5)
+	_box("meridian_credenza", Vector3(19.55, 0.0, -17.3), -PI * 0.5)
+	_m("meridian_blinds", Vector3(19.8, 1.2, -17.3), -PI * 0.5)
+	# Filing cabinets by the door, a painting over the visitors' chairs.
+	for x in [12.75, 13.3]:
+		_box("meridian_file_cabinet", Vector3(x, 0.0, -19.47))
+	_painting(Vector2(15.4, -19.8), Vector2(0, 1), 1.5, 1.35, 1.05, "painting_valley")
+	clocks.append(_m("wall_clock", Vector3(15.4, 2.3, -16.2), PI, Vector3.ONE * 0.4))
+	_m("potted_palm", Vector3(13.0, 0.0, -16.75), 0.0, Vector3.ONE * 0.7)
+	_solid(Vector3(13.0, 0.4, -16.75), Vector3(0.45, 0.8, 0.45))
+	# Light: a warm ceiling light, the banker's lamp, a little over the sideboard.
+	_pendant(15.6, -18.0, 2.0, MANAGER_H)
+	_omni(Vector3(15.6, 2.6, -18.0), WARM, 0.9, 6.5)
+	_omni(Vector3(16.95, 1.05, -18.95), CANDLE, 0.55, 2.8)
+	_omni(Vector3(18.8, 1.6, -17.3), WARM, 0.3, 3.0)
+	_probe(r, MANAGER_H, Color(0.36, 0.3, 0.24), 0.3)
+
+
+func _more_mat(mat_name: String, m: StandardMaterial3D) -> bool:
+	match mat_name:
+		"paint_study":
+			m.albedo_color = Color(0.13, 0.22, 0.17)
+			m.roughness = 0.8
+		_:
+			return false
+	return true
+
+
+## Mr Okafor's office's walls: walnut panelling to a brass rail, deep green
+## above.
+func _more_span(style: String, a: Vector2, u: Vector2, facing: Vector2, s0: float, s1: float, y0: float, y1: float, _h: float) -> void:
+	if style != "study":
+		return
+	if y0 < 0.14:
+		_face(a, u, facing, s0, s1, y0, minf(y1, 0.14), _mat("walnut"), 0.03)
+	_face(a, u, facing, s0, s1, maxf(y0, 0.14), minf(y1, 1.1), _mat("walnut"), 0.02)
+	if y1 >= 1.16 and y0 <= 1.1:
+		_face(a, u, facing, s0, s1, 1.1, 1.16, _mat("brass"), 0.035)
+	_face(a, u, facing, s0, s1, maxf(y0, 1.16), y1, _mat("paint_study"), 0.012)
+
+
+func _more_wall_top(style: String, a: Vector2, u: Vector2, facing: Vector2, length: float, h: float) -> void:
+	if style == "study":
+		_face(a, u, facing, 0.0, length, h - 0.12, h, _mat("cream"), 0.06)
 
 
 # --- Outside: the loading bay, the street, the buildings ---------------------------------------
@@ -523,13 +670,15 @@ func _street() -> void:
 	for sx in [-5.02, -2.98]:
 		_slab(Vector3(sx, 0.008, 1.95), Vector3(0.04, 0.016, 3.9), _mat("brass"))
 	_sign("THE MERIDIAN", Vector3(-4.0, 5.25, 0.06), 0.0, 128, Color(1.3, 1.05, 0.62), 0.006)
-	_spot(Vector3(-4.0, 3.2, 2.2), Vector3(-4.0, 0.0, 1.6), WARM, 4.0, 6.0, 55.0, true)
-	_omni(Vector3(-4.0, 2.6, 0.9), WARM, 0.8, 5.0)
+	var night := setting != "press"
+	if night:
+		_spot(Vector3(-4.0, 3.2, 2.2), Vector3(-4.0, 0.0, 1.6), WARM, 4.0, 6.0, 55.0, true)
+	_omni(Vector3(-4.0, 2.6, 0.9), WARM, 0.8 if night else 0.4, 5.0)
 	# Street lamps, lit on the near side and across from the door.
 	for lx in [-26.0, -14.0, 7.0, 22.0, 34.0]:
-		_lamp(Vector3(lx, 0.0, KERB - 0.6), absf(lx - (-4.0)) < 20.0)
+		_lamp(Vector3(lx, 0.0, KERB - 0.6), night and absf(lx - (-4.0)) < 20.0)
 	for lx in [-30.0, -16.0, -4.0, 8.0, 20.0, 32.0]:
-		_lamp(Vector3(lx, 0.0, FAR_KERB + 0.6), absf(lx - (-4.0)) < 14.0)
+		_lamp(Vector3(lx, 0.0, FAR_KERB + 0.6), night and absf(lx - (-4.0)) < 14.0)
 	for bx in [-7.6, -0.4]:
 		_box("Prop_Bollard", Vector3(bx, 0.0, KERB - 0.5))
 	_m("Prop_ManholeCover", Vector3(3.0, -0.148, 8.0))
@@ -537,13 +686,14 @@ func _street() -> void:
 	for ex in [-40.0, 40.0]:
 		_solid(Vector3(ex, 3.0, (ACROSS - 6.0) * 0.5), Vector3(0.4, 6.0, ACROSS + 6.0))
 	_solid(Vector3(0.0, 3.0, ACROSS + 0.2), Vector3(80.0, 6.0, 0.4))
-	# A dim moon over the street.
-	var moon := DirectionalLight3D.new()
-	moon.light_color = Color(0.55, 0.65, 0.95)
-	moon.light_energy = 0.12
-	moon.rotation_degrees = Vector3(-35.0, 150.0, 0.0)
-	_at.add_child(moon)
-	_probe(Rect2(-40.0, -6.0, 80.0, 22.0), 16.0, Color(0.12, 0.13, 0.18), 0.25)
+	# A dim moon over the street (the sun in the morning: see _daylight()).
+	if night:
+		var moon := DirectionalLight3D.new()
+		moon.light_color = Color(0.55, 0.65, 0.95)
+		moon.light_energy = 0.12
+		moon.rotation_degrees = Vector3(-35.0, 150.0, 0.0)
+		_at.add_child(moon)
+	_probe(Rect2(-40.0, -6.0, 80.0, 22.0), 16.0, Color(0.12, 0.13, 0.18) if night else Color(0.5, 0.55, 0.62), 0.25 if night else 0.55)
 
 
 ## The hotel's front and the buildings either side and across the street.
@@ -566,9 +716,10 @@ func _facades() -> void:
 			var win := _m("Marble_Window_Single", Vector3(wx, y, 0.0))
 			_override(win, "MI_FakeInterior", _window_mat(0 if rng.randf() < 0.45 else 1 + rng.randi() % 2, Color(1.0, 0.8, 0.6)))
 	_panels("Cornice_Marble_Center", Vector2(-14.0, 0.0), Vector2(1, 0), Vector2(0, 1), 0.0, 20.0, 16.0)
-	# Lit from below, between the windows.
-	for ux in [-13.2, -6.9, -1.1, 5.2]:
-		_spot(Vector3(ux, 0.15, 0.9), Vector3(ux, 9.0, 0.0), WARM, 5.0, 16.0, 22.0)
+	# Lit from below, between the windows, at night.
+	if setting != "press":
+		for ux in [-13.2, -6.9, -1.1, 5.2]:
+			_spot(Vector3(ux, 0.15, 0.9), Vector3(ux, 9.0, 0.0), WARM, 5.0, 16.0, 22.0)
 	# Next door, west: a brick block with a pub on the ground floor.
 	_block(-40.0, -14.0, 0.0, false, 12.0, "red", rng)
 	# East, past the loading bay: white brick offices.
@@ -577,6 +728,24 @@ func _facades() -> void:
 	_block(-40.0, -14.0, ACROSS, true, 12.0, "double", rng)
 	_block(-14.0, 10.0, ACROSS, true, 15.0, "inset", rng)
 	_block(10.0, 40.0, ACROSS, true, 12.0, "red", rng)
+
+
+## The press call's morning sun, on the street only: indoors, everyone and
+## the doors keep their rooms' light. The windows across the street go dark.
+func _daylight() -> void:
+	if setting != "press":
+		return
+	var sun := DirectionalLight3D.new()
+	sun.light_color = Color(1.0, 0.95, 0.86)
+	sun.light_energy = 1.6
+	sun.shadow_enabled = true
+	sun.directional_shadow_max_distance = 60.0
+	sun.rotation_degrees = Vector3(-38.0, 205.0, 0.0)
+	sun.light_cull_mask = 1 << (int(LAYERS.outside) - 1)
+	_rooms.outside.add_child(sun)
+	for k in _mats:
+		if str(k).begins_with("window_"):
+			(_mats[k] as StandardMaterial3D).emission_energy_multiplier = 0.06
 
 
 # --- Doors ------------------------------------------------------------------------------------
@@ -591,6 +760,7 @@ func _doors() -> void:
 	_reveal(Vector2(6.0, -27.0), Vector2(0, 1), 1.1, 2.2, 0.4, _mat("steel"), "steel")
 	_in("corridor")
 	_reveal(Vector2(12.0, -11.0), Vector2(0, 1), 1.1, 2.2, 0.4, _mat("walnut"), "brass")
+	_reveal(Vector2(12.0, -18.0), Vector2(0, 1), 1.1, 2.2, 0.4, _mat("walnut"), "brass")
 	_reveal(Vector2(9.0, -20.0), Vector2(1, 0), 1.2, 2.2, 0.4, _mat("walnut"))
 	_reveal(Vector2(9.0, -6.0), Vector2(1, 0), 1.1, 2.2, 0.4, _mat("steel"), "steel")
 
@@ -626,6 +796,15 @@ func _graph() -> void:
 		"office_out": Vector2(10.8, -11.0), "office_guard": Vector2(11.0, -12.6),
 		"office_in": Vector2(13.2, -11.0), "held": Vector2(14.6, -8.4),
 		"loading_in": Vector2(9.0, -7.2), "loading_out": Vector2(9.0, -4.8), "smoke": Vector2(11.2, -4.4),
+		"crew_bay": Vector2(9.6, -3.4),
+		# Mr Okafor's office.
+		"manager_out": Vector2(10.9, -18.0), "manager_in": Vector2(13.2, -18.0), "manager_c": Vector2(15.2, -16.95),
+		"okafor_office": Vector2(18.1, -16.95),
+		# The wedding's and the press call's people.
+		"gus": Vector2(4.3, -11.4), "pippa": Vector2(-7.0, -14.6), "pippa_in": Vector2(-3.0, -29.2),
+		"front_watch": Vector2(-6.7, -2.6), "wren_lobby": Vector2(-6.2, -4.0), "priya_lobby": Vector2(-7.4, -3.8),
+		"wren": Vector2(-5.4, -29.2), "priya": Vector2(-1.4, -28.7), "ingrid_stage": Vector2(-2.4, -28.8),
+		"rafe": Vector2(1.6, -27.6), "okafor_bar": Vector2(-10.3, -11.0),
 	}
 	for k in P:
 		points[k] = _v(P[k])
@@ -650,7 +829,13 @@ func _graph() -> void:
 		["corridor_n", "corridor_c", ""], ["corridor_c", "staff_corridor", ""], ["corridor_c", "office_out", ""],
 		["office_out", "office_guard", ""], ["office_guard", "corridor_n", ""], ["office_out", "office_in", "office"],
 		["office_in", "held", ""], ["corridor_c", "loading_in", ""], ["staff_corridor", "loading_in", ""],
-		["loading_in", "loading_out", "loading"], ["loading_out", "smoke", ""],
+		["loading_in", "loading_out", "loading"], ["loading_out", "smoke", ""], ["loading_out", "crew_bay", ""],
+		["corridor_n", "manager_out", ""], ["service_out", "manager_out", ""], ["manager_out", "manager_in", "manager"],
+		["manager_in", "manager_c", ""], ["manager_c", "okafor_office", ""],
+		["staff_lobby", "gus", ""], ["reception", "gus", ""], ["lobby_n", "pippa", ""],
+		["front_in", "front_watch", ""], ["crew_0", "front_watch", ""], ["lobby_s", "wren_lobby", ""], ["wren_lobby", "priya_lobby", ""], ["front_watch", "priya_lobby", ""],
+		["stage_front", "pippa_in", ""], ["stage_front", "wren", ""], ["stage_front", "priya", ""], ["stage_front", "ingrid_stage", ""],
+		["okafor_stage", "rafe", ""], ["lobby_w", "okafor_bar", ""], ["celeste", "okafor_bar", ""],
 	]
 	links = L
 	var face := {
@@ -659,6 +844,10 @@ func _graph() -> void:
 		"celeste": Vector2(1, 0), "hugo": Vector2(-1, 0), "celeste_in": Vector2(1, 0), "hugo_in": Vector2(-1, 0),
 		"smoke": Vector2(0, 1), "office_guard": Vector2(-1, 0), "held": Vector2(-1, 0),
 		"crew_0": Vector2(0, -1), "crew_1": Vector2(0, -1), "ballroom_in": Vector2(0, -1),
+		"crew_bay": Vector2(0, -1), "okafor_office": Vector2(-1, -0.4), "gus": Vector2(-1, 0.2), "pippa": Vector2(0.4, 1),
+		"pippa_in": Vector2(0, 1), "front_watch": Vector2(1, -0.3), "wren_lobby": Vector2(-0.3, 1), "priya_lobby": Vector2(0.4, 1),
+		"wren": Vector2(0.3, 1), "priya": Vector2(-0.3, 1), "ingrid_stage": Vector2(-0.6, -1), "rafe": Vector2(-0.5, -1),
+		"okafor_bar": Vector2(-1, -0.2),
 	}
 	for k in face:
 		spots[k] = _facing(P[k], face[k])
@@ -688,6 +877,8 @@ func _views() -> void:
 		"corridor": [Vector3(9.0, 1.7, -6.9), Vector3(9.0, 1.6, -19.0)],
 		"service_door": [Vector3(9.6, 1.65, -15.6), Vector3(9.0, 1.4, -20.0)],
 		"office": [Vector3(12.8, 1.7, -6.8), Vector3(17.0, 1.1, -12.4)],
+		"manager_door": [Vector3(8.0, 1.65, -13.6), Vector3(12.0, 1.3, -18.4)],
+		"manager_office": [Vector3(12.65, 1.65, -17.25), Vector3(18.6, 1.0, -18.9)],
 		"loading_bay": [Vector3(18.6, 1.8, -0.8), Vector3(9.0, 1.3, -5.6)],
 		"street": [Vector3(0.5, 1.7, 11.4), Vector3(-4.0, 3.6, 0.0)],
 	}
@@ -707,5 +898,7 @@ func _views() -> void:
 		"corridor": "The service corridor from the loading door, the service door at the end",
 		"service_door": "The service door (M0's), Marcus's post, and the keypad",
 		"office": "The security office: the CCTV monitors, the desk",
+		"manager_door": "Mr Okafor's door, across the corridor from the service door",
+		"manager_office": "Mr Okafor's office: his desk and chair, the safe, the sideboard under the blind",
 		"loading_bay": "The loading bay: the dumpster, the gate onto the street, the loading door",
 	}
