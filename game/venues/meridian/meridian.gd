@@ -878,7 +878,7 @@ func _views() -> void:
 		"service_door": [Vector3(9.6, 1.65, -15.6), Vector3(9.0, 1.4, -20.0)],
 		"office": [Vector3(12.8, 1.7, -6.8), Vector3(17.0, 1.1, -12.4)],
 		"manager_door": [Vector3(8.0, 1.65, -13.6), Vector3(12.0, 1.3, -18.4)],
-		"manager_office": [Vector3(12.7, 1.65, -16.7), Vector3(18.6, 1.0, -18.9)],
+		"manager_office": [Vector3(12.65, 1.65, -17.25), Vector3(18.6, 1.0, -18.9)],
 		"loading_bay": [Vector3(18.6, 1.8, -0.8), Vector3(9.0, 1.3, -5.6)],
 		"street": [Vector3(0.5, 1.7, 11.4), Vector3(-4.0, 3.6, 0.0)],
 	}

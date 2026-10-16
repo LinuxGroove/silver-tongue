@@ -1,4 +1,4 @@
-# The Meridian
+# The Hotel Meridian
 
 Made by `tools/screenshot.tscn -- --all=docs/screenshots group=hotel` (see `tools/screenshot.gd`).
 
@@ -16,4 +16,6 @@ Made by `tools/screenshot.tscn -- --all=docs/screenshots group=hotel` (see `tool
 - [`corridor`](corridor.png): The service corridor from the loading door, the service door at the end
 - [`service_door`](service_door.png): The service door (M0's), Marcus's post, and the keypad
 - [`office`](office.png): The security office: the CCTV monitors, the desk
+- [`manager_door`](manager_door.png): Mr Okafor's door, across the corridor from the service door
+- [`manager_office`](manager_office.png): Mr Okafor's office: his desk and chair, the safe, the sideboard under the blind
 - [`loading_bay`](loading_bay.png): The loading bay: the dumpster, the gate onto the street, the loading door
