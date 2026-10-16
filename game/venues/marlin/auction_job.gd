@@ -98,7 +98,7 @@ func _init() -> void:
 	staff_looking = ["stew_whites"]
 	staff_rooms = MarlinCast.CREW_ROOMS.duplicate()
 	looks = MarlinCast.LOOKS
-	extras = {"aft_deck": "guest", "saloon": "guest", "dining": "yacht_stew"}
+	extras = {"aft_deck": "guest", "saloon": {"job": "guest", "clips": ["Sitting_Idle", "Sitting_Talking"]}, "dining": "yacht_stew"}
 	routine = [
 		[SEATS, "nina", "nina_phone"],
 		[SEATS, "teo", "saloon_in"],

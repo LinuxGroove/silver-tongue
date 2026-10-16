@@ -736,8 +736,9 @@ def marlin_bed():
 
 @prop
 def marlin_safe_cabinet():
-    """The strongroom's safe: a steel cabinet 0.8 x 1.4 x 0.55 with its door standing open and
-    shelves of document boxes; front faces +Z."""
+    """The strongroom's safe: a steel cabinet 0.8 x 1.4 x 0.55 with its door, hinged on the left,
+    standing open, and shelves of document boxes; the cabinet's middle is the origin and its
+    front faces +Z."""
     p = Prop("marlin_safe_cabinet")
     w, h, d = 0.8, 1.4, 0.55
     t = 0.05
@@ -753,11 +754,11 @@ def marlin_safe_cabinet():
     for i in range(5):
         x = -0.3 + i * 0.12
         p.add(box((x - 0.045, t, -0.18), (x + 0.045, t + 0.32 + rng.random() * 0.04, 0.14), "cardboard" if i % 2 else "folder_blue", 0.004))
-    # The door, open toward +X.
-    door = box((0.0, 0.0, -0.04), (w - 0.02, h - 0.02, 0.04), "safe_grey", 0.008)
-    p.add(door.xf(move(w / 2, 0.01, d / 2) @ rot_y(-100)))
+    # The door, hinged on the left and swung open.
+    door = box((-(w - 0.02), 0.0, -0.04), (0.0, h - 0.02, 0.04), "safe_grey", 0.008)
+    p.add(door.xf(move(-w / 2, 0.01, d / 2) @ rot_y(100)))
     dial = cyl(0.06, 0.0, 0.03, "chrome", 16, m=rot_x(90))
-    p.add(dial.xf(move(w / 2, 0.01, d / 2) @ rot_y(-100) @ move(0.4, 0.8, 0.05)))
+    p.add(dial.xf(move(-w / 2, 0.01, d / 2) @ rot_y(100) @ move(-0.4, 0.8, 0.05)))
     return p
 
 

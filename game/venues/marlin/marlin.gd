@@ -271,10 +271,10 @@ func _more_mat(name: String, m: StandardMaterial3D) -> bool:
 			m.albedo_color = Color(0.9, 0.9, 0.88)
 			m.roughness = 0.9
 		"bridge_grey":
-			m.albedo_color = Color(0.16, 0.17, 0.19)
+			m.albedo_color = Color(0.3, 0.31, 0.33)
 			m.roughness = 0.6
 		"bridge_floor":
-			m.albedo_color = Color(0.1, 0.11, 0.12)
+			m.albedo_color = Color(0.26, 0.27, 0.28)
 			m.roughness = 0.9
 		"safe_wall":
 			m.albedo_color = Color(0.42, 0.44, 0.46)
@@ -1042,9 +1042,12 @@ func _captain() -> void:
 	_wall("steel", Vector2(-IN, -30.7), Vector2(-IN, -32.9), Vector2(1, 0), h, [], 0.3)
 	_wall("steel", Vector2(-IN, -32.9), Vector2(-2.05, -32.9), Vector2(0, 1), h, [], 0.1)
 	_wall("steel", Vector2(-2.05, -32.9), Vector2(-2.05, -30.7), Vector2(-1, 0), h, [], 0.1)
-	_box("marlin_safe_cabinet", Vector3(-4.05, 0.0, -32.235))
+	# The safe stands open; its box and door block, and the shelf stays in reach.
+	_m("marlin_safe_cabinet", Vector3(-4.03, 0.0, -32.6))
+	_solid(Vector3(-4.03, 0.7, -32.6), Vector3(0.8, 1.4, 0.55))
+	_solid_turned(Vector3(-4.36, 0.7, -31.94), Vector3(0.08, 1.4, 0.78), 0.1745)
 	if night == "safe":
-		_use("safe_shelf", Vector3(-4.05, 0.92, -32.2), Vector3(0.5, 0.3, 0.4), "marlin_file")
+		_use("safe_shelf", Vector3(-4.03, 0.92, -32.45), Vector3(0.5, 0.3, 0.5), "marlin_file")
 		uses.safe_shelf.set_meta("use", "item:auction_file")
 	_omni(Vector3(-3.3, 2.0, -31.6), COOL, 0.9, 3.5)
 	_slab(Vector3(-3.3, h - 0.01, -31.8), Vector3(0.3, 0.02, 0.3), _mat("led_cool"))
@@ -1075,8 +1078,10 @@ func _bridge() -> void:
 	_omni(Vector3(0.0, 1.3, -36.8), Color(0.4, 0.75, 0.9), 0.9, 4.5)
 	_omni(Vector3(3.9, 1.4, -34.0), CANDLE, 0.7, 3.5)
 	_omni(Vector3(0.0, 2.1, -34.6), Color(0.85, 0.3, 0.25), 0.45, 6.0)
-	_omni(Vector3(-2.6, 2.0, -34.2), WARM, 0.35, 4.5)
-	_probe(r, h, Color(0.22, 0.24, 0.28), 0.4)
+	_omni(Vector3(-2.6, 2.0, -34.2), WARM, 0.5, 5.0)
+	_omni(Vector3(1.6, 1.6, -34.0), WARM, 0.35, 4.0)
+	_omni(Vector3(0.0, 2.2, -35.4), WARM, 0.45, 5.5)
+	_probe(r, h, Color(0.26, 0.28, 0.32), 0.5)
 
 
 # --- The outside of the house ------------------------------------------------------------------
@@ -1328,7 +1333,7 @@ func _views() -> void:
 		"sky_lounge": [Vector3(3.8, 6.2, -14.5), Vector3(-3.0, 4.8, -19.6)],
 		"upper_hall": [Vector3(2.0, 6.2, -21.2), Vector3(3.0, 4.9, -32.5)],
 		"captain": [Vector3(0.5, 6.1, -21.3), Vector3(-3.6, 4.6, -28.6)],
-		"strongroom": [Vector3(-3.0, 5.95, -30.8), Vector3(-4.1, 4.75, -32.4)],
+		"strongroom": [Vector3(-2.9, 5.85, -30.85), Vector3(-4.0, 4.95, -32.55)],
 		"bridge": [Vector3(3.7, 6.1, -33.5), Vector3(-1.0, 4.9, -38.4)],
 	}
 	_set_views(v)
