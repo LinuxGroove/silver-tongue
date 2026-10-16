@@ -265,7 +265,9 @@ func _glow(n: Node) -> void:
 			m.emission_enabled = true
 			m.emission_texture = m.albedo_texture
 			m.emission = Color.WHITE
-			m.emission_energy_multiplier = 1.4 if m.resource_name == "slot_art" else 1.1
+			# Multiplied, so the picture glows rather than washing out to white.
+			m.emission_operator = BaseMaterial3D.EMISSION_OP_MULTIPLY
+			m.emission_energy_multiplier = 1.8 if m.resource_name == "slot_art" else 1.4
 	for c in n.get_children():
 		_glow(c)
 
@@ -461,7 +463,8 @@ func _lounge() -> void:
 	_use("request", Vector3(22.3, 0.0, -1.8), Vector3(0.5, 0.5, 0.5))
 	# The stage's light (the lounge's shadow), and a wash.
 	_spot(Vector3(18.5, LOUNGE_H - 0.3, -1.2), Vector3(23.8, 1.2, -3.2), Color(1.0, 0.6, 0.78), 14.0, 9.0, 24.0, true)
-	_omni(Vector3(16.0, LOUNGE_H - 0.5, -2.5), Color(0.9, 0.55, 0.75), 0.5, 7.0)
+	_omni(Vector3(16.0, LOUNGE_H - 0.5, -2.5), Color(0.9, 0.55, 0.75), 1.3, 9.0)
+	_omni(Vector3(21.0, LOUNGE_H - 0.6, -4.2), Color(1.0, 0.72, 0.6), 0.8, 6.0)
 	_sign("THE LOUNGE", Vector3(17.0, 3.3, -5.76), 0.0, 48, PINK * 1.5)
 
 
@@ -1004,18 +1007,18 @@ func _views() -> void:
 		"wheel_two": [Vector3(-4.2, 1.7, -21.6), Vector3(-2.6, 1.0, -17.4)],
 		"slots": [Vector3(0.0, 1.7, -1.6), Vector3(4.0, 1.2, -8.0)],
 		"bar": [Vector3(-11.0, 1.7, -8.4), Vector3(-16.4, 1.4, -13.4)],
-		"lounge": [Vector3(11.6, 1.7, -1.2), Vector3(23.6, 1.3, -3.6)],
+		"lounge": [Vector3(10.6, 2.6, -2.2), Vector3(22.6, 0.8, -3.0)],
 		"high_limit": [Vector3(-5.0, 2.0, -27.0), Vector3(-12.0, 1.0, -33.0)],
 		"cage": [Vector3(5.0, 1.7, -10.0), Vector3(10.6, 1.5, -10.0)],
-		"cage_inside": [Vector3(11.0, 1.7, -7.0), Vector3(15.6, 1.2, -11.6)],
-		"vault": [Vector3(15.0, 1.6, -10.0), Vector3(19.5, 1.0, -11.6)],
+		"cage_inside": [Vector3(13.8, 1.9, -6.4), Vector3(15.9, 1.1, -11.2)],
+		"vault": [Vector3(16.6, 2.0, -6.7), Vector3(19.8, 0.8, -12.2)],
 		"corridor": [Vector3(11.0, 1.7, -16.0), Vector3(25.0, 1.4, -16.0)],
 		"count_room": [Vector3(11.0, 1.8, -19.0), Vector3(14.6, 0.8, -23.6)],
 		"eye": [Vector3(18.0, 1.7, -19.0), Vector3(19.6, 1.6, -25.6)],
 		"office": [Vector3(23.0, 1.7, -18.8), Vector3(25.0, 0.9, -24.6)],
 		"staff_room": [Vector3(22.0, 1.7, -13.2), Vector3(24.6, 1.0, -7.4)],
 		"alley": [Vector3(31.5, 1.7, -2.0), Vector3(27.0, 1.4, -17.0)],
-		"waterfront": [Vector3(10.0, 1.6, 16.6), Vector3(0.0, 0.6, 40.0)],
+		"waterfront": [Vector3(-8.0, 2.4, 14.6), Vector3(14.0, 0.2, 27.0)],
 	}
 	_set_views(v)
 	view_about = {
@@ -1031,7 +1034,7 @@ func _views() -> void:
 		"high_limit": "The high-limit room: baccarat under the chandelier, the private bar, Hugo's table",
 		"cage": "The cage from the floor: three windows behind brass bars, Bea's and Noor's open, the middle one closed",
 		"cage_inside": "Inside the cage: the counters, Noor's desk, the vault door in its frame",
-		"vault": "The vault through its round door: shelves of cash, deposit boxes, the Rose on its table",
+		"vault": "Inside the vault: shelves of cash, deposit boxes, the Rose on its table",
 		"corridor": "The back corridor off the staff door: the count room, the eye, security, the cage, the back door",
 		"count_room": "The count room: the count table, the drop carts, the key box and the count sheet",
 		"eye": "The eye in the sky: the wall of camera feeds and Wes's console",
