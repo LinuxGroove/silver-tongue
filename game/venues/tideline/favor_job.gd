@@ -144,6 +144,7 @@ func _init() -> void:
 	]
 	outcomes = {
 		"owed": ["AUGIE OWES YOU", "Pruitt's out on the kerb, and at %s the pit boss owes the crew a favor."],
+		"caught": ["NOBODY TOLD AUGIE", "Pruitt's out on the kerb, but Augie never found out who to thank."],
 		"late": ["PRUITT CASHED OUT", "Pruitt walked out with his winnings, and Augie owes nobody anything."],
 	}
 	wins = ["owed"]
@@ -210,7 +211,9 @@ func on_action(job: Job, ch: Character, c: CrewInfo, act: String) -> bool:
 		"confess":
 			var lyle: Character = job.cast.get("lyle")
 			if lyle and not job.flags.has("caught") and lyle.global_position.distance_to(ch.global_position) < 8.0:
-				ch.say_scripted("Not here. Not with him watching.")
+				# She'll go to Augie on her break, away from Pruitt.
+				ch.say_scripted("Not here. Not with him watching. On my break.")
+				job.flags["tess_later"] = c.id
 				return true
 			if job.flags.has("caught") or job.flags.has("tess_confessing"):
 				return true
@@ -239,9 +242,14 @@ func lookup(job: Job, who: String, crew_id: int, said: String, _asker: Character
 	var c := job.crew_by_id(crew_id)
 	match who:
 		"hugo":
+			# He'll back up any of the crew he's warmed to.
 			var h: Character = job.cast.get("hugo")
-			var f: Dictionary = h.face_of(crew_id) if h else {}
-			if 0 in f.get("secrets", []) or (bool(f.get("met", false)) and int(f.get("suspicion", 2)) <= JobRules.TRUST):
+			var warm := false
+			for other in job.crew:
+				var f: Dictionary = h.faces.get(other.id, {}) if h else {}
+				if 0 in f.get("secrets", []) or (bool(f.get("met", false)) and int(f.get("suspicion", 2)) <= JobRules.TRUST):
+					warm = true
+			if warm:
 				return Job.fact("good", "You saw Lyle Pruitt thrown off the Marlin's card game for sliding chips, and you like the person asking.", "Pruitt? Sliding chips on the Marlin's card game. I saw it myself, and I'll tell Anton so.")
 			return Job.fact("bad", "You don't know who that is, and you're not getting dragged into anything.", "Who? I'm not getting dragged into anything, Augie.")
 		"wes":
@@ -263,6 +271,11 @@ func on_routine(job: Job, ch: Character, spot_name: String) -> bool:
 	match ch.sheet.id:
 		"tess":
 			if job.flags.has("caught") or job.flags.has("tess_confessing"):
+				return false
+			if spot_name == "tess_smoke" and job.flags.has("tess_later"):
+				job.flags["tess_out"] = true
+				job.flags["tess_confessing"] = job.flags.tess_later
+				ch.walk_to("pit_c")
 				return false
 			job.flags["tess_out"] = spot_name == "tess_smoke"
 		"lyle":
@@ -385,7 +398,9 @@ func check_end(job: Job) -> String:
 
 
 func at_end(job: Job) -> String:
-	return "owed" if _owes(job) else "late"
+	if _owes(job):
+		return "owed"
+	return "caught" if job.flags.has("caught") else "late"
 
 
 func on_seen(job: Job, ch: Character, c: CrewInfo, zone: String) -> bool:

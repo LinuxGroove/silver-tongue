@@ -238,7 +238,7 @@ static func hugo(night := "count") -> CharacterSheet:
 	if night == "favor":
 		s.secrets = [{"text": "Lyle Pruitt was thrown off the Marlin's card game in the spring for sliding chips onto a winning hand. You saw it yourself, and you'd say so to anyone.", "suspicion": 1, "turns": 2}]
 		s.knows.append("Lyle Pruitt plays wheel two downstairs every night. You think he's a boor.")
-		s.replies.insert(1, {"words": ["lyle", "pruitt", "cheat", "wheel two", "card game"], "secret": 0, "say": "Pruitt? Loud man. Bores everyone.", "tone": "calm"})
+		s.replies.insert(0, {"words": ["lyle", "pruitt", "cheat", "wheel two", "card game"], "secret": 0, "say": "Pruitt? Loud man. Bores everyone.", "tone": "calm"})
 	return s
 
 

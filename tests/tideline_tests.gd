@@ -473,3 +473,196 @@ func test_count_bea_two(t) -> void:
 	await _count_bea(t, true)
 
 #endregion
+
+
+#region The pit boss's favor
+
+## Wes's camera on wheel two: the Gaming Board asks him to watch it (Mae,
+## or a crewmate on the phone as the Board), the next spin with Tess
+## dealing catches Pruitt, and the crew tells Augie it was them.
+func _favor_camera(t, two: bool) -> void:
+	var label := "favor, the camera%s" % (" with two" if two else "")
+	var job: Job = await _start(t, TidelineFavorJob.new(), ["player", "inspector"] if two else ["player"])
+	if two:
+		t.check(await _ring(t, job, 2, "eye", "Caldera Gaming Board", "Caldera Gaming Board. We've had a complaint about wheel two. Watch it tonight, please.") == "watch_wheel", "%s: Wes takes the Board's call" % label)
+		job.hang_up(2)
+	else:
+		t.check(await _mae(t, job, 1, "board"), "%s: Mae rings Wes as the Board" % label)
+	t.check(job.flags.has("watch_wheel") and TidelineRules.watching(job), "%s: Wes has a camera on wheel two" % label)
+	await JobHarness.clock_to(t, job, TidelineFavorJob.SPINS[0] + 0.2)
+	t.check(str(job.flags.get("caught", "")) == "camera", "%s: the next spin, Pruitt's caught on tape" % label)
+	t.check(job.cast.lyle.post == "kerb" and job.cast.tess.post == "staff_out", "%s: Pruitt's walked out, and Tess goes off the floor" % label)
+	t.check(not job.flags.has("owed_at"), "%s: Augie doesn't know who to thank yet" % label)
+	await _say(t, job, 1, "augie", "That camera on wheel two? That was us.")
+	t.check(str(job.cast.augie.turns.back().reply.say).contains("owe you"), "%s: Augie owes them one (%s)" % [label, job.cast.augie.turns.back().reply.say])
+	t.check(await _ends(t, job, TidelineFavorJob.OWED_PAUSE + 2.0) == "owed", "%s: Augie owes the crew (%s)" % [label, _outcome(job)])
+	JobHarness.done(job)
+	await t.frames(2)
+
+
+func test_favor_camera(t) -> void:
+	await _favor_camera(t, false)
+
+
+func test_favor_camera_two(t) -> void:
+	await _favor_camera(t, true)
+
+
+## Tess on her break in the alley: frightened by the Board (Mae's call, or
+## a crewmate playing the inspector) and talked round kindly, she goes and
+## tells Augie everything.
+func _favor_tess(t, two: bool) -> void:
+	var label := "favor, Tess%s" % (" with two" if two else "")
+	var job: Job = await _start(t, TidelineFavorJob.new(), ["player", "inspector"] if two else ["player"])
+	var tess: Character = job.cast.tess
+	var who := 2 if two else 1
+	if not two:
+		t.check(await _mae(t, job, 1, "scare"), "%s: Mae rings Tess as the Board" % label)
+		t.check(tess.face_of(1).suspicion <= 1, "%s: Tess is frightened, and ready to talk" % label)
+	await JobHarness.clock_to(t, job, TidelineFavorJob.BREAK + 0.5)
+	t.check(job.flags.get("tess_out", false) and _walk(job, "tess", "tess_smoke"), "%s: Tess goes out to the alley on her break" % label)
+	if two:
+		t.check(await _say(t, job, 2, "tess", "Caldera Gaming Board. They know about wheel two.") == "none", "%s: the inspector frightens Tess" % label)
+		t.check(await _say(t, job, 2, "tess", "If there's something you want to tell your pit boss, tonight's the night. Tell Augie.") == "confess", "%s: and she'll tell Augie" % label)
+	else:
+		t.check(await _say(t, job, 1, "tess", "Are you all right? You look frightened.") == "none", "%s: a kind word" % label)
+		t.check(await _say(t, job, 1, "tess", "Tell Augie. Come clean, before the Board does it for you.") == "confess", "%s: and she'll tell Augie" % label)
+	t.check(job.flags.get("tess_confessing", 0) == who and tess.post == "pit_c", "%s: Tess walks to Augie" % label)
+	t.check(_walk(job, "tess", "pit_c"), "%s: she gets to the pit" % label)
+	t.check(await t.until(func() -> bool: return str(job.flags.get("caught", "")) == "tess", 2.0), "%s: she tells him everything, and Pruitt's out" % label)
+	t.check(await _ends(t, job, TidelineFavorJob.OWED_PAUSE + 2.0) == "owed", "%s: Augie owes the crew (%s)" % [label, _outcome(job)])
+	JobHarness.done(job)
+	await t.frames(2)
+
+
+func test_favor_tess(t) -> void:
+	await _favor_tess(t, false)
+
+
+func test_favor_tess_two(t) -> void:
+	await _favor_tess(t, true)
+
+
+## Hugo Marlowe saw Pruitt cheat on the Marlin: warmed up, he says so, and
+## Augie checks with him and throws Pruitt out.
+func _favor_hugo(t, two: bool) -> void:
+	var label := "favor, Hugo%s" % (" with two" if two else "")
+	var job: Job = await _start(t, TidelineFavorJob.new(), ["player", "player"] if two else ["player"])
+	var hugo: Character = job.cast.hugo
+	var who := 2 if two else 1
+	t.check(await _say(t, job, who, "hugo", "Is it true you sold the Marlin? Lovely yacht.") == "none", "%s: Hugo loves to talk boats" % label)
+	await _say(t, job, who, "hugo", "What do you make of Lyle Pruitt?")
+	await _say(t, job, who, "hugo", "Tell me about Pruitt and the Marlin's card game.")
+	t.check(str(hugo.turns.back().reply.say).contains("sliding chips"), "%s: Hugo saw Pruitt cheat (%s)" % [label, hugo.turns.back().reply.say])
+	JobHarness.stand(job, who, Vector3(-10, 0, -26), Vector3(-10, 0, -31))
+	t.check(await _say(t, job, 1, "augie", "Hugo Marlowe saw Pruitt cheat on the Marlin's card game. Ask him.") == "ask_regular", "%s: Augie goes to ask Hugo" % label)
+	t.check(await t.until(func() -> bool: return job.flags.has("caught"), 10.0), "%s: Hugo backs it up" % label)
+	t.check(str(job.flags.caught) == "hugo" and job.cast.augie.face_of(1).checks.get("ask_regular", "") == "good", "%s: and Augie throws Pruitt out on a witness" % label)
+	t.check(await _ends(t, job, TidelineFavorJob.OWED_PAUSE + 2.0) == "owed", "%s: Augie owes the crew (%s)" % [label, _outcome(job)])
+	JobHarness.done(job)
+	await t.frames(2)
+
+
+func test_favor_hugo(t) -> void:
+	await _favor_hugo(t, false)
+
+
+func test_favor_hugo_two(t) -> void:
+	await _favor_hugo(t, true)
+
+
+## The relief croupier: Anton's been told a relief is coming (Mae, or a
+## crewmate as Caldera Staffing), so Augie puts them on wheel two for Tess's
+## break, and Pruitt tries it on with them.
+func _favor_relief(t, two: bool) -> void:
+	var label := "favor, the relief%s" % (" with two" if two else "")
+	var job: Job = await _start(t, TidelineFavorJob.new(), ["croupier", "player"] if two else ["croupier"])
+	var c := job.crew_by_id(1)
+	if two:
+		t.check(await _ring(t, job, 2, "manager", "Caldera Staffing", "Caldera Staffing. Your relief croupier for wheel two is on the way.") == "expect_temp", "%s: Anton takes the agency's call" % label)
+		job.hang_up(2)
+	else:
+		t.check(await _mae(t, job, 1, "staffing"), "%s: Mae rings Anton as Caldera Staffing" % label)
+	t.check(job.flags.has("relief_booked"), "%s: a relief is booked" % label)
+	t.check(await _say(t, job, 1, "augie", "Evening. Caldera Staffing sent me as relief for wheel two.") == "call_manager", "%s: Augie checks with Anton" % label)
+	t.check(await t.until(func() -> bool: return c.flags.has("relief"), 10.0), "%s: it checks out, and Augie puts them on wheel two for the break" % label)
+	await JobHarness.clock_to(t, job, TidelineFavorJob.BREAK + 0.5)
+	_walk(job, "tess", "tess_smoke")
+	JobHarness.stand_at(job, 1, "tess")
+	await JobHarness.clock_to(t, job, TidelineFavorJob.SPINS[3] + 0.2)
+	t.check(str(job.flags.get("caught", "")) == "relief", "%s: Pruitt tries it on with the new croupier and Augie sees it" % label)
+	t.check(await _ends(t, job, TidelineFavorJob.OWED_PAUSE + 2.0) == "owed", "%s: Augie owes the crew (%s)" % [label, _outcome(job)])
+	JobHarness.done(job)
+	await t.frames(2)
+
+
+func test_favor_relief(t) -> void:
+	await _favor_relief(t, false)
+
+
+func test_favor_relief_two(t) -> void:
+	await _favor_relief(t, true)
+
+
+## Stories that don't check out, Tess with Pruitt watching, a catch nobody
+## owns up to, and Pruitt cashing out.
+func test_favor_wrong(t) -> void:
+	var job: Job = await _start(t, TidelineFavorJob.new(), ["croupier", "player"])
+	var augie: Character = job.cast.augie
+	t.check(await _say(t, job, 1, "augie", "Evening. Caldera Staffing sent me as relief for wheel two.") == "call_manager", "favor, wrong: Augie checks the relief with Anton")
+	t.check(await t.until(func() -> bool: return augie.face_of(1).checks.get("call_manager", "") == "bad" and not augie.busy, 10.0), "favor, wrong: Anton booked nobody")
+	t.check(not job.crew_by_id(1).flags.has("relief"), "favor, wrong: so no wheel for them")
+	JobHarness.stand(job, 1, Vector3(0, 0, -6), Vector3(0, 0, -10))
+	t.check(await _say(t, job, 2, "augie", "Pruitt's cheating at wheel two. He slides chips.") == "none" and not job.flags.has("caught"), "favor, wrong: Augie can't act on a guess")
+	t.check(await _say(t, job, 2, "augie", "Hugo Marlowe saw him do it on the Marlin.") == "ask_regular", "favor, wrong: he asks Hugo")
+	t.check(await t.until(func() -> bool: return augie.face_of(2).checks.get("ask_regular", "") == "bad" and not augie.busy, 10.0), "favor, wrong: Hugo's never met them and won't be dragged in")
+	t.check(not job.flags.has("caught"), "favor, wrong: Pruitt plays on")
+	await JobHarness.clock_to(t, job, TidelineFavorJob.SPINS[0] + 0.2)
+	t.check(not job.flags.has("caught"), "favor, wrong: with Tess dealing and nobody watching, Pruitt wins again")
+	await JobHarness.clock_to(t, job, TidelineFavorJob.CASH_OUT + 0.2)
+	t.check(job.cast.lyle.post == "kerb", "favor, wrong: Pruitt cashes out")
+	await JobHarness.clock_to(t, job, job.def.end + 0.1)
+	t.check(await _ends(t, job) == "late", "favor, wrong: and walks off with it (%s)" % _outcome(job))
+	JobHarness.done(job)
+	await t.frames(2)
+	job = await _start(t, TidelineFavorJob.new(), ["player"])
+	job.flags["watch_wheel"] = 1
+	await JobHarness.clock_to(t, job, TidelineFavorJob.SPINS[0] + 0.2)
+	t.check(str(job.flags.get("caught", "")) == "camera", "favor, wrong: caught on tape")
+	await JobHarness.clock_to(t, job, job.def.end + 0.1)
+	t.check(await _ends(t, job) == "caught", "favor, wrong: but nobody told Augie it was them (%s)" % _outcome(job))
+	JobHarness.done(job)
+	await t.frames(2)
+
+
+## Pruitt's lucky spins, the camera blinded by a loop, and Augie before
+## anything's happened.
+func test_favor_rules(t) -> void:
+	var job: Job = await _start(t, TidelineFavorJob.new(), ["player", "player"])
+	var tess: Character = job.cast.tess
+	await JobHarness.clock_to(t, job, TidelineFavorJob.SPINS[0] - 2)
+	JobHarness.stand_at(job, 1, "panel")
+	job.use(1, "cam_panel")
+	job.flags["watch_wheel"] = 1
+	await JobHarness.clock_to(t, job, TidelineFavorJob.SPINS[0] + 0.2)
+	t.check(not job.flags.has("caught"), "favor, rules: a looped camera sees nothing at wheel two")
+	job.flags.erase("watch_wheel")
+	t.check(await _say(t, job, 1, "augie", "I'd say you owe me a favor.") == "none" and str(job.cast.augie.turns.back().reply.say).contains("Nobody owes"), "favor, rules: nobody's owed anything yet")
+	for line in ["Are you all right?", "You look frightened.", "Tell Augie the truth."]:
+		await _say(t, job, 2, "tess", line)
+	t.check(not job.flags.has("tess_confessing") and job.flags.get("tess_later", 0) == 2 and tess.post == "tess", "favor, rules: Tess won't go to Augie with Pruitt watching")
+	JobHarness.stand_at(job, 2, "bea_bar")
+	JobHarness.stand_at(job, 1, "count_out")
+	await t.frames(3)
+	t.check(not job.flags.has("cam:1:corridor"), "favor, rules: the loop hides a guest in the back corridor")
+	job.minutes += TidelineRules.LOOP_MINUTES
+	t.check(await t.until(func() -> bool: return job.flags.has("cam:1:corridor"), 2.0), "favor, rules: till it runs out")
+	JobHarness.stand_at(job, 1, "bea_bar")
+	await JobHarness.clock_to(t, job, TidelineFavorJob.BREAK + 0.5)
+	t.check(job.flags.get("tess_confessing", 0) == 2 and tess.post == "pit_c", "favor, rules: on her break she goes to Augie instead")
+	_walk(job, "tess", "pit_c")
+	t.check(await _ends(t, job, TidelineFavorJob.OWED_PAUSE + 2.0) == "owed" and str(job.flags.get("caught", "")) == "tess", "favor, rules: and tells him everything (%s)" % _outcome(job))
+	JobHarness.done(job)
+	await t.frames(2)
+
+#endregion
