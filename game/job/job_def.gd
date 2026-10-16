@@ -85,6 +85,8 @@ var keypads := {}
 ## Where the crew's held: the office's door, the spot they're put at, and
 ## where the guard minding them stands.
 var office := {"door": "office", "held": "held", "guard": "office_guard", "name": "the security office"}
+## What the crew is told when every one of them is held.
+var held_text := "Security has called the police. Talk your way out before they come."
 
 ## Things to take, carry, show or leave: id -> {"name" (what it's called),
 ## "at" (the use id it lies at in the venue, "" for carried from the start),
@@ -105,8 +107,10 @@ var actions := {}
 ## spot), "toast" (said to the crew member, %s for the character's name).
 ## [method on_action] comes first and can do the rest.
 var effects := {}
-## Words that make anyone overhearing look up, on top of the usual ones.
+## Words that make anyone overhearing look up, on top of the usual ones,
+## and usual ones that don't here.
 var hot_words: Array = []
+var cool_words: Array = []
 ## Numbers on the phone: [{"id", "name", "who" (character id)}], and the
 ## names the crew can make the caller ID say.
 var phone: Array = []
@@ -146,6 +150,9 @@ func sheets() -> Array[CharacterSheet]:
 		for w in hot_words:
 			if not w in s.hot_words:
 				s.hot_words.append(w)
+		for w in cool_words:
+			if not w in s.cool_words:
+				s.cool_words.append(w)
 		if s.situation == "":
 			s.situation = situation
 	return out

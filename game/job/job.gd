@@ -973,7 +973,7 @@ func _check_end() -> void:
 	if free_crew().is_empty():
 		if _police_at < 0.0:
 			_police_at = minutes + POLICE
-			toast_for.emit(0, "Security has called the police. Talk your way out before they come.")
+			toast_for.emit(0, def.held_text)
 		elif minutes >= _police_at:
 			_end("held")
 		return
