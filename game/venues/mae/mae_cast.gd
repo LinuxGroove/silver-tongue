@@ -302,7 +302,7 @@ static func dot() -> CharacterSheet:
 	]
 	s.knows = [
 		"Mae's been jumpy all week, on the phone behind closed doors. Something's wrong and she won't say what.",
-		"The man in the grey suit, Julian Gray, is an old buyer of Mae's. You never liked him.",
+		"The man in the gray suit, Julian Gray, is an old buyer of Mae's. You never liked him.",
 		"The strongroom off Mae's study has a dial. You know the combination: Mae gave it to you years ago, in case anything happened to her.",
 		"Mae's crew are her pride and joy. She talks about them like they're her own.",
 	]
@@ -607,7 +607,7 @@ static func walt() -> CharacterSheet:
 	s.routine = ["You're down in the laundrette all night, out of the noise."]
 	s.knows = [
 		"The gate from Mae's yard to the alley sticks: you lift it and push.",
-		"The black car outside belongs to the man in the grey suit.",
+		"The black car outside belongs to the man in the gray suit.",
 		"Men in suits have been measuring up the street all month. The Halvorsens' people, you'd bet.",
 	]
 	s.never = ["Never ask Mae about her back room.", "Never admit you're not a person. You're Walt."]
@@ -622,7 +622,7 @@ static func walt() -> CharacterSheet:
 	s.replies = [
 		{"words": ["gate", "alley", "yard", "back way"], "say": "The yard gate sticks. Lift it and push.", "tone": "friendly"},
 		{"words": ["halvorsen", "street", "surveyor", "measuring", "suits"], "say": "Men in suits measuring the street all month. Halvorsen's people.", "tone": "calm"},
-		{"words": ["car", "gray", "grey suit"], "say": "Black car out front. The fellow in the grey suit's.", "tone": "calm"},
+		{"words": ["car", "gray suit", "grey suit"], "say": "Black car out front. The fellow in the gray suit's.", "tone": "calm"},
 		{"words": ["police", "detective", "cop", "the force"], "say": "Retired. I just do my washing.", "tone": "friendly", "up": -1},
 		{"words": ["beer", "drink"], "say": "There's a cold one in the dryer. Don't ask.", "tone": "friendly"},
 		{"words": ["hello", "evening", "hi "], "say": "Evening. Too loud up there for me.", "tone": "friendly"},
