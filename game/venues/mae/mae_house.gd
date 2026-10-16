@@ -104,6 +104,10 @@ func _build() -> void:
 	_doors()
 	_graph()
 	_views()
+	# Until a job says where they lie, the Rose shows in the strongroom and
+	# the copy stays in the drawer.
+	for u in ["desk", "case", "copy_safe", "copy_desk", "copy_case"]:
+		(uses[u] as Node3D).visible = false
 	_apply_layers()
 	_dress(self)
 	set_clock(22 * 60)
@@ -628,6 +632,10 @@ func _alley() -> void:
 	_m("Prop_Drain", Vector3(0.0, 0.002, -28.4))
 	_m("bulkhead_light", Vector3(2.0, 2.8, -30.0))
 	_omni(Vector3(2.0, 2.6, -29.6), SODIUM, 1.4, 9.0)
+	_m("bulkhead_light", Vector3(9.0, 2.6, -30.0))
+	_omni(Vector3(9.0, 2.4, -29.6), SODIUM, 0.9, 7.0)
+	# Next door's side wall, over its yard wall.
+	_wall("brick", Vector2(6.05, -26.5), Vector2(6.05, -18.0), Vector2(1, 0), 9.6)
 	_omni(Vector3(-7.0, 2.6, -29.6), SODIUM, 0.6, 6.0)
 	_probe(Rect2(-12.0, -30.0, 24.0, 3.5), 6.0, Color(0.14, 0.13, 0.13), 0.2)
 
@@ -1140,7 +1148,7 @@ func _views() -> void:
 		"dance": [Vector3(-4.4, F + 1.7, -11.0), Vector3(0.6, F + 1.1, -16.4)],
 		"kitchen": [Vector3(0.7, F + 1.8, -8.3), Vector3(4.6, F + 0.9, -2.4)],
 		"study": [Vector3(-4.8, F + 1.75, -8.3), Vector3(-2.4, F + 0.8, -0.8)],
-		"strongroom": [Vector3(-3.7, F + 1.7, -6.2), Vector3(-0.5, F + 0.9, -7.2)],
+		"strongroom": [Vector3(-2.35, F + 1.75, -6.0), Vector3(-0.3, F + 0.85, -7.6)],
 		"terrace": [Vector3(0.2, F + 1.8, -18.5), Vector3(-3.4, F + 0.8, -25.6)],
 		"yard": [Vector3(5.3, 1.8, -18.6), Vector3(2.0, 1.5, -26.0)],
 		"alley": [Vector3(10.4, 1.7, -28.2), Vector3(0.0, 1.6, -27.0)],

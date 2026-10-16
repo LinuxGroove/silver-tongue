@@ -43,6 +43,7 @@ props.MATERIALS.update({
     "leather_green": ("#1f3a2a", 0.0, 0.45, {}),
     "knit_red": ("#9a2f2a", 0.0, 0.95, {}),
     "knit_cream": ("#d8ccb0", 0.0, 0.95, {}),
+    "knit_mustard": ("#b5862f", 0.0, 0.95, {}),
     "tile_green": ("#2c5a4c", 0.0, 0.2, {}),
     "tile_cream": ("#d9cdb0", 0.0, 0.22, {}),
     "vinyl_black": ("#0c0c0d", 0.0, 0.28, {}),
@@ -559,8 +560,9 @@ def mae_sofa_big():
     # Scatter cushions and the throw.
     p.add(cushion((-0.95, 0.5, -d / 2 + 0.24), (-0.55, 0.88, -d / 2 + 0.38), "velvet_teal", 0.07).xf(move(0, 0, 0) @ rot_z(-6)))
     p.add(cushion((0.5, 0.5, -d / 2 + 0.24), (0.88, 0.86, -d / 2 + 0.38), "velvet_mustard", 0.07).xf(rot_z(5)))
-    p.add(cushion((w / 2 - 0.27, 0.62, -d / 2 + 0.05), (w / 2 + 0.01, 0.82, d / 2 + 0.02), "knit_cream", 0.03))
-    p.add(box((w / 2 - 0.02, 0.3, -d / 2 + 0.2), (w / 2 + 0.02, 0.8, d / 2 - 0.1), "knit_cream", 0.01))
+    p.add(cushion((w / 2 - 0.27, 0.62, -d / 2 + 0.12), (w / 2 + 0.03, 0.81, d / 2 - 0.04), "knit_mustard", 0.03))
+    p.add(grid_sheet(0.66, 0.46, 10, 5, "knit_mustard", lambda x, y: 0.012 * math.sin(x * 22.0) * (0.4 + y),
+                     m=move(w / 2 + 0.035, 0.34, 0.06) @ rot_y(90), thickness=0.012))
     return p
 
 
@@ -1327,7 +1329,8 @@ def mae_whirligig():
     for r in (0.4, 0.75, 1.05):
         pts = [(r * math.cos(math.radians(a)), 1.72 + r * 0.1, r * math.sin(math.radians(a))) for a in range(0, 361, 30)]
         p.add(tube(pts, 0.003, "paper", 3))
-    p.add(grid_sheet(1.0, 1.0, 6, 4, "cloth_white", lambda x, y: 0.03 * math.sin(x * 6.0 + y * 2.0), m=move(0.0, 0.78, 0.75) @ rot_y(0)))
+    p.add(grid_sheet(1.0, 0.9, 12, 6, "cloth_white", lambda x, y: 0.05 * math.sin(x * 9.0 + y * 2.0) * (1.2 - y),
+                     m=move(0.0, 0.88, 0.75) @ rot_y(0), thickness=0.004))
     p.add(grid_sheet(0.45, 0.6, 3, 3, "cloth_blue", lambda x, y: 0.02 * math.sin(y * 5.0), m=move(-0.75, 1.18, 0.05) @ rot_y(90)))
     p.add(grid_sheet(0.45, 0.55, 3, 3, "cloth_check", lambda x, y: 0.02 * math.sin(y * 5.0), m=move(0.05, 1.2, -0.75)))
     return p

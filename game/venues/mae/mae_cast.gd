@@ -291,7 +291,7 @@ static func dot() -> CharacterSheet:
 	s.staff = true
 	s.female = true
 	s.seed = 91
-	s.look = {"skin": 2, "hair": 3, "style": 3, "main": Color(0.55, 0.18, 0.14)}
+	s.look = {"skin": 2, "hair": 3, "style": 3, "main": Color(0.55, 0.18, 0.14), "legs": Color(0.16, 0.15, 0.2), "accent": Color(0.86, 0.82, 0.72)}
 	s.person_job = "party_help"
 	s.voice = "bf_isabella"
 	s.voice_speed = 0.92
