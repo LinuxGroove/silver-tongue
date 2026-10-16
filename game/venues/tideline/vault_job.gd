@@ -272,6 +272,7 @@ func on_action(job: Job, ch: Character, c: CrewInfo, act: String) -> bool:
 				ch.say_scripted("I don't owe you a thing. Who are you?")
 				return true
 			c.flags["vouched"] = true
+			job.flags["vouched"] = true
 			var h: Character = job.cast.get("horace")
 			if h:
 				h.note("On the radio, Augie: \"Horace, the people coming to see you are friends of mine, %s. Whatever they need, they're good for it.\"" % job.describe(c.id))
@@ -318,7 +319,8 @@ func lookup(job: Job, who: String, crew_id: int, said: String, _asker: Character
 				return Job.fact("good", "Halberd Dispatch told you a transfer team is coming for one item from the vault tonight.", "Yeah, Dispatch rang. Transfer team for one item. They're ours.")
 			return Job.fact("bad", "Nobody's told you of any transfer tonight.", "Nobody's told me about any transfer, Horace. Hold it.")
 		"augie":
-			if c and c.flags.has("vouched"):
+			# Augie vouches for the whole crew, not just whoever asked him.
+			if c and job.flags.has("vouched"):
 				return Job.fact("good", "You vouched for them: they're the people you owe.", "They're with me, Horace. Whatever they need, they're good for it.")
 			return Job.fact("bad", "You've never vouched for them.", "Never seen them, Horace. Don't open anything.")
 	return {}

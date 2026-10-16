@@ -666,3 +666,175 @@ func test_favor_rules(t) -> void:
 	await t.frames(2)
 
 #endregion
+
+
+#region The vault
+
+## A vault job, with the crew owed Augie's favor or not.
+func _vault(t, covers: Array, owed := true) -> Job:
+	var def := TidelineVaultJob.new()
+	def.owed = owed
+	return await _start(t, def, covers)
+
+
+## Horace has said yes to a release: both keys, the Rose from its table and
+## through the cage's middle window to crew member `id`, who walks it out
+## the front. Checks each step under `label`.
+func _released(t, job: Job, id: int, label: String) -> void:
+	t.check(str(job.flags.get("release", "")) == "keys" and job.cast.horace.post == "horace_vault", "%s: Horace goes to open the vault" % label)
+	JobHarness.stand_at(job, id, "window_2")
+	_walk(job, "horace", "horace_vault")
+	_walk(job, "noor", "noor_vault")
+	t.check(await t.until(func() -> bool: return str(job.flags.get("release", "")) == "fetch", 2.0), "%s: both keys turn" % label)
+	_walk(job, "horace", "rose_table")
+	t.check(await t.until(func() -> bool: return str(job.flags.get("release", "")) == "window", 2.0), "%s: Horace takes the Rose from its table" % label)
+	_walk(job, "horace", "horace_window")
+	_walk(job, "noor", "noor")
+	t.check(await t.until(func() -> bool: return job.holder("rose") == job.crew_by_id(id), 2.0), "%s: and passes it through the window" % label)
+	t.check(not job.flags.has("vault_open") and job.cast.horace.post == "horace", "%s: Horace goes back to his table" % label)
+	JobHarness.stand_at(job, id, "crew_0")
+	t.check(await _ends(t, job) == "out", "%s: out the front with the Rose (%s)" % [label, _outcome(job)])
+
+
+## Larkspur's courier: Anton's told the buyer's collecting (Mae, or a
+## crewmate on the phone as Larkspur), so Horace's call checks out.
+func _vault_courier(t, two: bool) -> void:
+	var label := "vault, the courier%s" % (" with two" if two else "")
+	var job: Job = await _vault(t, ["courier", "player"] if two else ["courier"])
+	var horace: Character = job.cast.horace
+	if two:
+		t.check(await _ring(t, job, 2, "manager", "Larkspur Holdings", "Larkspur Holdings, for Mr Varga. Our courier will collect the Rose tonight.") == "expect_courier", "%s: Anton takes Larkspur's call" % label)
+		job.hang_up(2)
+	else:
+		t.check(await _mae(t, job, 1, "buyer"), "%s: Mae rings Anton as Larkspur" % label)
+	t.check(job.flags.has("courier_expected"), "%s: Anton expects the courier" % label)
+	if two:
+		JobHarness.face(job, 1, "horace")
+		job.show_papers(1, horace)
+		t.check(await t.until(func() -> bool: return horace.face_of(1).checks.has("call_manager"), 2.0), "%s: the release order sends Horace to Anton" % label)
+	else:
+		t.check(await _say(t, job, 1, "horace", "Mr Bell? Peter Wren, from Larkspur Holdings. I'm here to collect the Rose.") == "call_manager", "%s: Horace calls Anton" % label)
+	t.check(await t.until(func() -> bool: return job.flags.has("release"), 10.0), "%s: it checks out" % label)
+	await _released(t, job, 1, label)
+	JobHarness.done(job)
+	await t.frames(2)
+
+
+func test_vault_courier(t) -> void:
+	await _vault_courier(t, false)
+
+
+func test_vault_courier_two(t) -> void:
+	await _vault_courier(t, true)
+
+
+## Halberd's transfer team: Marcus has heard from Dispatch (Mae, or a
+## crewmate on the phone as Dispatch), and Horace asks Marcus.
+func _vault_transfer(t, two: bool) -> void:
+	var label := "vault, the transfer%s" % (" with two" if two else "")
+	var job: Job = await _vault(t, ["halberd_escort", "player"] if two else ["halberd_escort"])
+	if two:
+		t.check(await _ring(t, job, 2, "halberd", "Halberd Dispatch", "Halberd Dispatch. Transfer team coming for one item from the vault tonight.") == "expect_transfer", "%s: Marcus takes Dispatch's call" % label)
+		job.hang_up(2)
+	else:
+		t.check(await _mae(t, job, 1, "dispatch"), "%s: Mae rings Marcus as Dispatch" % label)
+	t.check(job.flags.has("transfer_expected"), "%s: Marcus expects a transfer" % label)
+	t.check(await _say(t, job, 1, "horace", "Mr Bell. Halberd transfer team. We're moving the Rose tonight.") == "ask_security", "%s: Horace asks Marcus" % label)
+	t.check(await t.until(func() -> bool: return job.flags.has("release"), 10.0), "%s: it checks out" % label)
+	await _released(t, job, 1, label)
+	JobHarness.done(job)
+	await t.frames(2)
+
+
+func test_vault_transfer(t) -> void:
+	await _vault_transfer(t, false)
+
+
+func test_vault_transfer_two(t) -> void:
+	await _vault_transfer(t, true)
+
+
+## Augie's favor: he owes the crew for Pruitt, vouches for them to Horace,
+## and Horace takes his oldest friend's word.
+func _vault_favor(t, two: bool) -> void:
+	var label := "vault, Augie's favor%s" % (" with two" if two else "")
+	var job: Job = await _vault(t, ["player", "courier"] if two else ["player"])
+	var who := 2 if two else 1
+	t.check(await _say(t, job, who, "augie", "Evening, Augie. Remember us?") == "none", "%s: Augie remembers the crew" % label)
+	t.check(await _say(t, job, who, "augie", "You said you owed us one. Put in a word with Horace?") == "vouch", "%s: and vouches for them" % label)
+	t.check(job.flags.has("vouched"), "%s: Augie's told Horace they're friends" % label)
+	JobHarness.stand(job, who, Vector3(0, 0, -6), Vector3(0, 0, -10))
+	t.check(await _say(t, job, 1, "horace", "Augie sent me. He said you'd help us.") == "ask_pit", "%s: Horace asks Augie" % label)
+	t.check(await t.until(func() -> bool: return job.flags.has("release"), 10.0), "%s: and that's good enough for him" % label)
+	await _released(t, job, 1, label)
+	JobHarness.done(job)
+	await t.frames(2)
+
+
+func test_vault_favor(t) -> void:
+	await _vault_favor(t, false)
+
+
+func test_vault_favor_two(t) -> void:
+	await _vault_favor(t, true)
+
+
+## The float: hired as Noor's cage temp, in the cage when the vault opens at
+## half past eleven, with Horace's song sending him to the lounge and the
+## eye blind (Mae has Wes pulling footage, or a crewmate loops the cameras).
+func _vault_float(t, two: bool) -> void:
+	var label := "vault, the float%s" % (" with two" if two else "")
+	var job: Job = await _vault(t, ["cage_temp", "player"] if two else ["cage_temp"])
+	var c := job.crew_by_id(1)
+	var helper := 2 if two else 1
+	if two:
+		t.check(await _ring(t, job, 2, "manager", "Caldera Staffing", "Caldera Staffing. Your cage temp for tonight is on the way.") == "expect_temp", "%s: Anton takes the agency's call" % label)
+		job.hang_up(2)
+	else:
+		t.check(await _mae(t, job, 1, "staffing"), "%s: Mae rings Anton as Caldera Staffing" % label)
+	t.check(job.flags.has("temp_expected"), "%s: a cage temp is booked" % label)
+	t.check(await _say(t, job, helper, "marisol", "Could you sing Moon over the Harbor? It's for Horace.") == "take_request" and job.flags.has("song"), "%s: Marisol will sing Horace's song" % label)
+	t.check(await _say(t, job, 1, "noor", "Hi, Caldera Staffing sent me. You're short tonight?") == "call_manager", "%s: Noor calls Anton" % label)
+	t.check(await t.until(func() -> bool: return c.flags.has("cage_temp"), 10.0), "%s: Noor takes them on" % label)
+	t.check(job.venue.doors.staff.is_open and job.venue.doors.cage.is_open, "%s: through the staff door and into the cage" % label)
+	JobHarness.stand_at(job, 1, "cage_in")
+	await t.frames(3)
+	t.check(not c.held and not job.flags.has("cam:1:cage"), "%s: a temp in the cage is nothing to anyone" % label)
+	await JobHarness.clock_to(t, job, TidelineVaultJob.FLOAT - 3)
+	if two:
+		JobHarness.stand_at(job, 2, "panel")
+		t.check(job.use(2, "cam_panel").contains("loop"), "%s: a crewmate loops the cameras" % label)
+	else:
+		t.check(await _mae(t, job, 1, "footage"), "%s: Mae has Wes pulling old footage" % label)
+	await JobHarness.clock_to(t, job, TidelineVaultJob.FLOAT - 2 + 0.1)
+	_walk(job, "horace", "horace_vault")
+	_walk(job, "noor", "noor_vault")
+	await JobHarness.clock_to(t, job, TidelineVaultJob.FLOAT + 0.1)
+	t.check(await t.until(func() -> bool: return job.flags.has("vault_open"), 2.0) and job.venue.doors.vault.is_open, "%s: both keys, and the vault's open for the float" % label)
+	await JobHarness.clock_to(t, job, TidelineVaultJob.TRAYS + 0.1)
+	_walk(job, "noor", "noor")
+	await JobHarness.clock_to(t, job, TidelineVaultJob.SET + 0.1)
+	t.check(job.flags.has("horace_away") and job.cast.horace.post == "horace", "%s: Marisol sings Eleanor's song and Horace goes to listen" % label)
+	_walk(job, "horace", "horace")
+	JobHarness.stand_at(job, 1, "vault_in")
+	await t.frames(2)
+	t.check(job.use(1, "item:rose") == "You take the Rose." and job.holder("rose") == c, "%s: the Rose" % label)
+	t.check(not c.held and job.cast.wes.face_of(1).suspicion < JobRules.ALARM, "%s: and nobody saw a thing" % label)
+	JobHarness.stand_at(job, 1, "cage_in")
+	t.check(job.use(1, "door:cage") in ["You push the bar.", ""] and job.venue.doors.cage.is_open, "%s: out through the cage door" % label)
+	JobHarness.stand_at(job, 1, "staff_in")
+	t.check(job.use(1, "door:staff") in ["You push the bar.", ""] and job.venue.doors.staff.is_open, "%s: and the staff door" % label)
+	JobHarness.stand_at(job, 1, "crew_0")
+	t.check(await _ends(t, job) == "out", "%s: out the front with the Rose (%s)" % [label, _outcome(job)])
+	JobHarness.done(job)
+	await t.frames(2)
+
+
+func test_vault_float(t) -> void:
+	await _vault_float(t, false)
+
+
+func test_vault_float_two(t) -> void:
+	await _vault_float(t, true)
+
+#endregion
