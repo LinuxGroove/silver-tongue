@@ -324,3 +324,19 @@ func test_circuit_every_job(t) -> void:
 				good = good and (float(r[0]) <= d.start or float(r[0]) < d.end)
 			good = good and d.events == base.events and d.take >= 500
 		t.check(good, "%s's Circuit nights keep its people's rounds in order and inside the night" % id)
+
+
+## Character ids are people: whoever turns up at several venues is the same
+## person everywhere (name, body and voice).
+func test_people_across_venues(t) -> void:
+	var seen := {}
+	var odd := PackedStringArray()
+	for id in Jobs.available():
+		for s in Jobs.make(id).sheets():
+			var who := [s.name, s.female, s.voice]
+			if seen.has(s.id) and seen[s.id][0] != who:
+				odd.append("%s is %s at %s but %s at %s" % [s.id, str(seen[s.id][0]), seen[s.id][1], str(who), id])
+			elif not seen.has(s.id):
+				seen[s.id] = [who, id]
+	t.check(odd.is_empty(), "everyone is the same person at every venue (%s)" % "; ".join(odd))
+	t.check(seen.size() >= 8, "and there are people (%d)" % seen.size())
