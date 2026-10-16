@@ -1060,7 +1060,7 @@ func _graph() -> void:
 		# The terrace.
 		"terrace_in": Vector3(-3.0, F, -17.0), "terrace_out": Vector3(-3.0, F, -19.0), "terrace_e": Vector3(0.0, F, -18.7), "terrace_se": Vector3(0.5, F, -19.9),
 		"platform": Vector3(1.7, F, -18.7), "iron_top": Vector3(1.7, F, -19.45), "terrace_c": Vector3(-2.6, F, -22.4),
-		"terrace_n": Vector3(-2.6, F, -24.6), "silas": Vector3(-4.8, F, -21.6), "nadia": Vector3(-3.9, F, -21.9),
+		"terrace_n": Vector3(-2.6, F, -24.6), "silas": Vector3(-4.8, F, -21.6), "nadia": Vector3(-4.6, F, -22.7),
 		"mae_toast": Vector3(-2.4, F, -20.3), "julian_toast": Vector3(-0.4, F, -20.8), "rocco_toast": Vector3(0.3, F, -21.6),
 		"dot_toast": Vector3(-3.4, F, -21.6), "celeste_toast": Vector3(-2.8, F, -22.7), "hugo_toast": Vector3(-2.0, F, -22.8),
 		"silas_fw": Vector3(-5.0, F, -25.6), "dot_fw": Vector3(-4.2, F, -25.6), "mae_fw": Vector3(-3.4, F, -25.6),
@@ -1104,7 +1104,7 @@ func _graph() -> void:
 		"mae": Vector2(1, -0.5), "julian": Vector2(-1, 0.5), "rocco": Vector2(-1, -0.4), "dana": Vector2(-1, -0.1),
 		"celeste": Vector2(1, 0.3), "hugo": Vector2(-1, -0.1), "jojo": Vector2(0, 1), "mae_dance": Vector2(0.5, -1),
 		"mae_desk": Vector2(0.2, 1), "julian_study": Vector2(-0.2, 1), "rocco_study": Vector2(0.4, 1), "safe_in": Vector2(1, 0),
-		"silas": Vector2(1, -0.3), "nadia": Vector2(-1, 0.3),
+		"silas": Vector2(1, -0.3), "nadia": Vector2(-0.2, 1),
 		"mae_toast": Vector2(0, -1), "julian_toast": Vector2(-1, -0.3), "rocco_toast": Vector2(-1, 0.2), "dot_toast": Vector2(1, 0.5),
 		"celeste_toast": Vector2(0.2, 1), "hugo_toast": Vector2(-0.1, 1),
 	}
