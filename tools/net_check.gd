@@ -106,6 +106,20 @@ func _host() -> bool:
 	return true
 
 
+## Somewhere to stand by `ch`: the nearest point of the walking graph a
+## step or two away on the same floor, since in front of someone can be the
+## rail of a yacht at sea; in front of them when there's none.
+func _beside(venue: Venue, ch: Character) -> Vector3:
+	var best := ch.global_position + ch.global_basis.z * 1.3
+	var best_d := INF
+	for p in venue.points.values():
+		var d := Vector2(p.x, p.z).distance_to(Vector2(ch.global_position.x, ch.global_position.z))
+		if d >= 0.8 and d <= 2.5 and absf(p.y - ch.global_position.y) < 0.5 and d < best_d:
+			best = p
+			best_d = d
+	return best
+
+
 func _join() -> bool:
 	if not await _until(func(): return FileAccess.file_exists(_code_file) and FileAccess.get_file_as_string(_code_file) != ""):
 		return _fail("no word from the host")
@@ -129,7 +143,7 @@ func _join() -> bool:
 		for c in s.cast.values():
 			if ch == null or c.global_position.distance_to(s.player.global_position) < ch.global_position.distance_to(s.player.global_position):
 				ch = c
-	var at := ch.global_position + ch.global_basis.z * 1.3
+	var at := _beside(s.venue, ch)
 	s.player.global_position = Vector3(at.x, at.y + CrewMember.FEET, at.z)
 	s.player.look_at(Vector3(ch.global_position.x, s.player.global_position.y, ch.global_position.z), Vector3.UP)
 	await get_tree().create_timer(1.0).timeout
