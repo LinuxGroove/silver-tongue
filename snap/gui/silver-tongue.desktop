@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Silver Tongue
+Comment=A co-op con game where the guards, staff and guests hear what you say.
+Exec=silver-tongue
+Icon=${SNAP}/meta/gui/silver-tongue.svg
+Categories=Game;AdventureGame;
+Keywords=heist;con;talking;voice;co-op;first person;
+StartupWMClass=Silver Tongue

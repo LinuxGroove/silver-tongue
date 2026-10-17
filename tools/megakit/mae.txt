@@ -1,0 +1,10 @@
+# Mae's house: the laundrette's street, worn brick, the shop signs and awnings
+# across the road.
+WornBrick_WindowLarge
+WornBrick_Plain_3
+Cornice_WornBrick_Center
+Prop_Awning
+Prop_Awning_Bakery
+Prop_Sign_Bakery
+Prop_Sign_Deli
+Prop_Sign_Mays

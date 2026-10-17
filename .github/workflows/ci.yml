@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  GODOT_VERSION: 4.7.2
+
+defaults:
+  run:
+    # Named explicitly so pipefail is on and a failing Godot run fails the
+    # step even though its output goes through tee.
+    shell: bash
+
+jobs:
+  test:
+    # The core tests (the door, the gala, the season, the Circuit) and each
+    # venue's jobs, side by side.
+    name: Tests (${{ matrix.part }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [core, meridian, marlin, tideline, vantage, mae]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot
+        run: |
+          curl -sSfL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+      - name: Import
+        # Twice: Cogito's fonts only import cleanly once the rest has.
+        run: godot --headless --path . --import && godot --headless --path . --import
+      - name: Check every script
+        if: matrix.part == 'core'
+        run: godot --headless --path . tools/check_scripts.tscn 2>&1 | tee check.log; ! grep -q "SCRIPT ERROR" check.log
+      - name: Run tests
+        # The tests start tools/fake_lemonade.py themselves (python3 is on the runner).
+        timeout-minutes: 25
+        run: |
+          if [ "${{ matrix.part }}" = core ]; then part=--core; else part=--only=${{ matrix.part }}; fi
+          godot --headless --path . tests/run_tests.tscn -- "$part" 2>&1 | tee test.log
+          ! grep -q "SCRIPT ERROR" test.log
+      - name: Two copies play a job on LAN
+        # The gala for the core; one of each venue's jobs (a Circuit night
+        # at Vantage) for the rest.
+        timeout-minutes: 10
+        run: |
+          case "${{ matrix.part }}" in
+            core) job="" ;;
+            meridian) job="meridian_case" ;;
+            marlin) job="marlin_safe" ;;
+            tideline) job="tideline_count" ;;
+            vantage) job="vantage_board 482913" ;;
+            mae) job="mae_party" ;;
+            *) echo "no LAN check for ${{ matrix.part }} yet"; exit 0 ;;
+          esac
+          XDG_DATA_HOME=$RUNNER_TEMP/a godot --headless --path . tools/net_check.tscn -- host net.code $job > host.log 2>&1 &
+          sleep 1
+          XDG_DATA_HOME=$RUNNER_TEMP/b godot --headless --path . tools/net_check.tscn -- join net.code 2>&1 | tee join.log
+          wait $! && cat host.log
+          grep -q "NET OK host" host.log && grep -q "NET OK join" join.log
