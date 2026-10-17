@@ -80,9 +80,13 @@ func _ready() -> void:
 
 func _run() -> void:
 	_set_step("brain", "starting", -1.0)
+	if str(LGSettings.get_value("ai", "mode", "auto")) == "switchboard":
+		# The Switchboard answers over the online connection.
+		steps.brain.model = "the Switchboard"
+		await LGOnline.connect_async(GameConfig.player_name(), GameConfig.GAME_ID)
 	brain_ok = await LGBrain.ensure_ready_async()
 	if brain_ok:
-		steps.brain.model = LGBrain.model
+		steps.brain.model = LGBrain.model if LGBrain.source != "switchboard" else "the Switchboard"
 		probe = BrainQueue.cached_probe()
 		if probe == "":
 			_set_step("brain", "warming", -1.0)
@@ -93,6 +97,9 @@ func _run() -> void:
 	if not brain_ok:
 		_set_step("ears", "skipped", 0.0, "Needs his brain first")
 		_set_step("voice", "skipped", 0.0, "Needs his brain first")
+	elif LGBrain.source == "switchboard":
+		_set_step("ears", "skipped", 0.0, "You're typing your lines")
+		_set_step("voice", "skipped", 0.0, "They speak in subtitles only")
 	elif not voice_wanted():
 		_set_step("ears", "skipped", 0.0, "You're typing your lines")
 		_set_step("voice", "skipped", 0.0, "He speaks in subtitles only")

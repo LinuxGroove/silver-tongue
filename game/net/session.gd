@@ -1,8 +1,8 @@
 extends Node
 ## The crew's lobby and transport (autoload: Session): one player alone, or
-## a crew on the local network (ENet, found by [LanBeacon] or a join code)
-## with the host's device running the job. Peer 1 is the host; each
-## player's crew id is their peer id.
+## a crew on the local network (ENet, found by [LanBeacon] or a join code) or
+## in an online room (a code, through the game server) with the host's device
+## running the job. Peer 1 is the host; each player's crew id is their peer id.
 ##
 ## The job itself goes through [JobNet]; this only gathers the crew, says
 ## which job it is and who's wearing what, and starts everyone together.
@@ -15,7 +15,7 @@ signal status(text: String)
 ## Host: a guest's job scene is up and wants the night's state.
 signal guest_ready(peer: int)
 
-enum Mode { NONE, SOLO, LAN_HOST, LAN_CLIENT }
+enum Mode { NONE, SOLO, LAN_HOST, LAN_CLIENT, ONLINE_HOST, ONLINE_CLIENT }
 
 const HELLO_TIMEOUT := 6.0
 
@@ -35,6 +35,8 @@ var back_to := ""
 var wanted := {"cover": "guest", "female": false}
 ## Host: guests whose job scene is up (it can load before the host's).
 var ready_peers := {}
+## Host: online jobs reported in this room, for the server's round counter.
+var jobs_reported := 0
 var _beacon: LanBeacon
 var _pending_hello := {}
 
@@ -52,15 +54,29 @@ func _ready() -> void:
 
 
 func is_host() -> bool:
-	return mode in [Mode.SOLO, Mode.LAN_HOST, Mode.NONE]
+	return mode in [Mode.SOLO, Mode.LAN_HOST, Mode.ONLINE_HOST, Mode.NONE]
 
 
 func is_lan() -> bool:
 	return mode in [Mode.LAN_HOST, Mode.LAN_CLIENT]
 
 
+func is_online() -> bool:
+	return mode in [Mode.ONLINE_HOST, Mode.ONLINE_CLIENT]
+
+
+## Whether the crew is spread over a network, LAN or online.
+func is_networked() -> bool:
+	return is_lan() or is_online()
+
+
+## The host of a network crew (not alone).
+func _hosting() -> bool:
+	return mode in [Mode.LAN_HOST, Mode.ONLINE_HOST]
+
+
 func local_id() -> int:
-	return multiplayer.get_unique_id() if is_lan() else 1
+	return multiplayer.get_unique_id() if is_networked() else 1
 
 
 ## This device's choices: the cover and the body.
@@ -125,16 +141,65 @@ func join_lan_code(code: String) -> bool:
 	return join_lan(target.ip, target.port)
 
 
+## Opens an online room: the crew joins with its code. Needs the game server.
+func host_online(cover := "guest", female := false) -> bool:
+	leave()
+	status.emit("Connecting to the game server...")
+	if not await LGOnline.connect_async(GameConfig.player_name(), GameConfig.GAME_ID):
+		status.emit(LGOnline.last_error)
+		return false
+	var code: String = await LGOnline.host_room_async(GameConfig.GAME_ID)
+	if code == "":
+		status.emit(LGOnline.last_error)
+		return false
+	mode = Mode.ONLINE_HOST
+	join_code = code
+	crew = {1: {"name": GameConfig.player_name(), "cover": cover, "female": female}}
+	joined.emit()
+	roster_changed.emit()
+	return true
+
+
+func join_online(code: String, cover := "guest", female := false) -> bool:
+	if not LGOnline.is_valid_code(code):
+		status.emit("Type the room code shown on the host's screen.")
+		return false
+	leave()
+	wanted = {"cover": cover, "female": female}
+	status.emit("Connecting to the game server...")
+	if not await LGOnline.connect_async(GameConfig.player_name(), GameConfig.GAME_ID):
+		status.emit(LGOnline.last_error)
+		return false
+	if not await LGOnline.join_room_async(GameConfig.GAME_ID, code):
+		var shown := LGOnline.normalize_code(code)
+		if LGOnline.last_error == LGOnline.NO_ROOM:
+			status.emit("No room with code %s. Check the code with the host." % shown)
+		elif LGOnline.last_error.begins_with("room_full"):
+			status.emit("Room %s is full." % shown)
+		else:
+			status.emit("Couldn't join room %s." % shown)
+		return false
+	# No await between joining and setting the mode: the bridge has already
+	# announced the host, so connected_to_server has sent the hello.
+	mode = Mode.ONLINE_CLIENT
+	join_code = LGOnline.normalize_code(code)
+	return true
+
+
 func leave(reason := "") -> void:
 	var was := mode
 	_beacon.stop()
-	if multiplayer.multiplayer_peer and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
+	if is_online() or LGOnline.bridge:
+		# The bridge's peer can't be closed directly; leaving the room does it.
+		LGOnline.leave_room()
+	elif multiplayer.multiplayer_peer and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	mode = Mode.NONE
 	crew.clear()
 	join_code = ""
 	in_job = false
+	jobs_reported = 0
 	ready_peers.clear()
 	_pending_hello.clear()
 	if was != Mode.NONE:
@@ -180,7 +245,7 @@ func set_cover(cover: String, female: bool) -> void:
 	if is_host():
 		crew[local_id()] = {"name": GameConfig.player_name(), "cover": cover, "female": female}
 		_broadcast_roster()
-	elif mode == Mode.LAN_CLIENT:
+	elif mode in [Mode.LAN_CLIENT, Mode.ONLINE_CLIENT]:
 		_c_set_cover.rpc_id(1, cover, female)
 
 
@@ -220,8 +285,49 @@ func start_job() -> void:
 ## Guest: this device's job scene is up. It goes through here, not the
 ## scene, since the host's scene may not be up yet.
 func job_ready() -> void:
-	if mode == Mode.LAN_CLIENT:
+	if mode in [Mode.LAN_CLIENT, Mode.ONLINE_CLIENT]:
 		_c_job_ready.rpc_id(1)
+
+
+## Host of an online room: reports the job to the game server, which writes
+## the crew's stats and boards and what the characters will remember. Each
+## device's player is the signed-in account; only the host's game calls this.
+func report_job(r: Dictionary) -> bool:
+	if mode != Mode.ONLINE_HOST or LGOnline.bridge == null:
+		return false
+	jobs_reported += 1
+	var accounts := {}
+	for c in r.get("crew", []):
+		accounts[int(c.get("id", 0))] = LGOnline.user_id_for_peer(int(c.get("id", 0)))
+	var payload := job_report_payload(r, LGOnline.bridge.match_id, jobs_reported, accounts)
+	if payload.players.is_empty():
+		return false
+	var res: Variant = await LGOnline.rpc_async("%s.job_report" % GameConfig.GAME_ID, payload)
+	return res != null
+
+
+## The server's job report for a [method Job.report]: `accounts` maps each
+## crew member's id to their account id (left out when they have none).
+static func job_report_payload(r: Dictionary, match_id: String, round_number: int, accounts: Dictionary) -> Dictionary:
+	var players := []
+	for c in r.get("crew", []):
+		var uid := str(accounts.get(int(c.get("id", 0)), ""))
+		if uid == "":
+			continue
+		players.append({"user_id": uid, "held": bool(c.get("was_held", false)), "memories": r.get("memories", {})})
+	return {
+		"match_id": match_id,
+		"round": round_number,
+		"job": str(r.get("job", "")),
+		"circuit": int(r.get("circuit", 0)),
+		"win": bool(r.get("win", false)),
+		"clean": bool(r.get("clean", false)),
+		"quiet": bool(r.get("quiet", false)),
+		"silver": bool(r.get("silver", false)),
+		"take": int(r.get("take", 0)),
+		"venue": str(r.get("venue", "")),
+		"players": players,
+	}
 
 
 func _start(config: Dictionary) -> void:
@@ -245,7 +351,7 @@ func _is_ours(h: Dictionary) -> bool:
 
 
 func _on_peer_connected(id: int) -> void:
-	if mode == Mode.LAN_HOST:
+	if _hosting():
 		_pending_hello[id] = Time.get_ticks_msec()
 		get_tree().create_timer(HELLO_TIMEOUT).timeout.connect(_hello_overdue.bind(id))
 
@@ -259,7 +365,11 @@ func _hello_overdue(id: int) -> void:
 func _on_peer_disconnected(id: int) -> void:
 	_pending_hello.erase(id)
 	ready_peers.erase(id)
-	if mode == Mode.LAN_HOST and crew.has(id):
+	if is_online() and id == 1 and not _hosting():
+		# Deferred: this runs inside the bridge peer's poll.
+		leave.call_deferred("The host left.")
+		return
+	if _hosting() and crew.has(id):
 		var n: String = crew[id].name
 		crew.erase(id)
 		_broadcast_roster()
@@ -284,7 +394,7 @@ func _on_server_disconnected() -> void:
 
 @rpc("any_peer", "reliable")
 func _c_hello(protocol: int, p_name: String, cover: String, female: bool) -> void:
-	if mode != Mode.LAN_HOST:
+	if not _hosting():
 		return
 	var id := multiplayer.get_remote_sender_id()
 	_pending_hello.erase(id)
@@ -306,14 +416,14 @@ func _c_hello(protocol: int, p_name: String, cover: String, female: bool) -> voi
 @rpc("any_peer", "reliable")
 func _c_face(burned: bool) -> void:
 	var id := multiplayer.get_remote_sender_id()
-	if mode == Mode.LAN_HOST and crew.has(id):
+	if _hosting() and crew.has(id):
 		crew[id]["burned"] = burned
 
 
 @rpc("any_peer", "reliable")
 func _c_set_cover(cover: String, female: bool) -> void:
 	var id := multiplayer.get_remote_sender_id()
-	if mode == Mode.LAN_HOST and crew.has(id) and Covers.has(cover):
+	if _hosting() and crew.has(id) and Covers.has(cover):
 		crew[id].cover = cover
 		crew[id].female = female
 		_broadcast_roster()
@@ -322,7 +432,7 @@ func _c_set_cover(cover: String, female: bool) -> void:
 @rpc("any_peer", "reliable")
 func _c_job_ready() -> void:
 	var id := multiplayer.get_remote_sender_id()
-	if mode == Mode.LAN_HOST and crew.has(id):
+	if _hosting() and crew.has(id):
 		ready_peers[id] = true
 		guest_ready.emit(id)
 
@@ -353,7 +463,7 @@ func _h_start(config: Dictionary) -> void:
 
 
 func _broadcast_roster() -> void:
-	if mode == Mode.LAN_HOST:
+	if _hosting():
 		for p in multiplayer.get_peers():
 			if not _pending_hello.has(p):
 				_h_roster.rpc_id(p, crew, join_code, job_id, circuit)

@@ -119,6 +119,8 @@ func show_report(r: Dictionary, me := 1) -> void:
 	_add_button("Back to Mae's", _title, 190)
 	_add_button("Save a picture", save_picture, 170)
 	_add_button("Copy the text", copy_text, 160)
+	if CityOnline.enabled():
+		_add_button("Share by code", share_by_code, 170)
 	visible = true
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	_buttons[0].grab_focus.call_deferred()
@@ -194,6 +196,17 @@ static func as_text(r: Dictionary) -> String:
 func copy_text() -> void:
 	DisplayServer.clipboard_set(as_text(_report))
 	_say("Copied. Paste it anywhere.")
+
+
+## Puts the report on the game server and shows its code.
+func share_by_code() -> void:
+	_say("Sharing...")
+	var code := await CityOnline.share_report(_report)
+	if code == "":
+		_say("Couldn't share it. Is online play on?")
+		return
+	DisplayServer.clipboard_set(code)
+	_say("Shared. The code is %s (copied). Anyone can read it from Join a crew." % code)
 
 
 ## Saves the card as a picture in user://reports, the buttons left out.

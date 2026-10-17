@@ -177,3 +177,34 @@ func buy_face() -> bool:
 	faces += 1
 	save()
 	return true
+
+
+## Folds in the crew record the game server keeps for this account (see
+## [CityOnline.pull]): a burned face and the faces bought, the biggest take,
+## the jobs done, and what the characters remember. Nothing local is lost:
+## memories keep the newest lines of both, and the rest take the larger.
+func merge_server(doc: Dictionary) -> void:
+	if doc.is_empty():
+		return
+	burned = burned or (bool(doc.get("burned", false)) and int(doc.get("faces", 0)) >= faces)
+	faces = maxi(faces, int(doc.get("faces", 0)))
+	take = maxi(take, int(doc.get("take", 0)))
+	var theirs: Variant = doc.get("done", {})
+	if typeof(theirs) == TYPE_DICTIONARY:
+		for j in theirs:
+			if Jobs.exists(str(j)) and not done.has(j):
+				done[j] = theirs[j] if typeof(theirs[j]) == TYPE_DICTIONARY else {"outcome": "won", "take": 0}
+	var mem: Variant = doc.get("memories", {})
+	if typeof(mem) == TYPE_DICTIONARY:
+		for venue in mem:
+			if typeof(mem[venue]) != TYPE_DICTIONARY:
+				continue
+			var v: Dictionary = memories.get(venue, {})
+			for ch in mem[venue]:
+				var lines: Array = v.get(ch, [])
+				for l in mem[venue][ch]:
+					if not str(l) in lines:
+						lines.append(str(l))
+				v[ch] = lines.slice(maxi(0, lines.size() - MEMORIES))
+			memories[venue] = v
+	save()

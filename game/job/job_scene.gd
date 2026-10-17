@@ -1015,8 +1015,18 @@ func _finish(r: Dictionary) -> void:
 		player.end_talk()
 	report["file"] = _write(report)
 	Progress.record(report, me.id)
+	_report_online()
 	LGPlaytest.moment("job_" + str(report.get("outcome", "")), {"clock": report.get("clock", ""), "heat_peak": report.get("heat_peak", 0)})
 	report_card.show_report(report, me.id)
+
+
+## Online: the host reports the job to the game server, and the contract's
+## take goes on its board from whoever played it.
+func _report_online() -> void:
+	if Session.mode == Session.Mode.ONLINE_HOST:
+		Session.report_job(report)
+	if CityOnline.is_contract(report):
+		CityOnline.submit_contract(report)
 
 
 func _write(r: Dictionary) -> String:
@@ -1060,8 +1070,7 @@ func _on_quit() -> void:
 	if over:
 		Session.back_to = "board"
 	if net.lan:
-		multiplayer.multiplayer_peer.close()
-		multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
+		Session.leave()
 	LGScenes.change_scene(TITLE)
 
 

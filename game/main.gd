@@ -16,6 +16,7 @@ extends Node
 func _ready() -> void:
 	LGSettings.register_defaults(GameConfig.SETTING_DEFAULTS)
 	LGLaunchPing.send(GameConfig.GAME_ID)
+	LGBrain.switchboard_rpc = "%s.switchboard" % GameConfig.GAME_ID
 	LGPlaytest.setup(GameConfig.GAME_ID, GameConfig.PLAYTEST)
 	LGInput.register_actions(GameConfig.ACTIONS, float(LGSettings.get_value("input", "stick_deadzone", 0.2)))
 	LGInput.extend_ui_actions()

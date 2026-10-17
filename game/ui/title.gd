@@ -117,6 +117,10 @@ func show_main() -> void:
 	circuit.tooltip_text = "" if Progress.circuit_open() else "Opens after Mae's party"
 	_col.add_child(circuit)
 	_col.add_child(LGUi.button("Join a crew", show_join, WIDTH))
+	var boards := LGUi.button("Leaderboards", show_boards.bind(0), WIDTH)
+	boards.disabled = not CityOnline.enabled()
+	boards.tooltip_text = "" if CityOnline.enabled() else "Online play is off in Settings"
+	_col.add_child(boards)
 	_col.add_child(LGUi.button("The service door", _play, WIDTH))
 	_col.add_child(LGUi.button("How to play", show_how.bind(0), WIDTH))
 	_col.add_child(LGUi.button("Settings", show_settings, WIDTH))
@@ -190,6 +194,8 @@ func _job_line(id: String, titles: Dictionary, before: String) -> String:
 
 func _buy_face() -> void:
 	if Progress.buy_face():
+		if CityOnline.enabled() and LGOnline.is_connected_online():
+			CityOnline.buy_face()
 		show_board()
 		_text("A new face. Halberd's photo is of somebody else now.", true)
 
@@ -208,6 +214,8 @@ func show_circuit() -> void:
 	_col.add_child(HotelTheme.hud_label("This week's contract", 20, HotelTheme.BRASS))
 	_text(_night_text(week))
 	_col.add_child(LGUi.button("Take the contract", show_night.bind(week), WIDTH))
+	if CityOnline.enabled():
+		_col.add_child(LGUi.button("The contract's board", show_boards.bind(0), WIDTH))
 	_col.add_child(HotelTheme.hud_label("Any night", 20, HotelTheme.BRASS))
 	_col.add_child(LGUi.button("Roll a night", _roll_night, WIDTH))
 	_night = LineEdit.new()
@@ -312,6 +320,9 @@ func show_job(id := "") -> void:
 	_col.add_child(Control.new())
 	_col.add_child(LGUi.button("Play alone", _play_alone, WIDTH))
 	_col.add_child(LGUi.button("Host a crew on this network", _host, WIDTH))
+	if CityOnline.enabled():
+		_col.add_child(LGUi.button("Host a crew online", _host_online, WIDTH))
+	_status = _text("", true)
 	_col.add_child(LGUi.button("Join a crew", show_join, WIDTH))
 	_back(show_circuit if night != 0 else show_board)
 	LGUi.focus_first(_col)
@@ -367,6 +378,15 @@ func _host() -> void:
 	LGVoice.hush(_mae)
 	Session.host_lan(_cover, _female)
 
+
+func _host_online() -> void:
+	LGVoice.hush(_mae)
+	if _status:
+		_status.text = "Connecting to the game server..."
+	if await Session.host_online(_cover, _female):
+		# Brings the characters' memories of this account along.
+		CityOnline.pull()
+
 #endregion
 
 #region A crew
@@ -390,6 +410,9 @@ func show_join() -> void:
 	LGUi.gamepad_text_entry(_code)
 	_col.add_child(_code)
 	_col.add_child(LGUi.button("Join with the code", _join_code_pressed, WIDTH))
+	if CityOnline.enabled():
+		_col.add_child(LGUi.button("Join an online crew with the code", _join_online_pressed, WIDTH))
+		_col.add_child(LGUi.button("Read a shared report with the code", _read_report_pressed, WIDTH))
 	_status = _text("", true)
 	_back(_leave_join)
 	Session.browse_lan()
@@ -426,6 +449,28 @@ func _join_code_pressed() -> void:
 	_join_code(_code.text)
 
 
+func _join_online_pressed() -> void:
+	if _code.text.strip_edges() == "":
+		_on_status("Type the room code shown on the host's screen.")
+		return
+	await Session.join_online(_code.text, _cover, _female)
+
+
+func _read_report_pressed() -> void:
+	var code := _code.text.strip_edges()
+	if code == "":
+		_on_status("Type the report's code.")
+		return
+	_on_status("Looking for that report...")
+	var found := await CityOnline.read_report(code)
+	if _page != "join":
+		return
+	if found.is_empty():
+		_on_status("No report with that code.")
+		return
+	show_shared(found)
+
+
 func _leave_join() -> void:
 	Session.leave()
 	Session.stop_browsing()
@@ -438,7 +483,12 @@ func show_lobby() -> void:
 	_heading("Your crew")
 	Session.ensure_job()
 	_text("%s, %s%s" % [Jobs.current.title, Jobs.current.venue_name, JobReportCard.night({"circuit": Session.circuit})], true)
-	if Session.join_code != "":
+	if Session.is_online():
+		if Session.join_code != "":
+			_text("Room code: %s" % LGOnline.normalize_code(Session.join_code))
+			if Session.is_host():
+				_text("Anywhere: Join a crew, then type the code and Join an online crew.", true)
+	elif Session.join_code != "":
 		_text("Code: %s" % JoinCode.pretty(Session.join_code))
 		_text("On another computer on this network: Join a crew, then pick this crew or type the code.", true)
 	var ids := Session.crew.keys()
@@ -523,6 +573,34 @@ func _on_left(reason: String) -> void:
 func _on_status(text: String) -> void:
 	if _status:
 		_status.text = text
+
+#endregion
+
+#region Online boards and reports
+
+## The Leaderboards: your online record, then a board of the crews' takes
+## and jobs. `first` is the board shown first (an index of [constant CityOnline.BOARDS]).
+func show_boards(first := 0) -> void:
+	LGVoice.hush(_mae)
+	_clear("boards")
+	_heading("Leaderboards")
+	_text("From online jobs. The contract's board takes your take from any go at this week's contract, alone too.", true)
+	var panel := LGLeaderboardPanel.new()
+	panel.setup(GameConfig.GAME_ID, GameConfig.player_name(), CityOnline.BOARDS.slice(first) + CityOnline.BOARDS.slice(0, first), CityOnline.record_text)
+	_col.add_child(panel)
+	_back(show_main)
+	LGUi.focus_first(_col)
+
+
+## A report someone shared: its title and text.
+func show_shared(found: Dictionary) -> void:
+	_clear("shared")
+	_heading(str(found.get("title", "A report")))
+	var text := _text(str(found.get("text", "")))
+	text.custom_minimum_size.x = WIDTH
+	_col.add_child(LGUi.button("Copy the text", DisplayServer.clipboard_set.bind(str(found.get("text", ""))), WIDTH))
+	_back(show_join)
+	LGUi.focus_first(_col)
 
 #endregion
 

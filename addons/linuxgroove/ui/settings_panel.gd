@@ -26,7 +26,10 @@ func _ready() -> void:
 	_row("Sounds", VOLUMES, "audio", "sfx")
 	var brain := get_node_or_null("/root/LGBrain")
 	if brain:
-		_row("AI players", AI_MODES, "ai", "mode", func(_v): _restart_ai())
+		var modes := AI_MODES.duplicate()
+		if brain.switchboard_rpc != "":
+			modes.insert(modes.size() - 1, ["switchboard", "The game server's AI (sends talk to the server)"])
+		_row("AI players", modes, "ai", "mode", func(_v): _restart_ai())
 		_row("AI model", AI_MODELS, "ai", "model", func(_v): _restart_ai())
 		_ai_state = LGUi.label("", "HintLabel")
 		_ai_state.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -67,6 +70,8 @@ func _restart_ai() -> void:
 static func _ai_text(state: String, detail: String) -> String:
 	match state:
 		"ready":
+			if detail.ends_with("Switchboard"):
+				return "AI players think with %s. What they hear and say goes to the game server." % detail
 			return "AI players think with %s." % detail
 		"downloading", "loading", "starting":
 			return "AI players: %s" % detail

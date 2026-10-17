@@ -8,6 +8,9 @@ extends Node
 ##             already running at ai/external_url, otherwise off
 ##   embedded  start the bundled `lemond` privately on localhost
 ##   external  use ai/external_url only
+##   switchboard  the game server's model, over the online connection, for
+##             games that set `switchboard_rpc`. What the characters hear and
+##             say is sent to the server, so a game asks first.
 ##
 ## The embedded server is started only when a game asks for it, with a random
 ## port and API key known only to this process, and is stopped on exit.
@@ -31,6 +34,11 @@ var download_bytes := 0.0
 var download_total := 0.0
 var model := ""
 var source := ""
+## The server RPC that answers chats in switchboard mode, like
+## "silver-tongue.switchboard"; a game sets it to offer the mode.
+var switchboard_rpc := ""
+## What's left of today's Switchboard allowance after the last answer (-1 if unknown).
+var switchboard_left := -1
 
 var _client: LlmClient
 var _pid := -1
@@ -83,6 +91,8 @@ func ensure_ready_async() -> bool:
 func chat_async(messages: Array, max_tokens := 160, temperature := 0.8, json_mode := false, schema := {}) -> String:
 	if state != "ready":
 		return ""
+	if source == "switchboard":
+		return str((await _switchboard_chat(messages, max_tokens, schema)).get("text", ""))
 	return await _client.chat(model, messages, max_tokens, temperature, json_mode, schema)
 
 
@@ -91,6 +101,8 @@ func chat_async(messages: Array, max_tokens := 160, temperature := 0.8, json_mod
 func chat_full_async(messages: Array, max_tokens := 160, temperature := 0.8, json_mode := false, schema := {}) -> Dictionary:
 	if state != "ready":
 		return {"text": "", "ok": false, "usage": {}, "timings": {}, "seconds": 0.0, "error": "not ready"}
+	if source == "switchboard":
+		return await _switchboard_chat(messages, max_tokens, schema)
 	return await _client.chat_full(model, messages, max_tokens, temperature, json_mode, schema)
 
 
@@ -137,6 +149,8 @@ func _start() -> bool:
 	if mode == "off":
 		_set_state("off", "AI brains are turned off")
 		return false
+	if mode == "switchboard":
+		return await _start_switchboard()
 	var binary := embedded_binary() if mode in ["auto", "embedded"] else ""
 	if binary != "":
 		if not await _start_embedded(binary):
@@ -156,6 +170,48 @@ func _start() -> bool:
 		return false
 	_set_state("ready", "%s via %s Lemonade" % [model, source])
 	return true
+
+
+## Signs in to the game server and checks that its Switchboard answers.
+func _start_switchboard() -> bool:
+	source = "switchboard"
+	if switchboard_rpc == "":
+		_set_state("unavailable", "This game has no Switchboard")
+		return false
+	_set_state("starting", "Calling the Switchboard")
+	var res := await _switchboard_chat([{"role": "user", "content": "Say ok."}], 4, {})
+	if not bool(res.get("ok", false)):
+		_set_state("unavailable", "The Switchboard isn't answering (%s)" % str(res.get("error", "")))
+		return false
+	model = "the game server's model"
+	_set_state("ready", "%s via the Switchboard" % model)
+	return true
+
+
+## One chat through the game server. Needs the online connection, which the
+## game opens (a game's own sign-in, with its name); the answer is the same
+## shape as [method LlmClient.chat_full]'s.
+func _switchboard_chat(messages: Array, max_tokens: int, schema: Dictionary) -> Dictionary:
+	var out := {"text": "", "ok": false, "usage": {}, "timings": {}, "seconds": 0.0, "error": ""}
+	var online := get_node_or_null("/root/LGOnline")
+	if online == null or not online.is_connected_online():
+		out.error = "not signed in"
+		return out
+	var payload := {"messages": messages, "max_tokens": mini(max_tokens, 400)}
+	if not schema.is_empty():
+		payload["json_schema"] = schema
+	var t0 := Time.get_ticks_msec()
+	var res: Variant = await online.rpc_async(switchboard_rpc, payload)
+	out.seconds = (Time.get_ticks_msec() - t0) / 1000.0
+	if typeof(res) != TYPE_DICTIONARY:
+		out.error = "no answer"
+		return out
+	out.text = LlmClient.strip_thinking(str(res.get("text", "")))
+	out.ok = out.text != ""
+	if typeof(res.get("usage")) == TYPE_DICTIONARY:
+		out.usage = res.usage
+	switchboard_left = int(res.get("left", switchboard_left))
+	return out
 
 
 ## Asks the external server's /health until it answers or EXTERNAL_WAIT
