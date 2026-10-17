@@ -148,3 +148,24 @@ func test_switchboard(t) -> void:
 	panel.queue_free()
 	await t.frames(1)
 	LGBrain.switchboard_rpc = ""
+
+
+func test_crew_of_four(t) -> void:
+	t.check(GameConfig.MAX_CREW == 4, "a crew is up to four")
+	for id in Jobs.CAMPAIGN:
+		if not Jobs.exists(id):
+			continue
+		var def := Jobs.make(id)
+		var covers := []
+		for i in GameConfig.MAX_CREW:
+			covers.append(Covers.order()[i % Covers.order().size()])
+		var job := JobHarness.start(t, def, covers)
+		t.check(job.crew.size() == 4, "%s: four on the crew" % id)
+		var spots := []
+		for i in 4:
+			t.check(job.venue.spots.has("crew_%d" % i), "%s: a start for crew %d" % [id, i])
+			spots.append((job.venue.spots.get("crew_%d" % i, Transform3D()) as Transform3D).origin)
+		for a in 4:
+			for b in range(a + 1, 4):
+				t.check(spots[a].distance_to(spots[b]) > 0.6, "%s: crew %d and %d don't stand on each other" % [id, a, b])
+		JobHarness.done(job)

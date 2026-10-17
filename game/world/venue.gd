@@ -71,6 +71,25 @@ func build() -> void:
 		return
 	_built = true
 	_build()
+	_add_crew_spots()
+
+
+## How far behind the first two start spots the third and fourth crew stand.
+const BEHIND := 1.2
+
+
+## The third and fourth crew start behind the first two (venues name two),
+## each a point people walk to, linked to the spot in front.
+func _add_crew_spots() -> void:
+	for i in range(2, GameConfig.MAX_CREW):
+		var front := "crew_%d" % (i - 2)
+		if spots.has("crew_%d" % i) or not spots.has(front):
+			continue
+		var t: Transform3D = spots[front]
+		t.origin += t.basis.z * BEHIND
+		spots["crew_%d" % i] = t
+		points["crew_%d" % i] = t.origin
+		links.append([front, "crew_%d" % i, ""])
 
 
 ## The venue's rooms, doors, graph and views. Start with [method _make_rooms],

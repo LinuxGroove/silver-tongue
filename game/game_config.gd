@@ -7,7 +7,7 @@ const GAME_ID := "silver-tongue"
 ## to update instead of joining.
 const PROTOCOL := 3
 ## The crew on a job, on this many devices (one player each).
-const MAX_CREW := 2
+const MAX_CREW := 4
 
 ## This round's own questions at the end of a play test (LGPlaytest), on top
 ## of the standard ones. M0 is one guard at one door, so they ask about him.
