@@ -89,8 +89,55 @@ static func crew_spot(team: int, index: int) -> String:
 func _add_crew_spots() -> void:
 	for i in range(2, GameConfig.MAX_CREW):
 		_behind("crew_%d" % i, "crew_%d" % (i - 2), 1.0)
+	_add_rival_spots()
+
+
+## The rival crew starts on the venue's own spots nearest the crew's, in the
+## same room (each already has room to stand and a way to walk, so it works
+## in any building), spaced out; behind the crew when the room has too few.
+func _add_rival_spots() -> void:
+	if not spots.has("crew_0"):
+		return
+	var home: Vector3 = (spots["crew_0"] as Transform3D).origin
+	var zone := zone_at(home + Vector3.UP)
+	var near: Array = []
+	for name in spots:
+		var n := str(name)
+		if n.begins_with("crew_") or n.begins_with("rival_"):
+			continue
+		var p: Vector3 = (spots[name] as Transform3D).origin
+		if zone_at(p + Vector3.UP) == zone and absf(p.y - home.y) < 0.3:
+			near.append([_flat(p - home), n])
+	near.sort_custom(func(a, b): return a[0] < b[0])
+	var taken: Array = []
 	for i in GameConfig.MAX_CREW:
-		_behind("rival_%d" % i, "crew_%d" % (i % 2), 2.0 + float(i / 2))
+		var found := ""
+		for c in near:
+			var p: Vector3 = (spots[c[1]] as Transform3D).origin
+			if _flat(p - home) < 1.5 or _near_any(p, taken):
+				continue
+			found = c[1]
+			break
+		var name := "rival_%d" % i
+		if found == "":
+			_behind(name, "crew_%d" % (i % 2), 2.0 + float(i / 2))
+			continue
+		var t: Transform3D = spots[found]
+		spots[name] = t
+		points[name] = t.origin
+		links.append([found, name, ""])
+		taken.append(t.origin)
+
+
+static func _flat(v: Vector3) -> float:
+	return Vector2(v.x, v.z).length()
+
+
+static func _near_any(p: Vector3, others: Array) -> bool:
+	for o in others:
+		if _flat(p - o) < 1.0:
+			return true
+	return false
 
 
 func _behind(name: String, front: String, rows: float) -> void:
