@@ -5,9 +5,11 @@ extends RefCounted
 const GAME_ID := "silver-tongue"
 ## Bump PROTOCOL whenever network messages change; mismatched builds are told
 ## to update instead of joining.
-const PROTOCOL := 3
+const PROTOCOL := 4
 ## The crew on a job, on this many devices (one player each).
 const MAX_CREW := 4
+## Two rival crews on the same night, each up to MAX_CREW.
+const MAX_PLAYERS := 8
 
 ## This round's own questions at the end of a play test (LGPlaytest), on top
 ## of the standard ones. M0 is one guard at one door, so they ask about him.

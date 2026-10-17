@@ -46,7 +46,7 @@ static func structure(t, v: Venue, label: String, spot_zones: Dictionary) -> voi
 		if v.spots.has(s):
 			var z := v.zone_at((v.spots[s] as Transform3D).origin + Vector3.UP)
 			t.check(z == spot_zones[s], "%s: spot %s is in the %s (%s)" % [label, s, spot_zones[s], z])
-	for s in ["crew_0", "crew_1", "crew_2", "crew_3"]:
+	for s in ["crew_0", "crew_1", "crew_2", "crew_3", "rival_0", "rival_1", "rival_2", "rival_3"]:
 		t.check(v.spots.has(s), "%s: the crew's start, %s" % [label, s])
 	t.check(v.views.size() >= 6, "%s: at least six views (%d)" % [label, v.views.size()])
 	for name in v.views:

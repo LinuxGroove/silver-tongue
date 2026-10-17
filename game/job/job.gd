@@ -73,6 +73,8 @@ var elapsed := 0.0
 var done := false
 ## The night waits (for the crew's other devices to arrive).
 var hold := false
+## Rival crews: the crews (0, 1) that got what they came for. Empty until it ends.
+var winners: Array = []
 ## The job's own state, for its [JobDef]: anything it likes.
 var flags := {}
 ## Where each item is: id -> {"holder" (crew id, 0 for nobody), "at" (the
@@ -90,6 +92,7 @@ var lines: Array = []
 var rng := RandomNumberGenerator.new()
 var _held_by := {}
 var _ever_held := {}
+var _snitched := {}
 var _police_at := -1.0
 var _open := {}
 var _look_t := 0.0
@@ -140,7 +143,8 @@ func setup(p_def: JobDef, p_venue: Node3D, p_crew: Array[CrewInfo], seed := 0) -
 	for id in def.items:
 		items[id] = {"holder": 0, "at": str(def.items[id].get("at", ""))}
 	if not crew.any(func(c): return not c.items.is_empty()):
-		def.give_items(crew)
+		for t in 2:
+			def.give_items(crew.filter(func(c): return c.team == t))
 	for c in crew:
 		for it in c.items:
 			items[it] = {"holder": c.id, "at": ""}
@@ -286,6 +290,48 @@ func crew_said(crew_id: int, text: String, voice := "normal", earpiece := false)
 			var key := "%s|%d" % [ch.sheet.id, crew_id]
 			_told[key] = str(_told.get(key, "")) + " " + str(hearing.heard)
 		ch.hear(crew_id, text, str(hearing.heard), str(hearing.how), float(h.d), voice, said_to, ScriptedBrain._hot(lower, ch.sheet), bool(h.wall))
+	if to and rival():
+		_snitch(c, to, lower)
+
+
+## Words that point a finger at someone.
+const ACCUSE := ["earpiece", "impostor", "imposter", "isn't a ", "is not a ", "isn't really", "not a real", "fake", "lying", "liar",
+	"doesn't work here", "don't work here", "wearing a wire", "isn't staff", "not staff", "isn't on the list", "not on the list", "thief", "stole"]
+## A character this near a rival crew member can be told about them.
+const SNITCH_RANGE := 8.0
+## Suspicion at or below which a character takes someone's word.
+const BELIEVED := 2
+
+
+## One crew pointing a character at the other: with the character's trust
+## it raises their suspicion of the nearest rival; without it, the
+## accuser's own goes up. Once per accuser, rival and character.
+func _snitch(c: CrewInfo, to: Character, lower: String) -> void:
+	if not ACCUSE.any(func(w): return lower.contains(w)):
+		return
+	var target: CrewInfo = null
+	var best := SNITCH_RANGE
+	for other in crew:
+		if other.team == c.team or other.held or other.node == null:
+			continue
+		var d := other.position().distance_to(to.global_position)
+		if d < best:
+			best = d
+			target = other
+	if target == null:
+		return
+	var key := "%d>%d|%s" % [c.id, target.id, to.sheet.id]
+	if _snitched.has(key):
+		return
+	_snitched[key] = true
+	if to.suspicion_of(c.id) <= BELIEVED:
+		JobRules.nudge(to.face_of(target.id), 2)
+		to.event("%s says %s is not what they seem." % [describe(c.id).capitalize(), describe(target.id)], target.id)
+		toast_for.emit(c.id, "%s listens." % to.sheet.name)
+	else:
+		JobRules.nudge(to.face_of(c.id), 1)
+		to.event("%s tried to point the finger at %s, and it didn't ring true." % [describe(c.id).capitalize(), describe(target.id)], c.id)
+		toast_for.emit(c.id, "%s doesn't buy it." % to.sheet.name)
 
 
 ## Who a line is said to, of those who heard it clearly enough: the one
@@ -859,7 +905,7 @@ func _process(delta: float) -> void:
 	def.tick(self, delta)
 	_check_end()
 	if not done and minutes >= def.end:
-		_end(def.at_end(self))
+		_end(_at_end_rival() if rival() else def.at_end(self))
 
 
 func _routine() -> void:
@@ -969,8 +1015,35 @@ func free_crew() -> Array:
 	return crew.filter(func(c): return not c.held)
 
 
+## Whether two crews work this night, each for the prize.
+func rival() -> bool:
+	return crew.any(func(c): return c.team != 0)
+
+
+## One crew's members.
+func team_crew(team: int) -> Array[CrewInfo]:
+	var out: Array[CrewInfo] = []
+	for c in crew:
+		if c.team == team:
+			out.append(c)
+	return out
+
+
+## Runs `f` with only one crew as the crew, so a job's own rules (who's
+## inside, who holds the file) judge that crew alone.
+func _as_team(team: int, f: Callable) -> Variant:
+	var all := crew
+	crew = team_crew(team)
+	var out: Variant = f.call()
+	crew = all
+	return out
+
+
 func _check_end() -> void:
 	if done or crew.is_empty():
+		return
+	if rival():
+		_check_end_rival()
 		return
 	if free_crew().is_empty():
 		if _police_at < 0.0:
@@ -983,6 +1056,55 @@ func _check_end() -> void:
 	var o := def.check_end(self)
 	if o != "":
 		_end(o)
+
+
+## Two crews: a crew whose members are all held is out; the first crew the
+## job's own rules call done wins and the night ends (both, when it's the
+## same moment); nobody left free ends it as held.
+func _check_end_rival() -> void:
+	var live: Array = []
+	for t in 2:
+		var members := team_crew(t)
+		if not members.is_empty() and not members.all(func(c): return c.held):
+			live.append(t)
+	if live.is_empty():
+		if _police_at < 0.0:
+			_police_at = minutes + POLICE
+			toast_for.emit(0, def.held_text)
+		elif minutes >= _police_at:
+			_end("held")
+		return
+	_police_at = -1.0
+	var won: Array = []
+	var outcome := ""
+	for t in live:
+		var o := str(_as_team(t, func(): return def.check_end(self)))
+		if o == "":
+			continue
+		if o in def.wins:
+			won.append(t)
+			outcome = o
+		elif outcome == "":
+			outcome = o
+	if not won.is_empty():
+		winners = won
+		_end(outcome)
+	elif outcome != "":
+		_end(outcome)
+
+
+## The clock ran out with two crews: those the job's rules call done win.
+func _at_end_rival() -> String:
+	var outcome := ""
+	for t in 2:
+		if team_crew(t).is_empty():
+			continue
+		var o := str(_as_team(t, func(): return def.at_end(self)))
+		if o in def.wins:
+			winners.append(t)
+		if outcome == "" or o in def.wins:
+			outcome = o
+	return outcome
 
 
 ## Ends the night (a [JobDef] can call it with its own outcome).
@@ -1038,17 +1160,18 @@ func report(outcome: String) -> Dictionary:
 				worst = line
 	var people: Array = []
 	for c in crew:
-		people.append({"name": c.name, "cover": c.cover, "cover_name": c.cover_name, "held": c.held, "was_held": _ever_held.has(c.id), "inside": c.inside, "id": c.id, "items": c.items.duplicate()})
+		people.append({"name": c.name, "cover": c.cover, "cover_name": c.cover_name, "held": c.held, "was_held": _ever_held.has(c.id), "inside": c.inside, "id": c.id, "team": c.team, "items": c.items.duplicate()})
 	var won := outcome in def.wins
 	var usual := {
 		"held": ["ALL HELD", "The whole crew ended up in %s." % str(def.office.get("name", "the security office"))],
 		"lost": ["THE HOST LEFT", "The night ended when the host's game did."],
+		"beaten": ["BEATEN TO IT", "The other crew got there first."],
 	}
 	var heading: Array = def.outcomes.get(outcome, usual.get(outcome, [outcome.to_upper(), ""]))
 	var text := str(heading[1])
 	var r := {
 		"job": def.id, "job_title": def.title, "venue": def.venue_id, "venue_name": def.venue_name,
-		"outcome": outcome, "win": won, "title": str(heading[0]), "text": text % clock_text() if "%s" in text else text,
+		"outcome": outcome, "win": won, "rival": rival(), "winners": winners.duplicate(), "title": str(heading[0]), "text": text % clock_text() if "%s" in text else text,
 		"clock": clock_text(), "seconds": elapsed, "crew": people,
 		"heat_peak": heat.peak, "heat_peak_name": Heat.name_of(heat.peak),
 		"clean": _ever_held.is_empty() and heat.peak < Heat.LOCKDOWN,

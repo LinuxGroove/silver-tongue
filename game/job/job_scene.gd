@@ -116,8 +116,10 @@ func _ready() -> void:
 	add_child(net)
 	for d in setup.get("crew", []):
 		crew.append(CrewInfo.from_dict(d))
+		net.teams[crew[-1].id] = crew[-1].team
 	if not crew.is_empty() and not crew.any(func(c): return not c.items.is_empty()):
-		def.give_items(crew)
+		for t in 2:
+			def.give_items(crew.filter(func(c): return c.team == t))
 	var my_id := int(setup.get("me", net.my_id()))
 	for c in crew:
 		if c.id == my_id:
@@ -214,10 +216,11 @@ func _build_ui() -> void:
 
 ## The crew: you, and a body for each crewmate on another device.
 func _add_people() -> void:
-	var i := 0
+	var seen := [0, 0]
 	for c in crew:
-		var at: Transform3D = venue.spots.get("crew_%d" % i, venue.spots.get("crew_0", Transform3D.IDENTITY))
-		i += 1
+		var n: int = seen[c.team]
+		seen[c.team] += 1
+		var at: Transform3D = venue.spots.get(Venue.crew_spot(c.team, n), venue.spots.get("crew_0", Transform3D.IDENTITY))
 		if c == me:
 			player = CREW.instantiate()
 			player.hotel_pause = pause
@@ -381,7 +384,7 @@ func _start_services() -> void:
 
 func _hint() -> String:
 	var talk := str(LGSettings.get_value("voice", "talk", "push"))
-	var ear := "  ·  %s: earpiece" % LGInput.label_for_action("earpiece") if crew.size() > 1 else ""
+	var ear := "  ·  %s: earpiece" % LGInput.label_for_action("earpiece") if _mates() > 1 else ""
 	match talk:
 		"text":
 			return "%s: type a line%s" % [LGInput.label_for_action("text"), ear]
@@ -419,7 +422,7 @@ func _process(delta: float) -> void:
 func _on_talk_started() -> void:
 	if over:
 		return
-	if player.on_earpiece and crew.size() < 2:
+	if player.on_earpiece and _mates() < 2:
 		player.end_talk()
 		return
 	if net.lan:
@@ -493,6 +496,8 @@ func _on_mic_audio(pcm: PackedByteArray) -> void:
 func _on_voice(crew_id: int, data: PackedByteArray, earpiece: bool) -> void:
 	if crew_id == me.id:
 		return
+	if earpiece and not _is_mate(crew_id):
+		return
 	if earpiece:
 		VoiceRelay.play(_earpiece_player, data)
 	elif avatars.has(crew_id):
@@ -545,7 +550,7 @@ func _on_crew_line(crew_id: int, text: String, voice: String, earpiece: bool) ->
 	if crew_id == me.id:
 		return
 	var c: CrewInfo = _crew(crew_id)
-	if c == null or c.node == null:
+	if c == null or c.node == null or (earpiece and not _is_mate(crew_id)):
 		return
 	if earpiece or c.position().distance_to(player.global_position) <= float(CREW_HEAR.get(voice, 9.0)):
 		hud.crew(c.name, text, earpiece)
@@ -1005,6 +1010,7 @@ func _finish(r: Dictionary) -> void:
 	over = true
 	report = r.duplicate(true)
 	report["me"] = me.id
+	_judge_rival()
 	report["host"] = net.is_host()
 	report["lan"] = net.lan
 	report["brain"] = LGBrain.detail
@@ -1018,6 +1024,23 @@ func _finish(r: Dictionary) -> void:
 	_report_online()
 	LGPlaytest.moment("job_" + str(report.get("outcome", "")), {"clock": report.get("clock", ""), "heat_peak": report.get("heat_peak", 0)})
 	report_card.show_report(report, me.id)
+
+
+## Two crews: the night's win is yours only if your crew got there first;
+## the other crew was beaten to it and takes nothing home.
+func _judge_rival() -> void:
+	if not bool(report.get("rival", false)):
+		return
+	var won: bool = bool(report.get("win", false)) and int(me.team) in report.get("winners", [])
+	report["team"] = me.team
+	if won:
+		return
+	report["win"] = false
+	report["take"] = 0
+	if str(report.get("outcome", "")) in def.wins:
+		report["outcome"] = "beaten"
+		report["title"] = "BEATEN TO IT"
+		report["text"] = "The other crew got there first."
 
 
 ## Online: the host reports the job to the game server, and the contract's
@@ -1078,6 +1101,17 @@ func _on_quit_game() -> void:
 	LGScenes.quit()
 
 #endregion
+
+
+## How many are on your crew, you included.
+func _mates() -> int:
+	return crew.filter(func(c): return c.team == me.team).size()
+
+
+## Whether someone is on your crew (the earpiece is for them alone).
+func _is_mate(id: int) -> bool:
+	var c := _crew(id)
+	return c != null and c.team == me.team
 
 
 func _crew(id: int) -> CrewInfo:

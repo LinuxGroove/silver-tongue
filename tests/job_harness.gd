@@ -27,7 +27,7 @@ class Body:
 ## Sets up a job in its own venue (or `venue`, a stand-in like [StubHotel]), with a crew member
 ## per cover (the job's first cover when none are given; a body is a woman's
 ## where `female` says so), the job's items handed out, and scripted brains.
-static func start(t: Node, def: JobDef, covers: Array = [], venue: Node3D = null, seed := 7, female: Array = []) -> Job:
+static func start(t: Node, def: JobDef, covers: Array = [], venue: Node3D = null, seed := 7, female: Array = [], teams: Array = []) -> Job:
 	LGSettings.set_value("ai", "mode", "off")
 	Jobs.current = def
 	Person.add_looks(def.looks)
@@ -39,14 +39,18 @@ static func start(t: Node, def: JobDef, covers: Array = [], venue: Node3D = null
 	var v = venue if venue else def.venue()
 	root.add_child(v)
 	var crew: Array[CrewInfo] = []
+	var seen := [0, 0]
 	for i in covers.size():
 		var c := CrewInfo.make(i + 1, i + 1, "Crew%d" % i, str(covers[i]), i < female.size() and bool(female[i]))
+		c.team = int(teams[i]) if i < teams.size() else 0
 		var b := Body.new()
 		root.add_child(b)
-		b.global_transform = v.spots.get("crew_%d" % i, v.spots.get("crew_0", Transform3D()))
+		b.global_transform = v.spots.get(Venue.crew_spot(c.team, seen[c.team]), v.spots.get("crew_0", Transform3D()))
+		seen[c.team] += 1
 		c.node = b
 		crew.append(c)
-	def.give_items(crew)
+	for side in 2:
+		def.give_items(crew.filter(func(c): return c.team == side))
 	var job := Job.new()
 	root.add_child(job)
 	job.setup(def, v, crew, seed)

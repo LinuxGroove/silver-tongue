@@ -78,18 +78,29 @@ func build() -> void:
 const BEHIND := 1.2
 
 
+## The start spot for the `index`th member of `team`.
+static func crew_spot(team: int, index: int) -> String:
+	return ("crew_%d" if team == 0 else "rival_%d") % index
+
+
 ## The third and fourth crew start behind the first two (venues name two),
-## each a point people walk to, linked to the spot in front.
+## and a rival crew behind them: each a point people walk to, linked to the
+## spot in front.
 func _add_crew_spots() -> void:
 	for i in range(2, GameConfig.MAX_CREW):
-		var front := "crew_%d" % (i - 2)
-		if spots.has("crew_%d" % i) or not spots.has(front):
-			continue
-		var t: Transform3D = spots[front]
-		t.origin += t.basis.z * BEHIND
-		spots["crew_%d" % i] = t
-		points["crew_%d" % i] = t.origin
-		links.append([front, "crew_%d" % i, ""])
+		_behind("crew_%d" % i, "crew_%d" % (i - 2), 1.0)
+	for i in GameConfig.MAX_CREW:
+		_behind("rival_%d" % i, "crew_%d" % (i % 2), 2.0 + float(i / 2))
+
+
+func _behind(name: String, front: String, rows: float) -> void:
+	if spots.has(name) or not spots.has(front):
+		return
+	var t: Transform3D = spots[front]
+	t.origin += t.basis.z * BEHIND * rows
+	spots[name] = t
+	points[name] = t.origin
+	links.append([front, name, ""])
 
 
 ## The venue's rooms, doors, graph and views. Start with [method _make_rooms],

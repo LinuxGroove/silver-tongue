@@ -29,6 +29,8 @@ var in_job := false
 var job_id := "meridian_gala"
 ## The Circuit night's number when the job is one (see [Circuit]), else 0.
 var circuit := 0
+## Two rival crews on the same job: each player is in team 0 or 1.
+var rival := false
 ## Where the title opens next: "board" (Mae's back room) after a job.
 var back_to := ""
 ## This device's pick before it's in a crew, for the hello.
@@ -89,20 +91,20 @@ func me() -> Dictionary:
 func start_solo(cover := "guest", female := false) -> void:
 	leave()
 	mode = Mode.SOLO
-	crew = {1: {"name": GameConfig.player_name(), "cover": cover, "female": female}}
+	crew = {1: {"name": GameConfig.player_name(), "cover": cover, "female": female, "team": 0}}
 	roster_changed.emit()
 
 
 func host_lan(cover := "guest", female := false) -> bool:
 	leave()
 	var port := int(LGSettings.get_value("lan", "port"))
-	var peer := LanNet.create_host(port, GameConfig.MAX_CREW - 1)
+	var peer := LanNet.create_host(port, GameConfig.MAX_PLAYERS - 1)
 	if peer == null:
 		status.emit("Couldn't host on port %d. Is another game already hosting?" % port)
 		return false
 	multiplayer.multiplayer_peer = peer
 	mode = Mode.LAN_HOST
-	crew = {1: {"name": GameConfig.player_name(), "cover": cover, "female": female}}
+	crew = {1: {"name": GameConfig.player_name(), "cover": cover, "female": female, "team": 0}}
 	lan_address = LanNet.local_address()
 	join_code = JoinCode.encode(lan_address, port, port) if lan_address != "" else ""
 	_beacon.start_advertising(_beacon_info(), int(LGSettings.get_value("lan", "beacon_port")))
@@ -154,7 +156,7 @@ func host_online(cover := "guest", female := false) -> bool:
 		return false
 	mode = Mode.ONLINE_HOST
 	join_code = code
-	crew = {1: {"name": GameConfig.player_name(), "cover": cover, "female": female}}
+	crew = {1: {"name": GameConfig.player_name(), "cover": cover, "female": female, "team": 0}}
 	joined.emit()
 	roster_changed.emit()
 	return true
@@ -200,6 +202,7 @@ func leave(reason := "") -> void:
 	join_code = ""
 	in_job = false
 	jobs_reported = 0
+	rival = false
 	ready_peers.clear()
 	_pending_hello.clear()
 	if was != Mode.NONE:
@@ -249,6 +252,64 @@ func set_cover(cover: String, female: bool) -> void:
 		_c_set_cover.rpc_id(1, cover, female)
 
 
+## Which crew a player is in (0 unless two crews are on).
+func team_of(id: int) -> int:
+	return int(crew.get(id, {}).get("team", 0)) if rival else 0
+
+
+## How many players a crew has.
+func team_size(team: int) -> int:
+	var n := 0
+	for id in crew:
+		if int(crew[id].get("team", 0)) == team:
+			n += 1
+	return n
+
+
+## The crew a new player joins: the smaller one with room (-1 when both are full).
+func _open_team() -> int:
+	if not rival:
+		return 0 if crew.size() < GameConfig.MAX_CREW else -1
+	var t := 0 if team_size(0) <= team_size(1) else 1
+	return t if team_size(t) < GameConfig.MAX_CREW else -1
+
+
+## Host: two crews race for the same prize, or one crew works together.
+## Turning it on splits the players between the crews; it stays off while
+## more than one crew's worth of players are in.
+func set_rival(on: bool) -> bool:
+	if not is_host() or in_job:
+		return false
+	if on == rival:
+		return true
+	if not on and crew.size() > GameConfig.MAX_CREW:
+		return false
+	rival = on
+	var ids := crew.keys()
+	ids.sort()
+	for i in ids.size():
+		crew[ids[i]]["team"] = (i % 2) if on else 0
+	_broadcast_roster()
+	return true
+
+
+## Moves you to the other crew, if it has room.
+func switch_team() -> void:
+	if not rival:
+		return
+	var mine := team_of(local_id())
+	if is_host():
+		_move_team(local_id(), 1 - mine)
+	elif mode in [Mode.LAN_CLIENT, Mode.ONLINE_CLIENT]:
+		_c_switch_team.rpc_id(1)
+
+
+func _move_team(id: int, team: int) -> void:
+	if crew.has(id) and team_size(team) < GameConfig.MAX_CREW:
+		crew[id]["team"] = team
+		_broadcast_roster()
+
+
 func can_start() -> bool:
 	return is_host() and not in_job and not crew.is_empty()
 
@@ -263,8 +324,10 @@ func job_crew() -> Array:
 	for id in ids:
 		var c := CrewInfo.make(int(id), int(id), str(crew[id].name), str(crew[id].cover), bool(crew[id].female))
 		c.burned = Progress.burned if int(id) == local_id() else bool(crew[id].get("burned", false))
+		c.team = team_of(int(id))
 		crews.append(c)
-	Jobs.current.give_items(crews)
+	for t in 2:
+		Jobs.current.give_items(crews.filter(func(c): return c.team == t))
 	return crews.map(func(c): return c.to_dict())
 
 
@@ -272,7 +335,7 @@ func job_crew() -> Array:
 func start_job() -> void:
 	if not can_start():
 		return
-	var config := {"job": job_id, "circuit": circuit, "crew": job_crew(), "seed": randi()}
+	var config := {"job": job_id, "circuit": circuit, "crew": job_crew(), "seed": randi(), "rival": rival}
 	in_job = true
 	ready_peers.clear()
 	_beacon.update_info({"state": "playing"})
@@ -295,36 +358,43 @@ func job_ready() -> void:
 func report_job(r: Dictionary) -> bool:
 	if mode != Mode.ONLINE_HOST or LGOnline.bridge == null:
 		return false
-	jobs_reported += 1
 	var accounts := {}
 	for c in r.get("crew", []):
 		accounts[int(c.get("id", 0))] = LGOnline.user_id_for_peer(int(c.get("id", 0)))
-	var payload := job_report_payload(r, LGOnline.bridge.match_id, jobs_reported, accounts)
-	if payload.players.is_empty():
-		return false
-	var res: Variant = await LGOnline.rpc_async("%s.job_report" % GameConfig.GAME_ID, payload)
-	return res != null
+	var sent := false
+	# Two crews are two reports: each crew's own result.
+	for team in ([0, 1] if bool(r.get("rival", false)) else [-1]):
+		var payload := job_report_payload(r, LGOnline.bridge.match_id, jobs_reported + 1, accounts, team)
+		if payload.players.is_empty():
+			continue
+		jobs_reported += 1
+		sent = await LGOnline.rpc_async("%s.job_report" % GameConfig.GAME_ID, payload) != null or sent
+	return sent
 
 
 ## The server's job report for a [method Job.report]: `accounts` maps each
-## crew member's id to their account id (left out when they have none).
-static func job_report_payload(r: Dictionary, match_id: String, round_number: int, accounts: Dictionary) -> Dictionary:
+## crew member's id to their account id (left out when they have none). With
+## two crews, `team` picks one crew's players and result.
+static func job_report_payload(r: Dictionary, match_id: String, round_number: int, accounts: Dictionary, team := -1) -> Dictionary:
 	var players := []
 	for c in r.get("crew", []):
+		if team >= 0 and int(c.get("team", 0)) != team:
+			continue
 		var uid := str(accounts.get(int(c.get("id", 0)), ""))
 		if uid == "":
 			continue
 		players.append({"user_id": uid, "held": bool(c.get("was_held", false)), "memories": r.get("memories", {})})
+	var win: bool = bool(r.get("win", false)) and (team < 0 or team in r.get("winners", []))
 	return {
 		"match_id": match_id,
 		"round": round_number,
 		"job": str(r.get("job", "")),
 		"circuit": int(r.get("circuit", 0)),
-		"win": bool(r.get("win", false)),
-		"clean": bool(r.get("clean", false)),
-		"quiet": bool(r.get("quiet", false)),
-		"silver": bool(r.get("silver", false)),
-		"take": int(r.get("take", 0)),
+		"win": win,
+		"clean": bool(r.get("clean", false)) and win,
+		"quiet": bool(r.get("quiet", false)) and win,
+		"silver": bool(r.get("silver", false)) and win,
+		"take": int(r.get("take", 0)) if win else 0,
 		"venue": str(r.get("venue", "")),
 		"players": players,
 	}
@@ -404,10 +474,11 @@ func _c_hello(protocol: int, p_name: String, cover: String, female: bool) -> voi
 	if in_job:
 		_kick(id, "The job's already under way.")
 		return
-	if crew.size() >= GameConfig.MAX_CREW:
+	var team := _open_team()
+	if team < 0:
 		_kick(id, "The crew's full.")
 		return
-	crew[id] = {"name": _unique_name(p_name.strip_edges().left(16)), "cover": cover if Covers.has(cover) else Covers.first(), "female": female}
+	crew[id] = {"name": _unique_name(p_name.strip_edges().left(16)), "cover": cover if Covers.has(cover) else Covers.first(), "female": female, "team": team}
 	_broadcast_roster()
 	status.emit("%s joined." % crew[id].name)
 
@@ -430,6 +501,13 @@ func _c_set_cover(cover: String, female: bool) -> void:
 
 
 @rpc("any_peer", "reliable")
+func _c_switch_team() -> void:
+	var id := multiplayer.get_remote_sender_id()
+	if _hosting() and rival and crew.has(id):
+		_move_team(id, 1 - team_of(id))
+
+
+@rpc("any_peer", "reliable")
 func _c_job_ready() -> void:
 	var id := multiplayer.get_remote_sender_id()
 	if _hosting() and crew.has(id):
@@ -438,9 +516,10 @@ func _c_job_ready() -> void:
 
 
 @rpc("authority", "reliable")
-func _h_roster(p_crew: Dictionary, p_code: String, p_job: String, p_circuit: int) -> void:
+func _h_roster(p_crew: Dictionary, p_code: String, p_job: String, p_circuit: int, p_rival: bool) -> void:
 	var first := crew.is_empty()
 	crew = p_crew
+	rival = p_rival
 	join_code = p_code
 	if Jobs.exists(p_job):
 		job_id = p_job
@@ -466,7 +545,7 @@ func _broadcast_roster() -> void:
 	if _hosting():
 		for p in multiplayer.get_peers():
 			if not _pending_hello.has(p):
-				_h_roster.rpc_id(p, crew, join_code, job_id, circuit)
+				_h_roster.rpc_id(p, crew, join_code, job_id, circuit, rival)
 		_beacon.update_info({"players": crew.size()})
 	roster_changed.emit()
 
@@ -503,7 +582,7 @@ func _beacon_info() -> Dictionary:
 		"name": "%s's crew" % GameConfig.player_name(),
 		"port": int(LGSettings.get_value("lan", "port")),
 		"players": crew.size(),
-		"max": GameConfig.MAX_CREW,
+		"max": GameConfig.MAX_PLAYERS,
 		"state": "lobby",
 		"code": join_code,
 	}

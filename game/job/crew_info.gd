@@ -23,6 +23,8 @@ var items: Array[String] = []
 var flags := {}
 ## Held at an earlier job this season: Halberd has their photo.
 var burned := false
+## Which crew: 0, or 1 when two crews work the same night.
+var team := 0
 var held := false
 var inside := false
 var node: Node3D
@@ -73,7 +75,7 @@ func position() -> Vector3:
 
 ## For the session: everything another device needs to know about them.
 func to_dict() -> Dictionary:
-	return {"id": id, "peer": peer, "name": name, "cover": cover, "female": female, "look": look, "outfit": outfit, "items": items.duplicate(), "flags": flags.duplicate(), "burned": burned, "held": held, "inside": inside}
+	return {"id": id, "peer": peer, "name": name, "cover": cover, "female": female, "look": look, "outfit": outfit, "items": items.duplicate(), "flags": flags.duplicate(), "burned": burned, "held": held, "inside": inside, "team": team}
 
 
 static func from_dict(d: Dictionary) -> CrewInfo:
@@ -84,4 +86,5 @@ static func from_dict(d: Dictionary) -> CrewInfo:
 	c.burned = bool(d.get("burned", false))
 	c.held = bool(d.get("held", false))
 	c.inside = bool(d.get("inside", false))
+	c.team = int(d.get("team", 0))
 	return c

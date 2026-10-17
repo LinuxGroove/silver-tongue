@@ -430,8 +430,8 @@ func _on_hosts_found(hosts: Array) -> void:
 		_hosts.add_child(l)
 		return
 	for h in hosts:
-		var full := int(h.get("players", 0)) >= int(h.get("max", GameConfig.MAX_CREW)) or str(h.get("state", "")) != "lobby"
-		var b := LGUi.button("%s (%d of %d)" % [h.get("name", "A crew"), int(h.get("players", 0)), int(h.get("max", GameConfig.MAX_CREW))], _join_host.bind(str(h.get("ip", "")), int(h.get("port", 0))), WIDTH)
+		var full := int(h.get("players", 0)) >= int(h.get("max", GameConfig.MAX_PLAYERS)) or str(h.get("state", "")) != "lobby"
+		var b := LGUi.button("%s (%d of %d)" % [h.get("name", "A crew"), int(h.get("players", 0)), int(h.get("max", GameConfig.MAX_PLAYERS))], _join_host.bind(str(h.get("ip", "")), int(h.get("port", 0))), WIDTH)
 		b.disabled = full or int(h.get("protocol", 0)) != GameConfig.PROTOCOL
 		_hosts.add_child(b)
 
@@ -493,10 +493,23 @@ func show_lobby() -> void:
 		_text("On another computer on this network: Join a crew, then pick this crew or type the code.", true)
 	var ids := Session.crew.keys()
 	ids.sort()
-	for id in ids:
-		var c: Dictionary = Session.crew[id]
-		var you := " (you)" if int(id) == Session.local_id() else ""
-		_text("%s%s: %s, %s" % [c.name, you, Covers.cover_name(str(c.cover), bool(c.female)), Covers.role(str(c.cover))])
+	for team in (2 if Session.rival else 1):
+		if Session.rival:
+			_col.add_child(HotelTheme.hud_label("Crew %s" % "AB"[team], 20, HotelTheme.BRASS))
+		for id in ids:
+			var c: Dictionary = Session.crew[id]
+			if Session.rival and int(c.get("team", 0)) != team:
+				continue
+			var you := " (you)" if int(id) == Session.local_id() else ""
+			_text("%s%s: %s, %s" % [c.name, you, Covers.cover_name(str(c.cover), bool(c.female)), Covers.role(str(c.cover))])
+	if Session.is_networked():
+		if Session.is_host():
+			var on := LGUi.button("Two crews racing for the prize: %s" % ("on" if Session.rival else "off"), _toggle_rival, WIDTH)
+			on.disabled = Session.rival and Session.crew.size() > GameConfig.MAX_CREW
+			_col.add_child(on)
+		if Session.rival:
+			_col.add_child(LGUi.button("Switch to Crew %s" % "BA"[Session.team_of(Session.local_id())], Session.switch_team, WIDTH))
+			_text("Each crew works the same night. The first to get what it came for wins; the other is beaten to it. Your earpiece is for your crew alone.", true)
 	var row := GridContainer.new()
 	row.columns = 2
 	row.add_theme_constant_override("h_separation", 8)
@@ -520,6 +533,11 @@ func show_lobby() -> void:
 
 func _start() -> void:
 	Session.start_job()
+
+
+func _toggle_rival() -> void:
+	Session.set_rival(not Session.rival)
+	_queue_lobby("Two crews racing for the prize: %s" % ("on" if Session.rival else "off"))
 
 
 func _leave_lobby() -> void:

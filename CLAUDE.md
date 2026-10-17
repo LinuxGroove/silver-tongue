@@ -1,6 +1,6 @@
 # Silver Tongue
 
-A co-op con game where the characters hear what the players say out loud, in Godot 4.7 with GDScript on top of the COGITO immersive sim template, built from Quaternius' Downtown City MegaKit and Universal Base Characters. The concept is idea 23 in [game-ideas](https://github.com/LinuxGroove/game-ideas/blob/main/ideas/23-silver-tongue.md). It shares the LinuxGroove add-on with the other games; **read game-ideas' [online-addon.md](https://github.com/LinuxGroove/game-ideas/blob/main/online-addon.md) before touching online features or the shared add-on.** This is M3, the city online, on top of M2's campaign: thirteen jobs at four venues and Mae's house party, picked from Mae's back room, then the Circuit's remixed nights, for a crew of one to four on LAN or in an online room, with the crew's record, the weekly contract's board and the Switchboard on the game server (see `docs/m2.md`, which is also the contract for building a venue). M1's gala is the first job (`docs/m1.md`), and M0's service door stays on the title for measuring (`docs/m0.md`).
+A co-op con game where the characters hear what the players say out loud, in Godot 4.7 with GDScript on top of the COGITO immersive sim template, built from Quaternius' Downtown City MegaKit and Universal Base Characters. The concept is idea 23 in [game-ideas](https://github.com/LinuxGroove/game-ideas/blob/main/ideas/23-silver-tongue.md). It shares the LinuxGroove add-on with the other games; **read game-ideas' [online-addon.md](https://github.com/LinuxGroove/game-ideas/blob/main/online-addon.md) before touching online features or the shared add-on.** This is M4, two crews, on top of M3's city online and M2's campaign: thirteen jobs at four venues and Mae's house party, picked from Mae's back room, then the Circuit's remixed nights, for a crew of one to four, or two rival crews of up to four racing for the same prize, on LAN or in an online room, with the crew's record, the weekly contract's board and the Switchboard on the game server (see `docs/m2.md`, which is also the contract for building a venue). M1's gala is the first job (`docs/m1.md`), and M0's service door stays on the title for measuring (`docs/m0.md`).
 
 ## Commands
 
@@ -83,6 +83,14 @@ Run the script check and the tests before every commit. The tests start `tools/f
 - **Play tests.** The shared add-on's `LGPlaytest` records a play test when the Play test recording setting is on (or with `-- --playtest`): a picture every few seconds, game events, frame times and controls, the player's notes (F8, or Note this moment in the pause menu) and a survey when they quit, all in one zip in `user://playtest/`. Game events go through `LGPlaytest.event()` and `moment()`; the game's own survey questions are `GameConfig.PLAYTEST`. Quit through `LGScenes.quit()` so the survey comes first.
 - **Everything works offline.** No server or network is needed (LAN co-op needs only the local network); the models download once.
 - **Launch ping.** `game/main.gd` calls `LGLaunchPing.send(GameConfig.GAME_ID)` at startup: one anonymous request to the game server's `/launch` (game, random install id, version, OS, CPU) so the server counts every player. It's skipped headless, from source and with `DO_NOT_TRACK` set, and never blocks or retries. The game is registered on game-server (M3).
+
+## Two crews (M4)
+
+- **Rival mode** is a host toggle in the lobby (`Session.set_rival`): players split into Crew A and B (`CrewInfo.team`, `Session.switch_team`), up to `MAX_CREW` each, `MAX_PLAYERS` (8) in the room. Teams start at `Venue.crew_spot(team, i)`: `crew_*` and `rival_*` spots, both made behind the first two by `_add_crew_spots`.
+- **One night, two judgements.** `Job._as_team` swaps `crew` to one team so the job's own `check_end` and `at_end` judge each crew by the same rules; the first crew to get what it came for wins (`Job.winners`). A crew that is all held is out and the other plays on.
+- **Snitching** is host-side and keyword-based (`Job._snitch`): tell a character about the other crew and, if they believe you, the rival's suspicion rises. A tip nobody trusts costs the one who gave it.
+- **The earpiece is team-only**: filtered on the host in `JobNet` and again in `JobScene`. Rival crews never hear each other's radio.
+- **Reports.** A rival night sends two `job_report`s, one per crew, and only the winners get the take and marks. Known limits: unique items are shared records across crews, and stealing a story isn't built.
 
 ## Online (M3)
 

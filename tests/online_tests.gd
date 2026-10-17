@@ -169,3 +169,115 @@ func test_crew_of_four(t) -> void:
 			for b in range(a + 1, 4):
 				t.check(spots[a].distance_to(spots[b]) > 0.6, "%s: crew %d and %d don't stand on each other" % [id, a, b])
 		JobHarness.done(job)
+
+
+func _rival_job(t, id := "meridian_gala", covers := ["guest", "press", "guest", "press"]) -> Job:
+	return JobHarness.start(t, Jobs.make(id), covers, null, 7, [], [0, 0, 1, 1])
+
+
+func test_two_crews_session(t) -> void:
+	Session.leave()
+	Session.mode = Session.Mode.LAN_HOST
+	Session.crew = {1: {"name": "A", "cover": "guest", "female": false, "team": 0}}
+	t.check(Session.team_of(1) == 0 and not Session.rival, "one crew by default")
+	for i in range(2, 6):
+		Session.crew[i] = {"name": "P%d" % i, "cover": "guest", "female": false, "team": 0}
+	t.check(Session.set_rival(false) and not Session.rival, "turning it off is fine")
+	t.check(Session.set_rival(true) and Session.rival, "the host turns two crews on")
+	t.check(Session.team_size(0) == 3 and Session.team_size(1) == 2, "the players are split between the crews (%d, %d)" % [Session.team_size(0), Session.team_size(1)])
+	t.check(not Session.set_rival(false), "and it can't go off while more than a crew is in")
+	t.check(Session._open_team() == 1, "a newcomer joins the smaller crew")
+	Session.switch_team()
+	t.check(Session.team_of(1) == 1 and Session.team_size(1) == 3, "you can switch crews when there's room")
+	for id in [2, 3, 4]:
+		Session.crew[id]["team"] = 0
+	Session.crew[5]["team"] = 1
+	Session.crew[6] = {"name": "P6", "cover": "guest", "female": false, "team": 1}
+	t.check(Session.team_size(0) == 3 and Session.team_size(1) == 3, "three each")
+	Session.crew[7] = {"name": "P7", "cover": "guest", "female": false, "team": 0}
+	Session._move_team(1, 0)
+	t.check(Session.team_of(1) == 1, "a full crew takes no more")
+	var cfg := Session.job_crew()
+	t.check(cfg.size() == 7 and cfg.any(func(c): return int(c.team) == 1), "the job's crew carries the teams")
+	Session.leave()
+	t.check(not Session.rival, "leaving puts the crews back to one")
+
+
+func test_two_crews_race(t) -> void:
+	var job := _rival_job(t)
+	t.check(job.rival() and job.team_crew(0).size() == 2 and job.team_crew(1).size() == 2, "two crews of two")
+	var a: Vector3 = job.crew_node(1).global_position
+	var b: Vector3 = job.crew_node(3).global_position
+	t.check(a.distance_to(b) > 1.0, "the rival crew starts apart from yours")
+	for c in job.team_crew(1):
+		c.inside = true
+	job._check_end()
+	t.check(job.done, "the night ends when a crew gets what it came for")
+	JobHarness.done(job)
+	job = _rival_job(t)
+	for c in job.team_crew(0):
+		c.inside = true
+	for c in job.team_crew(1):
+		c.inside = true
+	job._check_end()
+	t.check(job.done, "both crews at once")
+	JobHarness.done(job)
+
+
+func test_two_crews_report(t) -> void:
+	var job := _rival_job(t)
+	var got: Array = []
+	job.ended.connect(got.append)
+	for c in job.team_crew(1):
+		c.inside = true
+	job._check_end()
+	var rep: Dictionary = got[0] if not got.is_empty() else {}
+	t.check(rep.get("rival", false) and rep.get("winners", []) == [1] and rep.get("win", false), "the report says which crew won (%s)" % str(rep.get("winners")))
+	t.check(rep.crew.size() == 4 and int(rep.crew[2].team) == 1, "and who was on which crew")
+	var accounts := {1: "uA", 2: "uB", 3: "uC", 4: "uD"}
+	var won := Session.job_report_payload(rep, "m", 1, accounts, 1)
+	var lost := Session.job_report_payload(rep, "m", 2, accounts, 0)
+	t.check(won.win and won.take > 0 and won.players.size() == 2 and won.players[0].user_id == "uC", "the winners are reported with the take")
+	t.check(not lost.win and lost.take == 0 and not lost.clean and lost.players.size() == 2 and lost.players[0].user_id == "uA", "the others are reported as beaten")
+	JobHarness.done(job)
+	# All of one crew held: the other plays on.
+	job = _rival_job(t)
+	for c in job.team_crew(0):
+		c.held = true
+	job._check_end()
+	t.check(not job.done, "a crew that's all held is out, and the other plays on")
+	for c in job.team_crew(1):
+		c.held = true
+	job._check_end()
+	job.minutes += Job.POLICE + 1.0
+	job._check_end()
+	t.check(job.done, "everyone held ends it")
+	JobHarness.done(job)
+
+
+func test_two_crews_snitch(t) -> void:
+	var job := _rival_job(t)
+	var guard: Character = job.cast.get("priya")
+	if guard == null:
+		guard = job.cast.values()[0]
+	var snitch: CrewInfo = job.crew_by_id(1)
+	var rival: CrewInfo = job.crew_by_id(3)
+	JobHarness.stand(job, 1, guard.global_position + Vector3(0, 0, 1.2), guard.global_position)
+	JobHarness.stand(job, 3, guard.global_position + Vector3(2.0, 0, 0), guard.global_position)
+	var before := guard.suspicion_of(3)
+	guard.face_of(1)["suspicion"] = 1
+	job._snitch(snitch, guard, " that man has an earpiece ")
+	t.check(guard.suspicion_of(3) == before + 2, "a believed tip about the rival raises their suspicion (%d to %d)" % [before, guard.suspicion_of(3)])
+	job._snitch(snitch, guard, " that man has an earpiece ")
+	t.check(guard.suspicion_of(3) == before + 2, "the same tip counts once")
+	var other := _rival_job(t)
+	JobHarness.done(other)
+	guard.face_of(2)["suspicion"] = 4
+	var ally: CrewInfo = job.crew_by_id(2)
+	JobHarness.stand(job, 2, guard.global_position + Vector3(0, 0, 1.2), guard.global_position)
+	var mine := guard.suspicion_of(2)
+	job._snitch(ally, guard, " he is lying, he is not a waiter ")
+	t.check(guard.suspicion_of(2) == mine + 1, "a tip nobody trusts costs the one who gave it")
+	job._snitch(rival, guard, " just chatting about the weather ")
+	t.check(guard.suspicion_of(1) <= 2, "ordinary talk isn't a tip")
+	JobHarness.done(job)

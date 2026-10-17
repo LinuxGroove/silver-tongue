@@ -43,6 +43,8 @@ var lan := false
 ## Guest: the host has sent the night's state, so its scene is up too and
 ## can take requests.
 var synced := false
+## Crew id -> team, so a crew's earpiece reaches only its own.
+var teams := {}
 
 
 func _ready() -> void:
@@ -147,7 +149,7 @@ func send_voice(crew_id: int, data: PackedByteArray, earpiece: bool) -> void:
 		return
 	if multiplayer.is_server():
 		for p in guests():
-			if p != crew_id:
+			if p != crew_id and (not earpiece or _mates(p, crew_id)):
 				_h_voice.rpc_id(p, crew_id, data, earpiece)
 	elif synced:
 		_c_voice.rpc_id(1, data, earpiece)
@@ -212,9 +214,14 @@ func line(char_id: String, text: String, tone: String, channel: String) -> void:
 		_h_line.rpc_id(p, char_id, text, tone, channel)
 
 
+## Whether two crew members are on the same crew.
+func _mates(a: int, b: int) -> bool:
+	return int(teams.get(a, 0)) == int(teams.get(b, 0))
+
+
 func crew_line(crew_id: int, text: String, voice: String, earpiece: bool) -> void:
 	for p in guests():
-		if p != crew_id:
+		if p != crew_id and (not earpiece or _mates(p, crew_id)):
 			_h_crew_line.rpc_id(p, crew_id, text, voice, earpiece)
 
 
